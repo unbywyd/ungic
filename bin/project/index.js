@@ -34,24 +34,22 @@ class ungicProject extends skeleton {
     async begin(options={}) {
         let config = this.config;
         this.fastify = options.fastify;
+
         htmlPlugin = new htmlPlugin(Object.assign(config.plugins.html, {
             fs: config.fs
         }), {project: this});
+
         htmlPlugin.on('log', (type, message, args) => {
             this.log(message, type, args);
         });
         this.plugins.set(htmlPlugin.id, htmlPlugin);
 
-
         scssPlugin = new scssPlugin(Object.assign(config.plugins.scss, {
             fs: config.fs
         }), {project: this});
+
         scssPlugin.on('log', (type, message, args) => {
             this.log(message, type, args);
-        });
-
-        scssPlugin.on('ready', () => {
-            console.log(scssPlugin.exports.toJSON());
         });
 
         this.plugins.set(scssPlugin.id, scssPlugin);

@@ -8,6 +8,10 @@
 @use "ungic.project.config" as config;
 
 @function export($cid, $oid, $data) {
+    @if(type-of($oid) != string or type-of($oid) != number) {
+        @warn "oid should be a string or a number";
+        @return null;
+    }
     @return to-export($cid, $oid, json-encode($data));
 }
 @function parse-pm($options:()) {
