@@ -52,6 +52,10 @@ class ungicProject extends skeleton {
             this.log(message, type, args);
         });
 
+        scssPlugin.on('ready', () => {
+            console.log(scssPlugin.exports.toJSON());
+        });
+
         this.plugins.set(scssPlugin.id, scssPlugin);
 
         let processes = [];
@@ -75,7 +79,10 @@ class ungicProject extends skeleton {
         this.watcher = chokidar.watch(this.root, {
             ignoreInitial: true,
             ignorePermissionErrors: true,
-            ignored: ['*.TMP', '*.tmp']
+            ignored: ['*.TMP', '*.tmp'],
+            awaitWriteFinish: {
+                stabilityThreshold: 50
+            },
         }).on('all', (event, ph, stat) => {
             let ph_splitter = _.filter(ph.split(this.root)[1].split(path.sep), ph => ph != "");
             let watchEvent = (storage, dir, prev="", prevdir="") => {

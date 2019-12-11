@@ -17,7 +17,6 @@ const open = require('open');
 
 class app extends skeleton {
     constructor(args={}) {
-
         let cmd = {
             server: {
                 port: args.port

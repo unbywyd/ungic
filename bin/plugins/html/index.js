@@ -142,6 +142,7 @@ class htmlPlugin extends plugin {
         });
         this.collection.on('all', (event, model) => {
             if(event == 'updated' || event == 'added' || event == 'removed') {
+                this.sassOptions.clean(model.id);
                 if(event == 'removed') {
                     if(model.get('type') == 'page') {
                         if(config.delete_from_dist) {
@@ -334,9 +335,8 @@ class htmlPlugin extends plugin {
                             let spl = str.split('.');
                             let data;
                             let search = function(id, data) {
-                                let res = scssPlugin.exports.find(model => model.id.indexOf(id) == 0);
-                                if(res) {
-                                    res = res.toJSON();
+                                let res = scssPlugin.exports.chain().filter(model => model.id.indexOf(id) == 0).map(m => m.toJSON()).value();
+                                if(res.length) {
                                     if(!spl.length) {
                                         return res;
                                     }
@@ -358,9 +358,11 @@ class htmlPlugin extends plugin {
                         if(scssPlugin && scssPlugin.exports.size) {
                             for(let o of sass_options) {
                                 let res = exportSearch(o);
-                                if(res) {
-                                    sass[res.id] = res.data;
-                                    this.sassOptions.set(res.id, rootData.ungic.page.id);
+                                if(res.length) {
+                                    for(let r of res) {
+                                        sass[r.id] = r.data;
+                                        this.sassOptions.set(r.id, rootData.ungic.page.id);
+                                    }
                                 }
                             }
                         }
@@ -465,7 +467,6 @@ class htmlPlugin extends plugin {
         for(let event of events) {
             for(let model of event.models) {
                 let attrs = model.get();
-                this.sassOptions.clean(model.id);
                 source = _.extend(source, {
                     page: {
                         id: model.id,
