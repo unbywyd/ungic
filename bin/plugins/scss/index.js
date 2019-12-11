@@ -12,14 +12,13 @@ const path = require('path');
 const skeleton = require('../../modules/skeleton');
 const renderMaster = require('../../modules/render-master');
 const watchGrouping = require('../../modules/watch-grouping');
-const {extend: Collection} = require('../../modules/collection');
+const {extend: Collection} = require('../../modules/collectionSync');
 const {extend: Model} = require('../../modules/model');
 const sass = require("sass");
 const Fiber = require("fibers");
 const encodeFunction = require('../../modules/sass-json');
 const postcss = require('postcss');
 const clean = require('postcss-clean');
-//const rtlcss = require('rtlcss');
 const rtl = require('postcss-rtl');
 const autoprefixer = require('autoprefixer');
 
@@ -154,7 +153,7 @@ class scssPlugin extends plugin {
                 try {
                     data = JSON.parse(data);
                     this.exports.add({
-                        oid, cid, data, id: cid + '-' + oid
+                        oid, cid, data, id: cid + '.' + oid
                     });
                 } catch {
                     this.log(`${oid} exported option of ${cid} component has invalid json format.`);
@@ -248,6 +247,8 @@ class scssPlugin extends plugin {
         let config = this.config;
         let source = {components: await this.getComponents(), render: components, advanced_export: config.advanced_export};
 
+        let toRemove = this.exports.filter(exp => ['project'].concat(components).indexOf(exp.get('cid')) != -1);
+        this.exports.remove(toRemove, {silent: true});
         // dev
         let build = this.builder.config;
         let buildConfig = build.dev.config;
@@ -378,7 +379,6 @@ class scssPlugin extends plugin {
         this.log(`${name} release successfully generated!`);
     }
     async _render(events) {
-        //console.log(events);
         let config = this.config;
         let prjConfig = this.project.config;
         for(let event of events) {
@@ -438,6 +438,7 @@ class scssPlugin extends plugin {
     }
     async fileChanged(events) {
         let components = [];
+        let component_phs = [];
         for(let event in events) {
             if(_.find(events[event], e => e.dirname.indexOf(this.components) == -1)) {
                 components = await this.getComponents();
@@ -445,6 +446,9 @@ class scssPlugin extends plugin {
             }
             for(let ev of events[event]) {
                 let cid = this.cidByPath(ev.dirname);
+                component_phs.push({
+                    cid, path: ev.path
+                })
                 if(components.indexOf(cid) == -1) {
                     if(await fsp.exists(path.join(this.components, cid))) {
                         components.push(cid);
@@ -452,8 +456,22 @@ class scssPlugin extends plugin {
                 }
             }
         }
+
+
+
         if(components.length) {
             for(let cid of components) {
+                let deps = this.getDepsFor(cid);
+                if(deps.length) {
+                    for(let dep of deps) {
+                        if(components.indexOf(dep) == -1 && _.find(component_phs, e => (e.cid == cid && path.basename(path.relative(path.join(this.components, e.cid), e.path), path.extname(e.path)) != 'render' && path.dirname(path.relative(path.join(this.components, e.cid), e.path)) != 'render'))) {
+                            if(this.project.config.verbose) {
+                                this.log(`${dep} component depends on ${cid} component, so ${dep} component will be be reassembled.`);
+                            }
+                            components.push(dep);
+                        }
+                    }
+                }
                 this.renderMaster.add({
                     description: `${cid} component`,
                     components: [cid]
@@ -462,7 +480,8 @@ class scssPlugin extends plugin {
         }
     }
     async begin() {
-        return this.renderMaster.run();
+        await this.renderMaster.run();
+        this.emit('begined', true);
     }
     cidByPath(ph) {
         let cid = path.dirname(path.relative(this.components, ph)).split(path.sep).shift();
@@ -488,16 +507,19 @@ class scssPlugin extends plugin {
             components: [cid]
         });
     }
+    getDepsFor(cid) {
+        let deps = [];
+        for(let compID in this.depends) {
+            if(this.depends[compID].indexOf(cid) != -1) {
+                deps.push(compID);
+            }
+        }
+        return _.uniq(deps);
+    }
     async removeComponent(cid) {
         let toPath = path.join(this.components, cid);
         if(await fsp.exists(toPath)) {
-            let deps = [];
-            for(let compID in this.depends) {
-                if(this.depends[compID].indexOf(cid) != -1) {
-                    deps.push(compID);
-                }
-            }
-            deps = _.uniq(deps);
+            let deps = this.getDepsFor(cid);
             if(deps.length) {
                 throw new Error(`"${deps.join(', ')}" components depend on this component.`);
             }

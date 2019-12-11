@@ -18,7 +18,7 @@ let render = (name) => {
                 compact: true,
                 presets: ["@babel/preset-env", {
                     "sourceType": 'module'
-                }, "minify"]
+                }]
             }))
             .transform('uglifyify', {global:true})
             .bundle()

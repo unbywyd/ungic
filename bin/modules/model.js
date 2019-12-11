@@ -88,7 +88,7 @@ class Model {
     clear(options={}) {
         let changed = {};
         for(let attr in this.attributes) {
-            changed = Object.assign(changed, this.unset(attr, {
+            changed = Object.assign({}, changed, this.unset(attr, {
                 silent: true,
             }));
         }
@@ -156,8 +156,11 @@ class Model {
         }
         //this.attributes = attributes;
         for(let attr in attributes) {
-            changed = Object.assign(changed, this._set(attr, attributes[attr], options));
+            let setted = this._set(attr, attributes[attr], options);
+            changed = Object.assign({}, changed, setted);
         }
+
+        this.changed = changed;
 
         if(Object.keys(changed).length && !options.silent) {
             this.#changed(changed, 'set');

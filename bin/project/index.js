@@ -49,17 +49,31 @@ class ungicProject extends skeleton {
         scssPlugin.on('log', (type, message, args) => {
             this.log(message, type, args);
         });
+
+        scssPlugin.on('ready', () => {
+            console.log(scssPlugin.exports.toJSON());
+        });
+
         this.plugins.set(scssPlugin.id, scssPlugin);
 
+        let processes = [];
         try {
+            processes.push();
             await htmlPlugin.initialize();
-            await htmlPlugin.begin();
             await scssPlugin.initialize();
+
+            processes.push(new Promise((res, rej) => {
+                scssPlugin.on('begined', async() => {
+                    await htmlPlugin.begin();
+                    res();
+                });
+            }));
             await scssPlugin.begin();
+            await Promise.all(processes);
         } catch(e) {
-            console.log(e);
-            this.log(e);
+            this.error(e);
         }
+
         this.watcher = chokidar.watch(this.root, {
             ignoreInitial: true,
             ignorePermissionErrors: true,

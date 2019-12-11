@@ -40,6 +40,32 @@ class typeHandlers extends skeleton {
         return this.handlers.get(handlerID);
     }
 }
+class sassOptionsStorage {
+    constructor() {
+        this.storage = [];
+    }
+    set(eid, page_id) {
+        if(this.get(page_id, eid)) {
+            return;
+        }
+        this.storage.push({eid, page_id});
+    }
+    get(page_id, eid) {
+        if(!page_id && !eid) {
+            return this.storage;
+        }
+        if(page_id && !eid) {
+            return _.findWhere(this.storage, {page_id});
+        }
+        if(eid && !page_id) {
+            return _.findWhere(this.storage, {eid});
+        }
+        return _.findWhere(this.storage, {page_id, eid});
+    }
+    clean(page_id) {
+        this.storage = _.reject(this.storage, m => m.page_id == page_id);
+    }
+}
 class htmlPlugin extends plugin {
     constructor(config={}, sysconfig={}) {
         config.id = 'html';
@@ -53,6 +79,7 @@ class htmlPlugin extends plugin {
             return attrs;
         });
 
+        this.sassOptions = new sassOptionsStorage;
         this.typeHandlers.set('json', async attrs => {
             try {
                 attrs.body = JSON.parse(attrs.body);
@@ -125,6 +152,7 @@ class htmlPlugin extends plugin {
                 }
                 if(event == 'updated' || event == 'added') {
                     if(model.get('type') == 'page') {
+                        //this.sassOptions.clean(model.id);
                         return this.renderMaster.add({
                             description: `${model.get('path')} page assembly`,
                             models: [model]
@@ -136,7 +164,11 @@ class htmlPlugin extends plugin {
                 if(attrs.page_ids) {
                     let models = this.collection.filter(model => attrs.page_ids.indexOf(model.id) != -1);
                     if(models.length) {
+                        /*models.forEach(m => {
+                            this.sassOptions.clean(m.id);
+                        });*/
                         let paths = models.map(m=>m.toJSON().path).join(', ');
+
                         return this.renderMaster.add({
                             description: `Assembly pages: ${paths}`,
                             models
@@ -294,6 +326,46 @@ class htmlPlugin extends plugin {
                     page_ids.push(rootData.ungic.page.id);
                     model.set('page_ids', page_ids, {silent: true});
 
+                    let sass;
+                    if(options.sass) {
+                        sass = {};
+                        let scssPlugin = this.project.plugins.get('scss');
+                        let exportSearch = function(str) {
+                            let spl = str.split('.');
+                            let data;
+                            let search = function(id, data) {
+                                let res = scssPlugin.exports.find(model => model.id.indexOf(id) == 0);
+                                if(res) {
+                                    res = res.toJSON();
+                                    if(!spl.length) {
+                                        return res;
+                                    }
+                                    return search(id + '.' + spl.shift(), res);
+                                } else {
+                                    if(!spl.length) {
+                                        return data;
+                                    } else {
+                                        return search(id + '.' + spl.shift(), res);
+                                    }
+                                }
+                            }
+                            if(spl.length) {
+                                data = search(spl.shift());
+                            }
+                            return data;
+                        }
+                        let sass_options = options.sass.replace(/\s/g, '').split(',');
+                        if(scssPlugin && scssPlugin.exports.size) {
+                            for(let o of sass_options) {
+                                let res = exportSearch(o);
+                                if(res) {
+                                    sass[res.id] = res.data;
+                                    this.sassOptions.set(res.id, rootData.ungic.page.id);
+                                }
+                            }
+                        }
+                        source.sass = sass;
+                    }
                     if(model.get('type') == 'template') {
                         if('object' == typeof options.extend) {
                             source = _.extend(source, options.extend);
@@ -310,7 +382,13 @@ class htmlPlugin extends plugin {
                         content = Handlebars.compile(content)(source);
                     }
                     if(model.get('type') == 'part') {
-                        content = Handlebars.compile(content)({ungic: source.ungic});
+                        let s = {
+                            ungic: source.ungic
+                        }
+                        if(sass) {
+                            s.sass = source.sass;
+                        }
+                        content = Handlebars.compile(content)(s);
                     }
                     if(model.get('type') == 'page') {
                         this.log(`${model.get('path')} page cannot be included in the ${rootData.ungic.page.path} page! The page cannot be included in the page!`);
@@ -387,12 +465,12 @@ class htmlPlugin extends plugin {
         for(let event of events) {
             for(let model of event.models) {
                 let attrs = model.get();
+                this.sassOptions.clean(model.id);
                 source = _.extend(source, {
                     page: {
                         id: model.id,
                         path: attrs.path
-                    },
-                    scss: {}
+                    }
                 });
                 let output;
                 try {
@@ -454,10 +532,24 @@ class htmlPlugin extends plugin {
             description: `assembly pages: ${_.pluck(pages, 'path').join(', ')}`,
             models
         });
-
     }
-    begin() {
-        return this.renderMaster.run();
+    async begin() {
+        await this.renderMaster.run();
+        let scssPlugin = this.project.plugins.get('scss');
+        scssPlugin.on('exports', (event, model) => {
+            let storage = this.sassOptions.storage;
+            let expOptions = _.filter(storage, e => e.eid == model.get('id'));
+            if(expOptions.length) {
+                let models = this.collection.filter(model => _.find(expOptions, e => e.page_id == model.id));
+                if(models.length) {
+                    let pages = models.map(model=>model.toJSON());
+                    this.renderMaster.add({
+                        description: `assembly pages: ${_.pluck(pages, 'path').join(', ')}`,
+                        models: models
+                    });
+                }
+            }
+        });
     }
 }
 
