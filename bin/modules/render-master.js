@@ -1,0 +1,69 @@
+const _ = require('underscore');
+const skeleton = require('./skeleton.js');
+const Collector = require('./collector.js');
+
+class renderMaster extends skeleton {
+    constructor(options={}, callback) {
+        if('function' != typeof callback) {
+            throw new Error('callback must be a function');
+        }
+        super({
+            id: {
+                type: 'string',
+                required: true
+            },
+            timeout: {
+                type: 'number',
+                default: 0
+            },
+            pause: {
+                type: 'boolean',
+                default: false
+            },
+            autorun: {
+                type: 'boolean',
+                default: false
+            }
+        }, {}, options);
+        let config = this.config;
+        this.collector = new Collector(config);
+        this.callback = callback;
+        this.collector.on('finish', events => {
+            for(let event of events) {
+                this.log(`A new "${event.description}" rendering event for ${config.id} was received.`);
+            }
+            this.events = _.uniq(_.union(this.events, events));
+            if(config.autorun && this.launched) {
+                this.run();
+            }
+        });
+        this.events = [];
+    }
+    run() {
+        this.launched = true;
+        let config = this.config, status = this.status();
+        if(status.clean || config.pause) {
+            return;
+        }
+        let events = _.clone(this.events);
+
+        this.events = _.without(this.events, ...events);
+        return this.callback(events);
+    }
+    pause(pause=true) {
+        this.setConfig({pause});
+    }
+    status() {
+        let config = this.config;
+        return {
+            paused: config.pause,
+            clean: this.events.length ? false : true,
+            events: this.events
+        }
+    }
+    add(event) {
+        this.collector.add(event, !this.launched);
+    }
+}
+
+module.exports = renderMaster;

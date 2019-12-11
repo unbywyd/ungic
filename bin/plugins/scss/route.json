@@ -1,0 +1,26 @@
+{
+    "ungic.default-theme": {
+        "root": "root",
+        "path": "project/themes/default"
+    },
+    "ungic.project": {
+        "root": "root",
+        "path": "project/"
+    },
+    "ungic.project.config": {
+        "root": "root",
+        "path": "project/config"
+    },
+    "ungic.meta": {
+        "root": "framework",
+        "path": "ungic/meta"
+    },
+    "ungic.utils": {
+        "root": "framework",
+        "path": "ungic/utils"
+    },
+    "ungic.default-properties": {
+        "root": "framework",
+        "path": "ungic/default-properties.scss"
+    }
+}

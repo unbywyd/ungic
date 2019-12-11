@@ -1,0 +1,79 @@
+@use "sass:meta";
+@use "sass:map";
+@use "ungic.utils" as un-utils;
+@use "ungic.meta" as un-meta;
+@use "ungic.project" as project;
+@use "ungic.themes.{{theme}}" as theme;
+
+$theme-options: meta.module-variables(theme);
+
+$inverse-mode: false;
+{{#if inverse}}
+   $inverse-mode: true;
+{{/if}}
+
+$project: meta.module-variables(project);
+$project: map.merge($project, (theme: $theme-options, inverse-mode: $inverse-mode));
+
+
+{{#unless inverse}}
+    {{#if advanced_export}}
+        $export: un-meta.export(project, theme, map.merge($theme-options, (inverse-mode: $inverse-mode)));
+        $export: un-meta.export(project, properties, map.get($project, properties));
+    {{/if}}
+    $export: un-meta.export(project, config, map.get($project, config));
+{{/unless}}
+
+{{#each components}}
+    @use "ungic.components.{{.}}.config" as {{.}}-config;
+    $config: meta.module-variables({{.}}-config);
+    @use "ungic.components.{{.}}.reassignment" as {{.}}-reassignment with (
+        $cid: {{.}},
+        $config: $config
+    );
+    $config: {{.}}-reassignment.$config;
+    {{#unless ../inverse}}
+    $export: un-meta.export({{.}}, config, $config);
+    {{/unless}}
+    @use "ungic.components.{{.}}.properties" as {{.}}-properties;
+    $properties: map.merge(map.get($project, properties), meta.module-variables({{.}}-properties));
+    {{#unless ../inverse}}
+        {{#if ../advanced_export}}
+        $export: un-meta.export({{.}}, properties,  meta.module-variables({{.}}-properties));
+        {{/if}}
+    {{/unless}}
+    @use "ungic.components.{{.}}.core" as {{.}}-core with (
+        $cid: {{.}},
+        $config: $config,
+        $properties: $properties,
+        $private_properties: meta.module-variables({{.}}-properties),
+        $project: $project
+    );
+{{/each}}
+
+{{#each render}}
+    {{#if ../inverse}}
+        .un-inverse {
+            {{#if ../theme_prefix}}
+                &.un-theme-{{../theme}} {
+                    @include meta.load-css("ungic.components.{{.}}.render");
+                }
+            {{/if}}
+            {{#unless ../theme_prefix}}
+                @include meta.load-css("ungic.components.{{.}}.render");
+            {{/unless}}
+        }
+    {{/if}}
+
+    {{#unless ../inverse}}
+        {{#if ../theme_prefix}}
+            .un-theme-{{../theme}} {
+                @include meta.load-css("ungic.components.{{.}}.render");
+            }
+        {{/if}}
+        {{#unless ../theme_prefix}}
+            @include meta.load-css("ungic.components.{{.}}.render");
+        {{/unless}}
+    {{/unless}}
+{{/each}}
+

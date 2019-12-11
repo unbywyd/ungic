@@ -1,0 +1,7 @@
+@use "sass:map";
+$cid: null !default;
+$config: () !default;
+
+@if($cid == helloworld) {
+    $config: (name: 'Arkasha');
+}

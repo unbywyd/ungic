@@ -1,0 +1,52 @@
+@use "ungic.meta" as un-meta;
+@use "sass:meta";
+@use "sass:map";
+@use "sass:color";
+
+$settings: () !default;
+$inverse-mode: false !default;
+$colors: map.get($settings, 'colors');
+$config: map.get($settings, 'config');
+$palettes: map.get($settings, 'palettes');
+$inverse: map.get($config, inverse);
+@if($inverse-mode) {
+    @if($inverse) {
+        $inverse: true
+    } @else {
+        $inverse: false
+    }
+}
+$lightest: white;
+$darkest: dark;
+
+@if not map.has-key($colors, extra) and map.has-key($colors, primary) and map.has-key($colors, secondary) {
+    $colors: map.merge($colors, (extra: color.mix(map.get($colors, primary), map.get($colors, secondary))));
+}
+@include un-meta.check-color-names($colors);
+
+@each $color-name, $_color in $colors {
+    $color: $_color;
+    @if(type-of($color) == list) {
+        $color: nth($_color, 1);
+        @if($inverse) {
+            $color: nth($_color, 2);
+        }
+    }
+    @if(type-of($color) != 'color') {
+        @error '#{$color} is not a color!';
+    } @else {
+        $colors: map.merge($colors, (
+            #{$color-name}: $color
+        ));
+    }
+}
+
+@if(map.get($config, relative-main-colors)) {
+    $lightest: un-meta.lightest(map.get($colors, 'text-color'), map.get($colors, 'background-color'));
+    $darkest: un-meta.darkest(map.get($colors, 'text-color'), map.get($colors, 'background-color'));
+}
+
+$theme-type: 'light';
+@if(un-meta.is-darker(map.get($colors, 'background-color'), map.get($colors, 'text-color'))) {
+    $theme-type: 'dark';
+}

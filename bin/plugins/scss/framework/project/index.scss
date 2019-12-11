@@ -1,0 +1,6 @@
+@use "config";
+@use "properties";
+@use "sass:meta";
+
+$config: meta.module-variables(config);
+$properties: meta.module-variables(properties);

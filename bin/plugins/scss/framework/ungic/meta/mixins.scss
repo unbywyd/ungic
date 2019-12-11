@@ -1,0 +1,18 @@
+@use "sass:map";
+@use "sass:list";
+@use "ungic.project.config" as config;
+
+@mixin check-color-names($colors) {
+    $available-colors: config.$available-theme-colors;
+    $keys: map.keys($colors);
+    @each $color-name in $keys {
+        @if(not list.index($available-colors, $color-name)) {
+            @error '#{$color-name} not available color';
+        }
+    }
+    @each $color-name in $available-colors {
+        @if(not list.index($keys, $color-name)) {
+            @error '#{$color-name} color is a required';
+        }
+    }
+}

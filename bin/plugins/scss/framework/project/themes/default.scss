@@ -1,0 +1,29 @@
+$colors: (
+    primary: #3930D8,
+    secondary: #e43591,
+    success: #FFF,
+    danger: #FFF,
+    info: #FFF,
+    warning: #FFF,
+    system: #FFF,
+    text-color: #444,
+    background-color: #FAFAFA
+);
+
+$config: (
+    inverse: true,
+    brightness: (
+        offset: 20,
+    ),
+    relative-light-limit : true,
+    gray: (
+        saturation: 5%,
+        hue: blue
+    )
+);
+
+$palettes: (
+    primary: (
+        tint: #3930D8
+    )
+);

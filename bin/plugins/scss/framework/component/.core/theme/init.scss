@@ -1,0 +1,12 @@
+@use "sass:map";
+
+$cid: null !default;
+$config: () !default;
+$properties: () !default;
+$private_properties:() !default;
+$project: () !default;
+
+@use "config" with (
+    $settings: map.get($project, theme),
+    $inverse-mode: map.get($project, inverse-mode)
+);

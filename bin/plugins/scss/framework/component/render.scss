@@ -1,0 +1,11 @@
+@use ".core" as this;
+@use ".core/theme" as theme;
+@use "functions" as *;
+@use "mixins" as *;
+@use "ungic.meta" as un-meta;
+@use "ungic.utils" as un-utils;
+
+@include this.component {
+    //....
+    @debug this.$cid;
+}

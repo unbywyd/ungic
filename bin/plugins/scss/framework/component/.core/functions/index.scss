@@ -1,0 +1,115 @@
+@use "../config" as this;
+@use "ungic.default-properties" as default-props;
+
+@use "sass:map";
+@use "sass:color";
+@use "sass:meta";
+@use "sass:list";
+@use "sass:string" as str;
+@use "ungic.meta" as un-meta;
+@use "property-handlers" as *;
+
+@function export($oid, $data) {
+    @return un-meta.export(this.$cid, $oid, $data);
+}
+@function cid($as_selector:null) {
+    $cid: this.$cid;
+    @if $as_selector {
+        @return ".#{$cid}";
+    }
+    @return $cid;
+}
+@function properties() {
+    @return this.$properties;
+}
+@function prop($prop, $args...) {
+    $props: map.keys(this.$properties);
+
+    @if not list.index($props, $prop) {
+        @warn '#{$prop} property not specified';
+        @return '';
+    }
+    @if meta.function-exists($prop) {
+        @if list.length($args) == 0 {
+            @return meta.call(meta.get-function($prop));
+        }
+        @return meta.call(meta.get-function($prop), $args...);
+    } @else {
+        @if str.index($prop, line-height) == 1 {
+            @return prop(font, line-height);
+        }
+        @if str.index($prop, border) and str.index($prop, radius) {
+            $stripped: str.slice($prop, str.index($prop, '-') + 1, -1);
+            $stripped: str.slice($stripped, 1, str.index($stripped, 'radius') - 2);
+           @return prop(border-radius, $stripped);
+        } @else if str.index($prop, border) == 1 {
+            $methods: (color, width, style);
+            $method: str.slice($prop, str.index($prop, '-') + 1, -1);
+            @if(list.index($methods, $method)) {
+                @return prop(border, $method);
+            }
+        }
+        @if str.index($prop, padding) == 1 {
+            @return prop(padding, str.slice($prop, str.index($prop, '-') + 1, -1));
+        }
+        @if str.index($prop, margin) == 1 {
+            @return prop(margin, str.slice($prop, str.index($prop, '-') + 1, -1));
+        }
+        @if str.index($prop, font) == 1 {
+            $methods: (family, style, size, variant, weight);
+            $method: str.slice($prop, str.index($prop, '-') + 1, -1);
+            @if(list.index($methods, $method)) {
+                @return prop(font, $method);
+            }
+        }
+        @if str.index($prop, background) == 1 {
+            $methods: (attachment, color, position, image, repeat);
+            $method: str.slice($prop, str.index($prop, '-') + 1, -1);
+            @if(list.index($methods, $method)) {
+                @return prop(background, $method);
+            }
+        }
+        @if str.index($prop, list-style) == 1 {
+            $methods: (type, position, image);
+            $method: str.slice($prop, str.length('list-style-') + 1, -1);
+            @if(list.index($methods, $method)) {
+                @return prop(list-style, $method);
+            }
+        }
+    }
+    @return map.get(this.$properties, $prop);
+}
+
+@function is-prop-changed($prop) {
+    $props: meta.module-variables(default-props);
+    @if not map.has-key($props, $prop) {
+        @return null;
+    }
+    @if map.get($props, $prop) == map.get(this.$properties, $prop) {
+        @return false;
+    }
+    @return true;
+}
+
+@function default-prop($prop) {
+    $props: meta.module-variables(default-props);
+    @if not map.has-key($props, $prop) {
+        @return null;
+    }
+    @return map.get($props, $prop);
+}
+
+@function project-prop($prop) {
+    $props: map.get(this.$project, properties);
+    @if not map.has-key($props, $prop) {
+        @return null;
+    }
+    @return map.get($props, $prop);
+}
+
+@function config($key:'') {
+    @if map.has-key(this.$config, $key) {
+        @return map.get(this.$config, $key);
+    }
+    @return this.$config;
+}

@@ -1,0 +1,80 @@
+@use "../config" as this;
+@use "sass:map";
+@use "sass:list";
+@use "sass:selector";
+@use "sass:string" as str;
+@use '../functions' as *;
+@use "ungic.meta" as un-meta;
+@use "ungic.utils" as *;
+
+@mixin component {
+    #{cid(true)} {
+        @content;
+    }
+}
+@mixin this {
+    #{cid(true)} {
+        @content;
+    }
+}
+
+@mixin wrap($suffix: null) {
+    @if $suffix {
+        $output: ();
+        $suffix: str-replace($suffix, '__this', cid(true));
+        @each $selector in & {
+            $replacements:  selector.parse($suffix);
+            @each $replacement in $replacements {
+                $output: list.append($output, str-replace(inspect($selector), cid(true), #{$replacement cid(true)}, false), comma);
+            }
+        }
+        @at-root #{$output} {
+            @content;
+        }
+    } @else {
+        &#{cid(true)} {
+            @content;
+        }
+    }
+}
+
+@mixin and($suffix: null) {
+    @if $suffix {
+        $output: ();
+        $suffix: str-replace($suffix, '__this', cid(true));
+        @each $selector in & {
+            $replacements:  selector.append(cid(true), $suffix);
+            @each $replacement in $replacements {
+                $output: list.append($output, str-replace(inspect($selector), cid(true), $replacement, false), comma);
+            }
+        }
+        @at-root #{$output} {
+            @content;
+        }
+    } @else {
+        &#{cid(true)} {
+            @content;
+        }
+    }
+}
+
+@mixin nest($suffix: null) {
+    @if $suffix {
+        $output: ();
+        $suffix: str-replace($suffix, '__this', cid(true));
+        @each $selector in & {
+            $replacements:  selector.nest(cid(true), $suffix);
+            @each $replacement in $replacements {
+                $output: list.append($output, str-replace(inspect($selector), cid(true), $replacement, false), comma);
+            }
+        }
+        @at-root #{$output} {
+            @content;
+        }
+    } @else {
+        &#{cid(true)} {
+            @content;
+        }
+    }
+}
+

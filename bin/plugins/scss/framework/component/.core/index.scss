@@ -1,0 +1,30 @@
+$cid: null !default;
+$config: () !default;
+$project: () !default;
+$properties: () !default;
+$private_properties: () !default;
+@use "sass:meta";
+@use "sass:map";
+
+@use "theme/init" with (
+    $cid: $cid,
+    $project: $project,
+    $config: $config,
+    $properties: $properties,
+    $private_properties: $private_properties
+);
+@use "theme";
+$theme: theme.get();
+
+@use "config" with (
+    $cid: $cid,
+    $project: $project,
+    $config: $config,
+    $properties: $properties,
+    $private_properties: $private_properties,
+    $theme: $theme
+);
+
+@forward "functions";
+@forward "mixins";
+@forward "config";
