@@ -17,6 +17,9 @@ function ungicReadline(callback, prefix='', closeCallback) {
             prompt: this.prefix
         });
         this.rl.on('line', input => {
+            if(input.replace(/\s\n/g, '') == '') {
+                return this.rl.prompt();
+            }
             if(!this._pause) {
                 this.rl.pause();
                 this._pause = true;

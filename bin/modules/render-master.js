@@ -39,7 +39,7 @@ class renderMaster extends skeleton {
         });
         this.events = [];
     }
-    run() {
+    async run() {
         this.launched = true;
         let config = this.config, status = this.status();
         if(status.clean || config.pause) {
@@ -48,7 +48,16 @@ class renderMaster extends skeleton {
         let events = _.clone(this.events);
 
         this.events = _.without(this.events, ...events);
-        return this.callback(events);
+        try {
+            if(this.callback.constructor.name === 'AsyncFunction') {
+                await this.callback(events);
+            } else {
+                this.callback(events);
+            }
+        } catch(e) {
+            this.error(e);
+        }
+        return
     }
     pause(pause=true) {
         this.setConfig({pause});

@@ -316,14 +316,15 @@ class scssPlugin extends plugin {
                     dir = '.' + buildConfig.direction;
                 }
                 for(let r of result) {
+                    await fse.remove(path.join(this.dist, 'releases', release.config.name + '.' + release.config.version, config.fs.dist.css));
                     if(typeof r == 'string') {
                         let output = await this.getReleseLabel(release.config, r);
-                        await fse.outputFile(path.join(this.dist, config.fs.dist.css, 'releases', release.config.name + '.' + release.config.version  + dir + '.css'), output);
+                        await fse.outputFile(path.join(this.dist, 'releases', release.config.name + '.' + release.config.version, config.fs.dist.css, release.config.name  + dir + '.css'), output);
                     } else {
                         for(let e of r) {
                             let output = await this.getReleseLabel(release.config, e.root);
                             let theme = e.theme;
-                            await fse.outputFile(path.join(this.dist, config.fs.dist.css, 'releases', release.config.name + '.theme-' + theme + '.' + release.config.version  + dir + '.css'), output);
+                            await fse.outputFile(path.join(this.dist, 'releases', release.config.name + '.' + release.config.version, config.fs.dist.css, release.config.name + '.theme-' + theme + dir + '.css'), output);
                         }
                     }
                 }
@@ -403,6 +404,15 @@ class scssPlugin extends plugin {
             }
         });
 
+        this.on('ready', async() => {
+            let toPath = path.join(this.dist, 'sass-options.json');
+/*            let exps = {};
+            _.each(this.exports.toJSON(), m => {
+                exps[`${m.oid}-${m.cid}`] = m;
+            });*/
+            await fse.outputFile(toPath, JSON.stringify(this.exports.toJSON(), null, 4));
+        });
+
         let components = await this.getComponents();
         if(components.length) {
             for(let cid of components) {
@@ -456,8 +466,6 @@ class scssPlugin extends plugin {
                 }
             }
         }
-
-
 
         if(components.length) {
             for(let cid of components) {

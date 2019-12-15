@@ -18,6 +18,7 @@ module.exports = function(yargs, done) {
         let plugin = this.app.project.plugins.get('scss');
         (async()=> {
             try {
+                this.rl.rl.pause();
                 let created = await plugin.createComponent(args.cid);
                 return done(`${args.cid} component successfully created!`);
             } catch(e) {
@@ -108,7 +109,7 @@ module.exports = function(yargs, done) {
                     if(args.config) {
                         config.config = args.config;
                     }
-
+                    this.rl.rl.pause();
                     await plugin.release(name, config);
                     return done();
                }
@@ -170,7 +171,6 @@ module.exports = function(yargs, done) {
 
                 let answers = await prompts.call(this, questions);
 
-
                 themes = _.reject(themes, t => t == answers.default_theme);
 
                 let answers2 = await prompts.call(this, [
@@ -188,6 +188,7 @@ module.exports = function(yargs, done) {
                 ]);
 
                answers = _.extend(answers, answers2);
+               this.rl.rl.pause();
                await plugin.release(args.name, answers);
                done();
             })();
@@ -228,6 +229,7 @@ module.exports = function(yargs, done) {
             }]);
             if(answers.remove) {
                 try {
+                    this.rl.rl.pause();
                     let created = await plugin.removeComponent(args.cid);
                     done(`${args.cid} component successfully removed!`);
                 } catch(e) {

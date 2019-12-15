@@ -8,12 +8,15 @@ const { promisify } = require("util");
 fsp.exists = promisify(fs.exists);
 let scssPlugin = require('../plugins/scss');
 let htmlPlugin = require('../plugins/html');
+let iconsPlugin = require('../plugins/icons');
 let skeleton = require('../modules/skeleton');
 const appPaths = require('../modules/app-paths')();
 class ungicProject extends skeleton {
     constructor(config) {
         super({}, {}, config);
         this.root = appPaths.root;
+        config = this.config;
+        this.dist = path.join(this.root, config.fs.dirs.dist);
         this.plugins = new Map;
     }
     async initialize() {
@@ -35,16 +38,17 @@ class ungicProject extends skeleton {
         let config = this.config;
         this.fastify = options.fastify;
 
-        htmlPlugin = new htmlPlugin(Object.assign(config.plugins.html, {
+        htmlPlugin = new htmlPlugin(Object.assign(config.plugins.html || {}, {
             fs: config.fs
         }), {project: this});
 
         htmlPlugin.on('log', (type, message, args) => {
             this.log(message, type, args);
         });
+
         this.plugins.set(htmlPlugin.id, htmlPlugin);
 
-        scssPlugin = new scssPlugin(Object.assign(config.plugins.scss, {
+        scssPlugin = new scssPlugin(Object.assign(config.plugins.scss || {}, {
             fs: config.fs
         }), {project: this});
 
@@ -52,27 +56,43 @@ class ungicProject extends skeleton {
             this.log(message, type, args);
         });
 
-        scssPlugin.on('ready', () => {
-            console.log(scssPlugin.exports.toJSON());
+        this.plugins.set(scssPlugin.id, scssPlugin);
+        iconsPlugin = new iconsPlugin(Object.assign(config.plugins.icons || {}, {
+            fs: config.fs
+        }), {project: this});
+
+        iconsPlugin.on('log', (type, message, args) => {
+            this.log(message, type, args);
         });
 
-        this.plugins.set(scssPlugin.id, scssPlugin);
+        iconsPlugin.on('icons', icons => {
+            this.emit('icons', icons);
+        });
+        this.plugins.set(iconsPlugin.id, iconsPlugin);
 
         let processes = [];
         try {
             processes.push();
+            await iconsPlugin.initialize();
             await htmlPlugin.initialize();
             await scssPlugin.initialize();
-
             processes.push(new Promise((res, rej) => {
+                iconsPlugin.on('begined', async(icons) => {
+                    await scssPlugin.begin({icons});
+                    await htmlPlugin.begin({icons});
+                    res();
+                });
+            }));
+/*            processes.push(new Promise((res, rej) => {
                 scssPlugin.on('begined', async() => {
                     await htmlPlugin.begin();
                     res();
                 });
-            }));
-            await scssPlugin.begin();
+            }));*/
+            processes.push(iconsPlugin.begin());
             await Promise.all(processes);
         } catch(e) {
+            console.log(e);
             this.error(e);
         }
 

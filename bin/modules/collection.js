@@ -117,17 +117,20 @@ class Collection {
             return changed;
         }
         if(options.remove) {
-            this.each(model => {
-                if(!_.find(models, m => m.id == model.id)) {
-                    let removed = this._remove(model, options);
-                    changed.push({
-                        event: "removed",
-                        model: removed
-                    });
-                }
-            });
+            // Удаляет все кроме этой
+            let modelsWithIDs = _.filter(models, m => m.id);
+            if(modelsWithIDs.length) {
+                this.each(model => {
+                    if(!_.find(modelsWithIDs, m => m.id == model.id)) {
+                        let removed = this._remove(model, options);
+                        changed.push({
+                            event: "removed",
+                            model: removed
+                        });
+                    }
+                });
+            }
         }
-
         for(let model of models) {
             if(this._isModel(model)) {
                 if(!this.has(model.id) && options.add) {

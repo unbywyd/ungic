@@ -156,7 +156,6 @@ class App extends skeleton {
                                     self.rl = new readline(appMenu);
                                 });
                             })
-                            .showHelp(s => self.rl.done())
                     }
                 }
 

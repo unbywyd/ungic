@@ -111,7 +111,7 @@ class app extends skeleton {
         this.fastify.decorate('io', io);
         this.fastify.register(require('fastify-static'), {
             root:  path.join(__dirname, 'client'),
-            prefix: '/dev/',
+            prefix: '/ungic/',
             redirect: true,
             setHeaders: (res) => {
                 res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -137,13 +137,13 @@ class app extends skeleton {
         });
         await require('./api')(this.fastify);
 
-        this.fastify.get('/', async (request, reply) => {
+        this.fastify.get('/ungic', async (request, reply) => {
             return { hello: 'world' }
         });
         this.fastify.use((req, res, next) => {
-            if(req.originalUrl.indexOf('/' + config.fs.dirs.dist) == 0 || req.originalUrl.indexOf('/' + config.fs.dirs.source) == 0) {
+            if(!/^\/ungic/.test(req.originalUrl)) {
                 return handler(req, res, {
-                    public: appPaths.root,
+                    public: path.join(appPaths.root, config.fs.dirs.dist),
                     headers: [{
                       "source" : "**/*",
                       "headers" : [
@@ -196,20 +196,20 @@ class app extends skeleton {
         let port = this.fastify.server.address().port;
         this.setConfig({port: port});
         this.log(`Server is listening on ${address}`);
-        if(config.openInBrowser) {
-            await open(address);
-        }
         this.project = new ungicProject(this.config);
         this.project.on('log', (type, message, args={}) => {
             this.log(message, type, args);
         });
 
         this.project.on('watcher:' + config.fs.dirs.dist, (event, ph) => {
-            let relative = path.relative(this.project.root, ph).replace(/\\+/g, '/');
-            io.emit('change', event, this.fastify.address + '/' + path.relative(this.project.root, ph).replace(/\\+/g, '/'), relative);
+            let relative = path.relative(this.project.dist, ph).replace(/\\+/g, '/');
+            io.emit('change', event, this.fastify.address + '/' + path.relative(this.project.dist, ph).replace(/\\+/g, '/'), relative);
         });
 
         await this.project.begin({fastify: this.fastify});
+        if(config.openInBrowser) {
+            await open(address);
+        }
     }
 }
 module.exports = app;

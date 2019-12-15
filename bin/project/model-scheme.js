@@ -8,14 +8,14 @@ module.exports = {
             html: {
                 type: 'object'
             },
-            svg: {
+            icons: {
                 type: 'object'
             }
         },
         default: {
             scss: {},
             html: {},
-            svg: {}
+            icons: {}
         }
     },
     id: {

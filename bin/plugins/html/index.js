@@ -19,10 +19,13 @@ const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 const MD = new(require('markdown-it'));
 const yaml = require('js-yaml');
+const validate = require('html5-validator');
+var amphtmlValidator = require('amphtml-validator');
 class typeHandlers extends skeleton {
     constructor(options={}) {
         super({},{}, options);
         this.handlers = new Map;
+        this.iconsStorage = {};
     }
     set(handlerID, handler) {
         if(!handlerID) {
@@ -40,30 +43,25 @@ class typeHandlers extends skeleton {
         return this.handlers.get(handlerID);
     }
 }
-class sassOptionsStorage {
+class Storage { // sassUsedStorage
     constructor() {
         this.storage = [];
     }
-    set(eid, page_id) {
-        if(this.get(page_id, eid)) {
-            return;
+    set(data) {
+        let prev = this.get(data);
+        if(prev) {
+            this.storage = _.without(this.storage, prev);
         }
-        this.storage.push({eid, page_id});
+        this.storage.push(data);
     }
-    get(page_id, eid) {
-        if(!page_id && !eid) {
+    get(data) {
+        if(!data) {
             return this.storage;
         }
-        if(page_id && !eid) {
-            return _.findWhere(this.storage, {page_id});
-        }
-        if(eid && !page_id) {
-            return _.findWhere(this.storage, {eid});
-        }
-        return _.findWhere(this.storage, {page_id, eid});
+        return _.findWhere(this.storage, data);
     }
-    clean(page_id) {
-        this.storage = _.reject(this.storage, m => m.page_id == page_id);
+    clean(rej) {
+        this.storage = _.reject(this.storage, m => rej(m));
     }
 }
 class htmlPlugin extends plugin {
@@ -79,7 +77,8 @@ class htmlPlugin extends plugin {
             return attrs;
         });
 
-        this.sassOptions = new sassOptionsStorage;
+        this.sassUsed = new Storage;
+        this.iconsUsed = new Storage;
         this.typeHandlers.set('json', async attrs => {
             try {
                 attrs.body = JSON.parse(attrs.body);
@@ -101,19 +100,24 @@ class htmlPlugin extends plugin {
             return attrs;
         });
 
-         this.typeHandlers.set('html', async attrs => {
+        this.typeHandlers.set('html', async attrs => {
             attrs.body = await this.ungicParser.parse(attrs.body, attrs);
             const dom = new JSDOM(attrs.body);
-            if(!dom.window.document.head.children.length && dom.window.document.body.innerHTML.replace(/\s/g, '') != '') {
-                attrs.body = dom.window.document.body.innerHTML;
-            } else if (dom.window.document.body.innerHTML.replace(/\s/g, '') != '') {
+            if(!dom.window.document.querySelector('head').children.length && dom.window.document.querySelector('body').innerHTML.replace(/\s/g, '') != '') {
+                attrs.body = dom.window.document.querySelector('body').innerHTML;
+            } else if (dom.window.document.querySelector('html').innerHTML.replace(/\s/g, '') != '') {
                 attrs.type = "page";
-                let script = dom.window.document.createElement("script");
-                script.setAttribute('src', this.project.fastify.address + '/dev/js/dist/pipe.min.js');
-                script.setAttribute('data-connect', this.project.fastify.address);
-                script.setAttribute('data-src', path.relative(this.project.root, path.join(this.dist, attrs.path)).replace(/\\+/g, '/'));
-                dom.window.document.body.appendChild(script);
-                attrs.body = dom.window.document.documentElement.outerHTML;
+                if(!this.release) {
+                    let script = dom.window.document.createElement("script");
+                    script.setAttribute('src', this.project.fastify.address + '/ungic/js/dist/pipe.min.js');
+                    script.setAttribute('data-connect', this.project.fastify.address);
+                    script.setAttribute('data-src', path.relative(this.dist, path.join(this.dist, attrs.path)).replace(/\\+/g, '/'));
+                    dom.window.document.querySelector('body').appendChild(script);
+                }
+                attrs.body = '<!DOCTYPE html>\n' + dom.window.document.documentElement.outerHTML;
+                if(dom.window.document.querySelector('html').hasAttribute('⚡')) {
+                    attrs.amp = true;
+                }
             } else {
                 return;
             }
@@ -142,7 +146,8 @@ class htmlPlugin extends plugin {
         });
         this.collection.on('all', (event, model) => {
             if(event == 'updated' || event == 'added' || event == 'removed') {
-                this.sassOptions.clean(model.id);
+                this.sassUsed.clean((m) => m.page_id == model.id);
+                this.iconsUsed.clean((m) => m.page_id == model.id);
                 if(event == 'removed') {
                     if(model.get('type') == 'page') {
                         if(config.delete_from_dist) {
@@ -153,7 +158,6 @@ class htmlPlugin extends plugin {
                 }
                 if(event == 'updated' || event == 'added') {
                     if(model.get('type') == 'page') {
-                        //this.sassOptions.clean(model.id);
                         return this.renderMaster.add({
                             description: `${model.get('path')} page assembly`,
                             models: [model]
@@ -165,9 +169,6 @@ class htmlPlugin extends plugin {
                 if(attrs.page_ids) {
                     let models = this.collection.filter(model => attrs.page_ids.indexOf(model.id) != -1);
                     if(models.length) {
-                        /*models.forEach(m => {
-                            this.sassOptions.clean(m.id);
-                        });*/
                         let paths = models.map(m=>m.toJSON().path).join(', ');
 
                         return this.renderMaster.add({
@@ -206,7 +207,7 @@ class htmlPlugin extends plugin {
                         css = path.basename(css, path.extname(css));
                     }
                     let pathToCSS = path.join(this.dist, config.fs.dist.css, css + (['ltr', 'rtl'].indexOf(attrs.dir) == -1 ? '' : '.' + attrs.dir) + '.css');
-                    let href = '/' + path.relative(this.project.root, pathToCSS).replace(/\\+/g, '/');
+                    let href = '/' + path.relative(this.dist, pathToCSS).replace(/\\+/g, '/');
                         if(!config.relative_src) {
                             href = this.project.fastify.address + href.replace(/\\+/g, '/');
                         }
@@ -243,7 +244,6 @@ class htmlPlugin extends plugin {
             let cwd = options.cwd ? path.join(this.dist, options.cwd) : this.dist;
             let pathToSRC = path.join(cwd, src);
             let relative_src = options.relative_src ? options.relative_src : config.relative_src;
-
             let page_ids = [];
             if(this.resources.has(pathToSRC)) {
                 page_ids = this.resources.get(pathToSRC);
@@ -253,11 +253,55 @@ class htmlPlugin extends plugin {
             if(!fs.existsSync(pathToSRC)) {
                 this.log(`Resource by path ${pathToSRC} not exist`);
             }
-            if(relative_src) {
-                return this.project.fastify.address + '/' + path.relative(this.project.root, pathToSRC).replace(/\\+/g, '/');
-            } else {
-                return '/' + path.relative(this.project.root, pathToSRC).replace(/\\+/g, '/');
+
+            if(this.release) {
+                let host = this.release.host;
+                if(!/\/$/.test(host)) {
+                    host += '/';
+                }
+                return host + path.relative(this.dist, pathToSRC).replace(/\\+/g, '/');
             }
+
+            if(!relative_src) {
+                return this.project.fastify.address + '/' + path.relative(this.dist, pathToSRC).replace(/\\+/g, '/');
+            } else {
+                return '/' + path.relative(this.dist, pathToSRC).replace(/\\+/g, '/');
+            }
+        });
+        Handlebars.registerHelper("icon", (id, context) => {
+            let rootData = context.data.root.ungic;
+            let options = context.hash ? context.hash: {};
+            let config = this.config;
+            let mode = this.iconsStorage.mode;
+            if(!mode) {
+                this.error('The icon plugin has not been begined!')
+                return '';
+            }
+            let icon = _.find(this.iconsStorage.data.icons, {id});
+            if(!icon) {
+                this.warning(`${id} icon not exists`);
+                this.iconsUsed.set({icon_id: id, page_id: rootData.page.id, mode, rendered: false});
+                return '';
+            }
+            if(mode == 'fonts') {
+                let fontConfig = this.iconsStorage.data.config;
+
+                let title = icon.title;
+                if(options.label) {
+                    title = options.label;
+                }
+                let label = title ? `<span class="${fontConfig.font.class}-icon-label">${title}<span>` : '';
+                if(options.ignore_label) {
+                   label = '';
+                }
+                this.iconsUsed.set({icon_id: id, page_id: rootData.page.id, mode, rendered: true});
+                if(options.href) {
+                    return `<a href="${options.href}"><i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${icon.id}"></i>${label}</a>`;
+                } else {
+                    return `<i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${icon.id}"></i>${label}`;
+                }
+            }
+            return '';
         });
         Handlebars.registerHelper("log", function() {
             console.log(JSON.stringify(this, null, 4));
@@ -270,7 +314,6 @@ class htmlPlugin extends plugin {
             let rootData = context.data.root;
             let source = {ungic: _.clone(rootData.ungic)};
             let activeModel = this.collection.findByID(source.ungic.model ? source.ungic.model.id : source.ungic.page.id);
-
             let options = context.hash ? context.hash: {};
             let dirname = source.ungic.dirname ? source.ungic.dirname : path.dirname(source.ungic.page.path);
             let cwd = config.relative_include ? path.join(this.root, dirname) : this.root;
@@ -361,7 +404,7 @@ class htmlPlugin extends plugin {
                                 if(res.length) {
                                     for(let r of res) {
                                         sass[r.id] = r.data;
-                                        this.sassOptions.set(r.id, rootData.ungic.page.id);
+                                        this.sassUsed.set(r.id, rootData.ungic.page.id);
                                     }
                                 }
                             }
@@ -434,11 +477,11 @@ class htmlPlugin extends plugin {
         ph = path.normalize(ph);
         let entityData = {
             extname: path.extname(ph).toLowerCase(),
-            path: ph
+            path: path.normalize(ph)
         }
         let fullPath = path.join(this.root, ph);
         if(!await fsp.exists(fullPath)) {
-            let model = this.collection.find(model=>model.get().path == ph);
+            let model = this.collection.find(model=>model.get('path') == path.normalize(ph));
             if(model) {
                 this.collection.remove(model.id);
             }
@@ -452,6 +495,145 @@ class htmlPlugin extends plugin {
         }
         entityData.body = body;
         await this.collection.add(entityData, options);
+    }
+    toRelease(args) {
+        return new Promise(async(done, rej) => {
+            this.release = args;
+            this.unwatch();
+            if(!args.pages.length) {
+                this.error('no pages selected for release compilation');
+                return;
+            }
+
+            let pagesModels = this.collection.filter(model => args.pages.indexOf(model.get('path')) != -1);
+            let pids = _.map(pagesModels, m => m.id);
+
+            let models = this.collection.filter(model => {
+                if(model.has('page_ids') && model.get('page_ids').length) {
+                    let page_ids = model.get('page_ids');
+                    for(let pid of page_ids) {
+                        if(pids.indexOf(pid) != -1) {
+                            return true;
+                        }
+                    }
+                }
+                if(args.pages.indexOf(model.get('path')) != -1) {
+                    return true;
+                }
+            });
+            for(let model of models) {
+                let ph = model.get('path');
+                this.collection.remove(model, {silent: true});
+                await this.setEntityByPath('add', ph, {silent: true});
+            }
+            let pages = pagesModels.map(model=>model.toJSON());
+            let self = this;
+            async function ready(events) {
+                self.watch();
+                delete self.release;
+                for(let model of models) {
+                    let ph = model.get('path');
+                    self.collection.remove(model, {silent: true});
+                    await self.setEntityByPath('add', ph, {silent: true});
+                }
+                self.off('ready', ready);
+                done();
+            }
+
+            this.on('ready', ready);
+            this.renderMaster.add({
+                description: `assembly pages: ${_.pluck(pages, 'path').join(', ')}`,
+                models: this.collection.filter(model => args.pages.indexOf(model.get('path')) != -1)
+            });
+        });
+    }
+    async validate(content, name) {
+        name = name ? name : 'This';
+        try {
+            let result = await validate(content);
+
+            if(result.messages.length) {
+                let res =  `${name} document has ${result.messages.length} validation errors:`;
+                for(let i=0; i<result.messages.length; i++) {
+                    let m = result.messages[i];
+                    res += `\n${i+1}) ` + m.message;
+                    let fl = m.firstLine ? m.firstLine : 1;
+                    res += "\n" + `From line ${fl}, column ${m.firstColumn}; to line ${m.lastLine}, column ${m.lastColumn}`
+                }
+                return res;
+            }
+            return name+ ' document is valid according to the specified schema';
+        } catch(e) {
+            this.log(e);
+        }
+    }
+    async ampValidate(content, name) {
+        name = name ? name : 'This';
+        try {
+            let validator = await amphtmlValidator.getInstance();
+            var result = validator.validateString(content);
+            if(result.status  === 'PASS') {
+                return 'PASS';
+            } else {
+                let res =  `${name} document has ${result.errors.length} amp validation errors:`;
+                for(let i=0; i<result.errors.length; i++) {
+                    let m = result.errors[i];
+                    res += `\n${i+1}) ` + m.severity;
+                    res += "\n" + m.message;
+                    res += "\n" + `Line ${m.line}, column ${m.col}, code: ${m.code}, specUrl ${m.specUrl};`;
+                }
+                return res;
+            }
+        } catch(e) {
+            this.log(e);
+        }
+    }
+    async distValidate(ph) {
+        let pathDist = path.join(this.dist, ph);
+        if(!await fsp.exists(pathDist)) {
+            if(await fsp.exists(pathDist + '.html')) {
+                pathDist = pathDist + '.html';
+            } else {
+                throw new Error(`${pathDist} not exist`);
+            }
+        }
+        let content = await fsp.readFile(pathDist, 'UTF-8');
+        return this.validate(content, path.basename(pathDist));
+    }
+    async distAmpValidate(ph) {
+        let pathDist = path.join(this.dist, ph);
+        if(!await fsp.exists(pathDist)) {
+            if(await fsp.exists(pathDist + '.html')) {
+                pathDist = pathDist + '.html';
+            } else {
+                throw new Error(`${pathDist} not exist`);
+            }
+        }
+        let content = await fsp.readFile(pathDist, 'UTF-8');
+        return this.ampValidate(content, path.basename(pathDist));
+    }
+    async removePage(name) {
+        if(path.extname(name) != '') {
+            name = path.basename(name, path.extname(name));
+        }
+        let rootPath =  path.join(this.root, name + '.html');
+        if(!await fsp.exists(rootPath)) {
+           throw new Error(`${name} page not exist!`);
+        }
+        return fse.remove(rootPath);
+    }
+    async createPage(args) {
+        let name = args.name;
+        let template = path.join(__dirname, 'page.hbs');
+        template = await fsp.readFile(template, 'UTF-8');
+        if(path.extname(name) != '') {
+            name = path.basename(name, path.extname(name));
+        }
+        let rootPath = path.join(this.root, name + '.html');
+        if(await fsp.exists(rootPath)) {
+           throw new Error(`${name} page already exist!`);
+        }
+        return fse.outputFile(rootPath, Handlebars.compile(template)(args));
     }
     async _render(events) {
         let config = this.config;
@@ -484,9 +666,42 @@ class htmlPlugin extends plugin {
                 } catch(e) {
                     this.log(`An error occurred while rendering the ${attrs.path} page. Origin: ${e.message}`, 'error');
                 }
-                let distPath = path.join(this.dist, attrs.path);
+                let distPath = this.dist;
+                if(this.release) {
+                    distPath = path.join(this.dist, 'releases', this.release.name + '.' + this.release.version);
+                    if(config.release_validation) {
+                        if(attrs.amp) {
+                            let resultValidation = await this.ampValidate(output, attrs.path);
+                            await fse.outputFile(path.join(distPath, path.basename(attrs.path, path.extname(attrs.path)) + '.amp.validation.result.txt'), resultValidation);
+                        } else {
+                            let resultValidation = await this.validate(output, attrs.path);
+                            await fse.outputFile(path.join(distPath, path.basename(attrs.path, path.extname(attrs.path)) + '.w3.validation.result.txt'), resultValidation);
+                        }
+                    }
+                    let templatesModels = this.collection.filter(m => m.has('page_ids') && m.get('page_ids').indexOf(model.id) != -1 && m.get('type') == 'template');
+                    if(templatesModels.length) {
+                        for(let template of templatesModels) {
+                            let output = template.get('body');
+                            let templatePath = path.join(distPath, 'templates', template.get('path'));
+                            if(/^templates/.test(template.get('path'))) {
+                                templatePath = path.join(distPath, template.get('path'));
+                            }
+                            await fse.outputFile(templatePath, output);
+                        }
+                    }
+                } else {
+                    if(config.dev_validation) {
+                        if(attrs.amp) {
+                            await this.ampValidate(output, attrs.path);
+                        } else {
+                            await this.validate(output, attrs.path);
+                        }
+                    }
+                }
+                distPath = path.join(distPath, attrs.path);
                 await fse.outputFile(distPath, output);
                 this.log(`${attrs.path} page successfully compiled to ${distPath}`);
+                this.emit('one_ready', attrs);
             }
         }
 
@@ -534,14 +749,57 @@ class htmlPlugin extends plugin {
             models
         });
     }
-    async begin() {
+    async begin(options) {
+        if(options.icons) {
+            this.iconsStorage = options.icons;
+        }
         await this.renderMaster.run();
         let scssPlugin = this.project.plugins.get('scss');
         scssPlugin.on('exports', (event, model) => {
-            let storage = this.sassOptions.storage;
+            let storage = this.sassUsed.storage;
             let expOptions = _.filter(storage, e => e.eid == model.get('id'));
             if(expOptions.length) {
                 let models = this.collection.filter(model => _.find(expOptions, e => e.page_id == model.id));
+                if(models.length) {
+                    let pages = models.map(model=>model.toJSON());
+                    this.renderMaster.add({
+                        description: `assembly pages: ${_.pluck(pages, 'path').join(', ')}`,
+                        models: models
+                    });
+                }
+            }
+        });
+        this.project.on('icons', e => {
+            if(this.iconsStorage.mode && this.iconsStorage.mode != e.mode) {
+                let ids = _.map(e.data.icons, i => i.id);
+                let used = _.filter(this.iconsUsed.storage, i => ids.indexOf(i.icon_id) != -1);
+                if(used.length) {
+                    let page_ids = _.eniq(_.map(used, i => i.page_id));
+                    let models = this.collection.filter(m => page_ids.indexOf(m.id) != -1);
+                    if(models.length) {
+                        let pages = models.map(model=>model.toJSON());
+                        this.renderMaster.add({
+                            description: `assembly pages: ${_.pluck(pages, 'path').join(', ')}`,
+                            models: models
+                        });
+                    }
+                }
+            }
+            this.iconsStorage = e;
+
+            let noRendered = _.filter(this.iconsUsed.storage, i => !i.rendered);
+            let pagesToRender = _.map(noRendered, i => i.page_id);
+            let icons = e.data.icons;
+            let iconsIds = _.map(e.data.icons, i => i.icon_id);
+
+            _.each(this.iconsUsed.storage, icon => {
+                if(iconsIds.indexOf(icon.icon_id) == -1 && pagesToRender.indexOf(icon.page_id) == -1) {
+                    pagesToRender.push(icon.page_id);
+                }
+            });
+
+            if(pagesToRender.length) {
+                let models = this.collection.filter(m => pagesToRender.indexOf(m.id) != -1);
                 if(models.length) {
                     let pages = models.map(model=>model.toJSON());
                     this.renderMaster.add({

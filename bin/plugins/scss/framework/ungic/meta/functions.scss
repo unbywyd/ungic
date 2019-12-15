@@ -8,7 +8,6 @@
 @use "ungic.project.config" as config;
 
 @function export($cid, $oid, $data) {
-    @debug type-of($oid);
     @if(type-of($oid) != 'string' and type-of($oid) != 'number') {
         @warn "oid should be a string or a number";
         @return null;

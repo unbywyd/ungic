@@ -64,6 +64,14 @@ module.exports = {
         type: 'boolean',
         default: true
     },
+    dev_validation: {
+        type: 'boolean',
+        default: false
+    },
+    release_validation: {
+        type: 'boolean',
+        default: true
+    },
     delete_from_dist: {
         type: 'boolean',
         default: false

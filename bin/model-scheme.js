@@ -20,14 +20,9 @@ module.exports = {
             html: {
                 type: 'object'
             },
-            svg: {
+            icons: {
                 type: 'object'
             }
-        },
-        default: {
-            scss: {},
-            html: {},
-            svg: {}
         }
     },
     version: {
@@ -85,7 +80,7 @@ module.exports = {
                     html: {
                         type: 'string'
                     },
-                    svg: {
+                    icons: {
                         type: 'string'
                     }
                 }
@@ -105,7 +100,7 @@ module.exports = {
             "source": {
                 "scss": "scss",
                 "html": "html",
-                "svg": "svg"
+                "icons": "icons"
             }
         }
     }
