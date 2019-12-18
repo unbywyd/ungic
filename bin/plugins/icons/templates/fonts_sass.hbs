@@ -1,0 +1,96 @@
+@use "sass:map";
+$icons: (
+    {{#each icons}}{{id}}:(
+        unicode: {{unicode}},
+        name: "{{name}}",
+        {{#if title}} title: "{{title}}", {{/if}}
+    ),{{/each}}
+);
+
+@function char($character-code) {
+    @if function-exists("selector-append") {
+        @return unquote("\"\\#{$character-code}\"");
+    }
+
+    @if "\\#{'x'}"=="\\x" {
+        @return str-slice("\x", 1, 1)+$character-code;
+    }
+
+    @else {
+        @return #{"\"\\"}#{$character-code + "\""};
+    }
+}
+
+%core-icon {
+    font-family: {{config.font.name}} !important;
+    speak: none;
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    text-decoration: none;
+    display: inline-flex;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    &::selection {
+        background-color: transparent;
+    }
+}
+
+@function icon-exists($icon-name) {
+    @if(not map.has-key($icons, $icon-name)) {
+        @return false;
+    }
+    @return true;
+}
+
+@function get-icon($icon-name) {
+    $result: null;
+    @if(map.has-key($icons, $icon-name)) {
+        $icon: map.get($icons, $icon-name);
+        $result:char(map.get($icon, unicode));
+        $save: ungic-save-font-icon($cid, $icon-name);
+    } @else {
+        @warn '#{$icon-name} icon not exist';
+    }
+    @return $result;
+}
+
+@mixin icon($icon-name, $before: true) {
+    $unicode: get-icon($icon-name);
+    @if($unicode != null) {
+        @if($before) {
+            @extend %core-icon;
+            &:before {
+                content: $unicode;
+            }
+        } @else {
+            @extend %core-icon;
+            content: $unicode;
+        }
+    }
+}
+
+@mixin render {
+    @font-face {
+        font-family: {{config.font.name}};
+        src: url('{{fonts_path}}{{config.font.name}}.eot'); /* IE9 Compat Modes */
+        src: url('{{fonts_path}}{{config.font.name}}.eot?#iefix') format('embedded-opentype'){{#each config.font.supports}}, url('{{../fonts_path}}{{../config.font.name}}.{{type}}') format('{{format}}'){{/each}};
+        font-weight: normal;
+        font-style: normal;
+    }
+
+    @if(length(map.keys($icons))) {
+        .{{config.font.class}} {
+            @extend %core-icon;
+        }
+
+        @each $icon-name, $icon in $icons {
+            .{{config.font.class}}-#{$icon-name} {
+                &:before {
+                    content: char(map.get($icon, unicode));
+                }
+            }
+        }
+    }
+}

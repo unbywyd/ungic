@@ -3,21 +3,90 @@ module.exports = {
         type: 'number',
         default: 61696
     },
-    font_name: {
-        type: 'string',
-        default: 'ungic'
+    sprites: {
+        type: 'object',
+        default: {
+            className: 'sprite'
+        },
+        properties: {
+            className: {
+                type: 'string'
+            }
+        }
     },
-    class_name: {
-        type: 'string',
-        default: 'icon'
+    svg_sprite: {
+        type: 'object',
+        default: {
+            width: '2em',
+            height: '2em',
+            external: false,
+            enabled: true,
+            className: 'svg-icon'
+        },
+        properties: {
+            className: {
+                type: 'string'
+            },
+            enabled: {
+                type: 'boolean'
+            },
+            external: {
+                type: 'boolean'
+            },
+            width: {
+                "oneOf": [
+                    { type: "string" },
+                    { type: "number" }
+                ]
+            },
+            height: {
+                "oneOf": [
+                    { type: "string" },
+                    { type: "number" }
+                ]
+            }
+        }
     },
-    dev_mode: {
-        type: 'string',
-        default: 'fonts',
-        enum: ['svg_sprite', 'fonts', 'img_sprite']
+    fonts_to_sprite: {
+        type: 'boolean',
+        default: false
     },
-    icons_width: {
-        type: 'number',
-        default: 512
+    fonts: {
+        type: 'object',
+        default: {
+            name: 'ungic',
+            fixedWidth: false,
+            fontHeight: 512,
+            centerHorizontally: true,
+            normalize: true,
+            enabled: true,
+            className: 'icon'
+        },
+        properties: {
+            className: {
+                type: 'string'
+            },
+            enabled: {
+                type: 'boolean'
+            },
+            name: {
+                type: 'string'
+            },
+            fixedWidth: {
+                type: 'boolean'
+            },
+            fontHeight: {
+                type: 'number'
+            },
+            fontWeight: {
+                type: 'number'
+            },
+            centerHorizontally: {
+                type: 'boolean'
+            },
+            normalize: {
+                type: 'boolean'
+            }
+        }
     }
 }

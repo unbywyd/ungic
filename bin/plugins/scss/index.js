@@ -21,6 +21,7 @@ const postcss = require('postcss');
 const clean = require('postcss-clean');
 const rtl = require('postcss-rtl');
 const autoprefixer = require('autoprefixer');
+const Storage = require('../../modules/storage');
 
 class builder extends skeleton {
     constructor(scheme, config={}) {
@@ -49,7 +50,7 @@ class scssPlugin extends plugin {
             this.fileChanged(events);
         });
         this.depends = {};
-
+        this.iconsSaveStorage = new Storage;
         let model = Model({
             oid: {
                 type: 'string',
@@ -101,13 +102,38 @@ class scssPlugin extends plugin {
                         file: path.join(this[to.root], to.path)
                     });
                 } else {
+                    if(/^ungic\.font-icons/.test(url)) {
+                        if(this.iconsStorage.type == 'fonts') {
+                            let cid = 'stdin';
+                            if(prev != 'stdin') {
+                                cid = this.cidByPath(prev);
+                            }
+                            return done({
+                                contents: `$cid:${cid}; ` + this.iconsStorage.data.sass
+                            });
+
+                        } else {
+                            this.error('To include font-icons sass module, a icon plugin should be switched to "fonts" mode');
+                        }
+                        return done({
+                            contents: ''
+                        });
+                    }
                     if(/^ungic\.components/.test(url)) {
                         let parsed = url.split('.');
+                        if(parsed.length == 2) {
+                            return done({
+                                contents: '$cids: () !default;'
+                            });
+                        }
                         let cid = parsed[2];
                         this.regComponentRouter(cid, prev);
                         if(parsed.length == 3) {
                             if(!await fsp.exists(path.join(this.components, cid))) {
-                                return this.error(`${cid} component does not exist`, {exit:true});
+                                this.error(`${cid} component does not exist`);
+                                return done({
+                                    contents: ''
+                                });
                             }
                             return done({
                                 file: path.join(this.components, cid)
@@ -126,7 +152,14 @@ class scssPlugin extends plugin {
                                     file: path.join(this.components, cid, route)
                                 });
                             } else {
-                                return this.error(`${route} handler not found for routing component`, {exit:true});
+                                if(route == 'render') {
+                                    this.warning(`${cid} component has no method for rendering`);
+                                } else {
+                                    this.error(`${route} handler not found for routing component`);
+                                }
+                                return done({
+                                    contents: ''
+                                });
                             }
                         }
                     } else if(/^ungic\.themes/.test(url)) {
@@ -137,6 +170,9 @@ class scssPlugin extends plugin {
                         });
                     } else {
                         this.error(`${url} route not exists`);
+                        return done({
+                            contents: ''
+                        });
                     }
                 }
             } else {
@@ -158,6 +194,13 @@ class scssPlugin extends plugin {
                 } catch {
                     this.log(`${oid} exported option of ${cid} component has invalid json format.`);
                 }
+                return sass.types.Boolean.TRUE
+            },
+            "ungic-save-font-icon($cid, $icon_id)": (cid, icon_id) => {
+                this.iconsSaveStorage.set({
+                    cid: cid.getValue(),
+                    icon_id: icon_id.getValue()
+                });
                 return sass.types.Boolean.TRUE
             }
         });
@@ -247,6 +290,7 @@ class scssPlugin extends plugin {
         let config = this.config;
         let source = {components: await this.getComponents(), render: components, advanced_export: config.advanced_export};
 
+        this.iconsSaveStorage.clean(e => components.indexOf(e.cid) != -1);
         let toRemove = this.exports.filter(exp => ['project'].concat(components).indexOf(exp.get('cid')) != -1);
         this.exports.remove(toRemove, {silent: true});
         // dev
@@ -383,7 +427,11 @@ class scssPlugin extends plugin {
         let config = this.config;
         let prjConfig = this.project.config;
         for(let event of events) {
-            await this._renderComponents(event.components);
+            try {
+                await this._renderComponents(event.components);
+            } catch(e) {
+                console.log(e);
+            }
             this.log(`Styles for ${event.components.join(',')} components were successfully generated!`);
         }
     }
@@ -487,7 +535,10 @@ class scssPlugin extends plugin {
             }
         }
     }
-    async begin() {
+    async begin(options) {
+        if(options.icons && options.icons.fonts) {
+            this.iconsStorage = options.icons.fonts;
+        }
         await this.renderMaster.run();
         this.emit('begined', true);
     }

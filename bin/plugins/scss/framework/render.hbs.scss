@@ -6,7 +6,8 @@
 @use "ungic.themes.{{theme}}" as theme;
 
 $theme-options: meta.module-variables(theme);
-
+$cids: ({{#each components}}{{.}},{{/each}});
+@use "ungic.components" with ($cids: $cids);
 $inverse-mode: false;
 {{#if inverse}}
    $inverse-mode: true;

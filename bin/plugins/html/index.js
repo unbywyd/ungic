@@ -14,6 +14,7 @@ const Handlebars = require('handlebars');
 const {extend: Collection} = require('../../modules/collection');
 const {extend: Model} = require('../../modules/model');
 const renderMaster = require('../../modules/render-master');
+const Storage = require('../../modules/storage');
 const skeleton = require('../../modules/skeleton');
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
@@ -25,7 +26,6 @@ class typeHandlers extends skeleton {
     constructor(options={}) {
         super({},{}, options);
         this.handlers = new Map;
-        this.iconsStorage = {};
     }
     set(handlerID, handler) {
         if(!handlerID) {
@@ -43,31 +43,12 @@ class typeHandlers extends skeleton {
         return this.handlers.get(handlerID);
     }
 }
-class Storage { // sassUsedStorage
-    constructor() {
-        this.storage = [];
-    }
-    set(data) {
-        let prev = this.get(data);
-        if(prev) {
-            this.storage = _.without(this.storage, prev);
-        }
-        this.storage.push(data);
-    }
-    get(data) {
-        if(!data) {
-            return this.storage;
-        }
-        return _.findWhere(this.storage, data);
-    }
-    clean(rej) {
-        this.storage = _.reject(this.storage, m => rej(m));
-    }
-}
+
 class htmlPlugin extends plugin {
     constructor(config={}, sysconfig={}) {
         config.id = 'html';
         super(require('./model-scheme'), config, sysconfig);
+        this.iconsStorage = {};
         this.ungicParser = new(require('./utils/parser'));
         this.resources = new Map;
         this.typeHandlers = new typeHandlers;
@@ -113,6 +94,18 @@ class htmlPlugin extends plugin {
                     script.setAttribute('data-connect', this.project.fastify.address);
                     script.setAttribute('data-src', path.relative(this.dist, path.join(this.dist, attrs.path)).replace(/\\+/g, '/'));
                     dom.window.document.querySelector('body').appendChild(script);
+
+                    if(this.iconsStorage.fonts && this.iconsStorage.fonts.data.icons.length) {
+                        let linkicons = dom.window.document.createElement("link");
+                        linkicons.setAttribute('href', this.project.fastify.address + '/ungic/font-icons');
+                        linkicons.setAttribute('rel', 'stylesheet');
+                        dom.window.document.querySelector('head').appendChild(linkicons);
+                    }
+                }
+
+                if(this.iconsStorage.svg_sprite  && this.iconsStorage.svg_sprite.data.icons.length && !this.iconsStorage.svg_sprite.data.external) {
+                    let domSprite = new JSDOM(this.iconsStorage.svg_sprite.data.sprite);
+                    dom.window.document.querySelector('body').appendChild(domSprite.window.document.querySelector('svg'));
                 }
                 attrs.body = '<!DOCTYPE html>\n' + dom.window.document.documentElement.outerHTML;
                 if(dom.window.document.querySelector('html').hasAttribute('⚡')) {
@@ -146,8 +139,8 @@ class htmlPlugin extends plugin {
         });
         this.collection.on('all', (event, model) => {
             if(event == 'updated' || event == 'added' || event == 'removed') {
-                this.sassUsed.clean((m) => m.page_id == model.id);
-                this.iconsUsed.clean((m) => m.page_id == model.id);
+                this.sassUsed.clean(m => m.page_id == model.id);
+                this.iconsUsed.clean(m => m.page_id == model.id);
                 if(event == 'removed') {
                     if(model.get('type') == 'page') {
                         if(config.delete_from_dist) {
@@ -272,34 +265,31 @@ class htmlPlugin extends plugin {
             let rootData = context.data.root.ungic;
             let options = context.hash ? context.hash: {};
             let config = this.config;
-            let mode = this.iconsStorage.mode;
-            if(!mode) {
-                this.error('The icon plugin has not been begined!')
+            let type = options.type;
+            if(!type) {
+                this.error('<type> argument is required');
                 return '';
             }
-            let icon = _.find(this.iconsStorage.data.icons, {id});
+            if(!this.iconsStorage[type]) {
+                this.error(`Icon plugin does not generate ${type} type of icon`);
+                return '';
+            }
+            if(!this.iconsStorage[type].data.icons.length) {
+                this.error('The icons plugin did not generate any icons');
+                return '';
+            }
+
+            let icon = _.find(this.iconsStorage[type].data.icons, {id});
             if(!icon) {
                 this.warning(`${id} icon not exists`);
-                this.iconsUsed.set({icon_id: id, page_id: rootData.page.id, mode, rendered: false});
+                this.iconsUsed.set({icon_id: id, page_id: rootData.page.id, type, rendered: false});
                 return '';
             }
-            if(mode == 'fonts') {
-                let fontConfig = this.iconsStorage.data.config;
-
-                let title = icon.title;
-                if(options.label) {
-                    title = options.label;
-                }
-                let label = title ? `<span class="${fontConfig.font.class}-icon-label">${title}<span>` : '';
-                if(options.ignore_label) {
-                   label = '';
-                }
-                this.iconsUsed.set({icon_id: id, page_id: rootData.page.id, mode, rendered: true});
-                if(options.href) {
-                    return `<a href="${options.href}"><i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${icon.id}"></i>${label}</a>`;
-                } else {
-                    return `<i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${icon.id}"></i>${label}`;
-                }
+            let iconsPlugin = this.project.plugins.get('icons');
+            let iconRendered = iconsPlugin.getIconForRender(icon.id, options);
+            if(iconRendered) {
+                this.iconsUsed.set({icon_id: id, page_id: rootData.page.id, type, rendered: true});
+                return iconRendered;
             }
             return '';
         });
@@ -321,23 +311,34 @@ class htmlPlugin extends plugin {
                 cwd = path.join(this.root, options.cwd);
             }
             if(options.data) {
-                let dataPath = path.join(cwd, options.data);
-                if(!fs.existsSync(dataPath)) {
-                    this.log(`Data file by path ${dataPath} not exists. Error building ${rootData.ungic.page.path} page in ${activeModel.get('path')} entity`, 'error');
+                if(options.data == 'icons') {
+                    let iconsData = {};
+                    if(this.iconsStorage.fonts) {
+                        iconsData.fonts = _.map(this.iconsStorage.fonts.data.icons, i => _.omit(i, 'svg'));
+                    }
+                    if(this.iconsStorage.svg_sprite) {
+                        iconsData.svg_sprite = _.map(this.iconsStorage.svg_sprite.data.icons, i => _.omit(i, 'svg'));
+                    }
+                    source.icons = iconsData;
                 } else {
-                    let model = this.collection.findWhere({path: path.relative(this.root, dataPath)}, false);
-                    if(model) {
-                        if(_.keys(rootData).length == 1 || (options.extend === 'true' || options.extend === true)) {
-                            source = _.extend(rootData, model.get('body'));
-                        } else {
-                            source = _.extend(source, model.get('body'));
+                    let dataPath = path.join(cwd, options.data);
+                    if(!fs.existsSync(dataPath)) {
+                        this.log(`Data file by path ${dataPath} not exists. Error building ${rootData.ungic.page.path} page in ${activeModel.get('path')} entity`, 'error');
+                    } else {
+                        let model = this.collection.findWhere({path: path.relative(this.root, dataPath)}, false);
+                        if(model) {
+                            if(_.keys(rootData).length == 1 || (options.extend === 'true' || options.extend === true)) {
+                                source = _.extend(rootData, model.get('body'));
+                            } else {
+                                source = _.extend(source, model.get('body'));
+                            }
+                            let page_ids = [];
+                            if(model.has('page_ids')) {
+                                page_ids = model.get('page_ids');
+                            }
+                            page_ids.push(rootData.ungic.page.id);
+                            model.set('page_ids', page_ids, {silent: true});
                         }
-                        let page_ids = [];
-                        if(model.has('page_ids')) {
-                            page_ids = model.get('page_ids');
-                        }
-                        page_ids.push(rootData.ungic.page.id);
-                        model.set('page_ids', page_ids, {silent: true});
                     }
                 }
             }
@@ -398,8 +399,9 @@ class htmlPlugin extends plugin {
                             return data;
                         }
                         let sass_options = options.sass.replace(/\s/g, '').split(',');
-                        if(scssPlugin && scssPlugin.exports.size) {
+                        if(scssPlugin && scssPlugin.exports.size()) {
                             for(let o of sass_options) {
+
                                 let res = exportSearch(o);
                                 if(res.length) {
                                     for(let r of res) {
@@ -664,6 +666,7 @@ class htmlPlugin extends plugin {
                         output = pretty(output);
                     }
                 } catch(e) {
+                    console.log(e);
                     this.log(`An error occurred while rendering the ${attrs.path} page. Origin: ${e.message}`, 'error');
                 }
                 let distPath = this.dist;
@@ -730,6 +733,12 @@ class htmlPlugin extends plugin {
         }
     }
     async initialize() {
+
+    }
+    async begin(options) {
+        if(options.icons) {
+            this.iconsStorage = options.icons;
+        }
         let config = this.config;
         let types = _.keys(config.supported_types).join('|');
         let files = await fg('**/*.('+types+')', {dot: false, cwd: this.root, deep: 10});
@@ -748,11 +757,6 @@ class htmlPlugin extends plugin {
             description: `assembly pages: ${_.pluck(pages, 'path').join(', ')}`,
             models
         });
-    }
-    async begin(options) {
-        if(options.icons) {
-            this.iconsStorage = options.icons;
-        }
         await this.renderMaster.run();
         let scssPlugin = this.project.plugins.get('scss');
         scssPlugin.on('exports', (event, model) => {
@@ -770,36 +774,12 @@ class htmlPlugin extends plugin {
             }
         });
         this.project.on('icons', e => {
-            if(this.iconsStorage.mode && this.iconsStorage.mode != e.mode) {
-                let ids = _.map(e.data.icons, i => i.id);
-                let used = _.filter(this.iconsUsed.storage, i => ids.indexOf(i.icon_id) != -1);
-                if(used.length) {
-                    let page_ids = _.eniq(_.map(used, i => i.page_id));
-                    let models = this.collection.filter(m => page_ids.indexOf(m.id) != -1);
-                    if(models.length) {
-                        let pages = models.map(model=>model.toJSON());
-                        this.renderMaster.add({
-                            description: `assembly pages: ${_.pluck(pages, 'path').join(', ')}`,
-                            models: models
-                        });
-                    }
-                }
-            }
-            this.iconsStorage = e;
-
-            let noRendered = _.filter(this.iconsUsed.storage, i => !i.rendered);
-            let pagesToRender = _.map(noRendered, i => i.page_id);
-            let icons = e.data.icons;
-            let iconsIds = _.map(e.data.icons, i => i.icon_id);
-
-            _.each(this.iconsUsed.storage, icon => {
-                if(iconsIds.indexOf(icon.icon_id) == -1 && pagesToRender.indexOf(icon.page_id) == -1) {
-                    pagesToRender.push(icon.page_id);
-                }
-            });
-
-            if(pagesToRender.length) {
-                let models = this.collection.filter(m => pagesToRender.indexOf(m.id) != -1);
+            this.iconsStorage[e.type] = e;
+            let ids = _.map(e.data.icons, i => i.id);
+            let used = _.filter(this.iconsUsed.storage, i => ids.indexOf(i.icon_id) != -1);
+            if(used.length) {
+                let page_ids = _.uniq(_.map(used, i => i.page_id));
+                let models = this.collection.filter(m => page_ids.indexOf(m.id) != -1);
                 if(models.length) {
                     let pages = models.map(model=>model.toJSON());
                     this.renderMaster.add({

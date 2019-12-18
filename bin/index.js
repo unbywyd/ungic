@@ -109,6 +109,7 @@ class app extends skeleton {
         this.fastify = fastify({ logger: false, ignoreTrailingSlash: false});
         let io = ioSockets(this.fastify.server);
         this.fastify.decorate('io', io);
+        this.fastify.decorate('app', this);
         this.fastify.register(require('fastify-static'), {
             root:  path.join(__dirname, 'client'),
             prefix: '/ungic/',
@@ -135,13 +136,13 @@ class app extends skeleton {
           },
           exposeRoute: true
         });
-        await require('./api')(this.fastify);
+        await require('./api')(this.fastify, this);
 
         this.fastify.get('/ungic', async (request, reply) => {
             return { hello: 'world' }
         });
         this.fastify.use((req, res, next) => {
-            if(!/^\/ungic/.test(req.originalUrl)) {
+            if(req.originalUrl != 'ungic' && !/^\/ungic\//.test(req.originalUrl)) {
                 return handler(req, res, {
                     public: path.join(appPaths.root, config.fs.dirs.dist),
                     headers: [{
@@ -206,7 +207,11 @@ class app extends skeleton {
             io.emit('change', event, this.fastify.address + '/' + path.relative(this.project.dist, ph).replace(/\\+/g, '/'), relative);
         });
 
-        await this.project.begin({fastify: this.fastify});
+        try {
+            await this.project.begin({fastify: this.fastify});
+        } catch(e) {
+            console.log(e);
+        }
         if(config.openInBrowser) {
             await open(address);
         }
