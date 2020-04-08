@@ -82,15 +82,6 @@ module.exports = {
                     },
                     icons: {
                         type: 'string'
-                    },
-                    sprites: {
-                        type: 'string'
-                    },
-                    svg_fonts: {
-                        type: 'string'
-                    },
-                    svg_sprites: {
-                        type: 'string'
                     }
                 }
             }
@@ -109,10 +100,7 @@ module.exports = {
             "source": {
                 "scss": "scss",
                 "html": "html",
-                "icons": "icons",
-                "sprites": "sprites",
-                "svg_fonts": "svg-fonts",
-                "svg_sprites": "svg-sprites"
+                "icons": "icons"
             }
         }
     }

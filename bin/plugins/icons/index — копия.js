@@ -73,6 +73,11 @@ class iconsPlugin extends plugin {
             title: {
                 type: 'string'
             },
+            type: {
+                type: 'string',
+                enum: ['svg', 'font', 'sprite'],
+                required: true
+            },
             path: {
                 type: 'string',
                 required: true,
@@ -91,14 +96,15 @@ class iconsPlugin extends plugin {
         this.collection = new collection();
         this.collection.on('all', (event, model) => {
             if(event == 'updated' || event == 'added' || event == 'removed') {
-                if(!model.has('svg') && config.sprites.enabled) {
+                let type = model.get('type');
+                if(type == 'font' && !config.fonts_to_sprite && config.fonts.enabled) {
+                    this.allFontsToRender();
+                }
+                if(config.svg_sprites.enabled && ((type == 'svg') || (type == 'font' && config.fonts_to_sprite))) {
+                    this.allSVGToRender();
+                }
+                if(type == 'sprite' && config.sprites.enabled) {
                     this.allSpritesToRender();
-                } else if(model.has('svg')) {
-                    if(config.icons_mode == 'fonts') {
-                        this.allFontsToRender();
-                    } else {
-                        this.allSVGToRender();
-                    }
                 }
             }
         });
@@ -143,28 +149,47 @@ class iconsPlugin extends plugin {
             }
         }
         let config = this.config;
-        let svg, sprites;
+        let types = [];
         for(let p of paths) {
-            if(path.extname(p) == '.svg') {
-                svg = true;
-            } else {
-                sprites = true;
+            //let dirName = p.split(path.sep)[0];
+            let type = this.getTypeByPath(p);
+            if(types.indexOf(type) == -1) {
+                types.push(type);
             }
-            if(svg && sprites){
-                break;
-            }
-        }
-        if(sprites) {
-            this.allSpritesToRender();
         }
 
-        if(svg) {
-            if(config.icons_mode == 'fonts') {
-                this.allFontsToRender();
+        if(types.indexOf('font') != -1) {
+            this.allFontsToRender();
+        }
+        if(types.indexOf('svg') != -1) {
+            this.allSVGToRender();
+        }
+        if(types.indexOf('sprite') != -1) {
+            this.allSpritesToRender();
+        }
+    }
+    getTypeByPath(ph) {
+        let dirName = path.normalize(ph).split(path.sep)[0];
+        let config = this.config, type;
+        if(dirName == config.fs.source.sprites) {
+            type = 'sprite';
+        }
+        if(dirName == config.fs.source.svg_fonts && !config.fonts_to_sprite) {
+            type = 'font'
+        }
+        if(dirName == config.fs.source.svg_sprites || dirName == config.fs.source.svg_fonts && config.fonts_to_sprite) {
+            type = 'svg'
+        }
+
+        if(type == 'sprite' && path.extname(ph) == '.svg') {
+            if(this.config.svg_sprites.enabled) {
+                this.warning(`.svg images are not supported for sprites. ${path.basename(ph)} will be added to svg sprites.`);
+                type = 'svg';
             } else {
-                this.allSVGToRender();
+                return this.error(`.svg images are not supported for sprites. ${path.basename(ph)} will be skipped.`);
             }
         }
+        return type;
     }
     async setEntityByPath(ph, options={}) {
         let supports = ['png', 'svg', 'jpeg', 'jpg'];
@@ -175,6 +200,10 @@ class iconsPlugin extends plugin {
         }
 
         let fullPath = path.join(this.root, ph);
+        let type = this.getTypeByPath(ph);
+        if(!type) {
+            return
+        }
         if(!await fsp.exists(fullPath)) {
             let model = this.collection.find(model=> {
                 return model.get('path') == path.normalize(ph);
@@ -186,19 +215,18 @@ class iconsPlugin extends plugin {
         }
 
         let entityData = {
+            type,
             name: path.basename(ph, path.extname(ph)).replace(/[_-]+/g, ' '),
-            className: path.basename(ph, path.extname(ph)).replace(/[^\w]+/g, '-'),
-            id: ph.replace(path.extname(ph), '').replace(/[^\w]+/g, '-'),
+            id: path.basename(ph, path.extname(ph)).replace(/[^\w]+/g, '-'),
             path: path.normalize(ph)
         }
-        //console.log(entityData);
-        if(extname == 'svg') {
+        if(path.extname(ph) == '.svg') {
             let svgSource = await fsp.readFile(fullPath, 'UTF-8');
             try {
                 svgSource = await this.svgo.optimize(svgSource);
                 let dom = new JSDOM(svgSource.data);
                 let svg = dom.window.document.querySelector('svg');
-                svg.setAttribute('id', entityData.className);
+                svg.setAttribute('id', entityData.id);
                 svg.removeAttribute('style');
                 let symbols = svg.querySelectorAll('symbol');
                 if(symbols.length) {
@@ -247,16 +275,16 @@ class iconsPlugin extends plugin {
         let className = config.svg_sprites.className;
         if(!options.presentation && title) {
             let titleTag = dom.window.document.createElement("title");
-            titleTag.setAttribute('id', className + '-' + model.get('className') + '-title');
+            titleTag.setAttribute('id', className + '-' + model.id + '-title');
             titleTag.innerHTML = title;
-            svg.setAttribute('aria-labelledby', className + '-' + model.get('className') + '-title');
+            svg.setAttribute('aria-labelledby', className + '-' + model.id + '-title');
             svg.appendChild(titleTag);
         } else {
             svg.setAttribute('aria-hidden', true);
         }
         let useTag = dom.window.document.createElement("use");
 
-        let url = '#' + className + '-' + model.get('className');
+        let url = '#' + className + '-' + model.id;
         if(config.svg_sprites.external) {
             url = 'ungic-sprite.svg' + url;
         }
@@ -294,9 +322,9 @@ class iconsPlugin extends plugin {
            label = '';
         }
         if(options.href) {
-            return `<a href="${options.href}"><i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${model.get('className')}"></i>${label}</a>`;
+            return `<a href="${options.href}"><i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${model.id}"></i>${label}</a>`;
         } else {
-            return `<i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${model.get('className')}"></i>${label}`;
+            return `<i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${model.id}"></i>${label}`;
         }
     }
     getHTMlSpriteIcon(id, options={}) {
@@ -315,9 +343,9 @@ class iconsPlugin extends plugin {
            label = '';
         }
         if(options.href) {
-            return `<a href="${options.href}"><i aria-hidden="true" class="${config.sprites.className}-${model.get('className')}"></i>${label}</a>`;
+            return `<a href="${options.href}"><i aria-hidden="true" class="${config.sprites.className}-${model.id}"></i>${label}</a>`;
         } else {
-            return `<i aria-hidden="true" class="${config.sprites.className}-${model.get('className')}"></i>${label}`;
+            return `<i aria-hidden="true" class="${config.sprites.className}-${model.id}"></i>${label}`;
         }
     }
     getSymbol(id, asHTML) {
@@ -416,7 +444,6 @@ class iconsPlugin extends plugin {
             path: spritesPath ? spritesPath : path.relative(path.join(this.dist, config.fs.dist.css), dist).replace(/\\+/g, '/')
         }
         template = await fsp.readFile(template, 'UTF-8');
-        //console.log(source);
         let content = hbs.compile(template)(source);
         return content;
     }
@@ -542,33 +569,45 @@ class iconsPlugin extends plugin {
     }
     allFontsToRender() {
         let config = this.config;
-        let models = this.collection.filter(m=>m.has('svg'));
-        if(models.length) {
-            let icons = models.map(model=>model.toJSON());
-            this.renderMaster.add({
-                description: `font icons: ${_.pluck(icons, 'id').join(', ')} to render`,
-                models,
-                type: 'fonts'
-            });
+        if(config.fonts.enabled && !config.fonts_to_sprite) {
+            let models = this.collection.filter(m=>m.get('type') == 'font');
+            if(models.length) {
+                let icons = models.map(model=>model.toJSON());
+                this.renderMaster.add({
+                    description: `font icons: ${_.pluck(icons, 'id').join(', ')} to render`,
+                    models,
+                    type: 'fonts'
+                });
+            }
         }
     }
     allSVGToRender() {
         let config = this.config;
-        let models = this.collection.filter(m=>m.has('svg'));
-        if(models.length) {
-            let icons = models.map(model=>model.toJSON());
-            this.renderMaster.add({
-                description: `svg icons: ${_.pluck(icons, 'id').join(', ')} to render`,
-                models,
-                type: 'svg_sprite'
-            });
+        if(config.svg_sprites.enabled || config.fonts_to_sprite) {
+            let models = [];
+
+            if(config.fonts_to_sprite && config.svg_sprites.enabled) {
+                models = this.collection.filter(m=> ['font', 'svg'].indexOf(m.get('type')) != -1);
+            } else if(config.svg_sprites.enabled) {
+                models = this.collection.filter(m=>m.get('type') == 'svg');
+            } else {
+                models = this.collection.filter(m=>m.get('type') == 'font');
+            }
+            if(models.length) {
+                let icons = models.map(model=>model.toJSON());
+                this.renderMaster.add({
+                    description: `svg icons: ${_.pluck(icons, 'id').join(', ')} to render`,
+                    models,
+                    type: 'svg_sprite'
+                });
+            }
         }
     }
     allSpritesToRender() {
         let config = this.config;
         if(config.sprites.enabled) {
             let models = [];
-            models = this.collection.filter(m=> !m.has('svg'));
+            models = this.collection.filter(m=>m.get('type') == 'sprite');
             if(models.length) {
                 let icons = models.map(model=>model.toJSON());
                 this.renderMaster.add({
@@ -587,13 +626,9 @@ class iconsPlugin extends plugin {
             }
         }
         let config = this.config;
-
         try {
-            if(config.icons_mode == 'fonts') {
-                this.allFontsToRender();
-            } else {
-                this.allSVGToRender();
-            }
+            this.allFontsToRender();
+            this.allSVGToRender();
             this.allSpritesToRender();
         } catch(e) {
             console.log(e);
@@ -629,15 +664,13 @@ class iconsPlugin extends plugin {
             return
         }
         let config = this.config;
-        let svg =  model.has('svg');
-        if(!svg) {
+        let type =  model.get('type');
+        if(type == 'font' && !config.fonts_to_sprite) {
+            return this.getHTMlFontIcon(model, options);
+        } else if(type == 'svg' || config.fonts_to_sprite) {
+            return this.getHTMLSvgSprite(model, options);
+        } else if(type == 'sprite') {
             return this.getHTMlSpriteIcon(model, options);
-        } else {
-            if(config.icons_mode == 'fonts') {
-                return this.getHTMlFontIcon(model, options);
-            } else {
-                return this.getHTMLSvgSprite(model, options);
-            }
         }
     }
     async generateSprite(models) {
@@ -664,7 +697,6 @@ class iconsPlugin extends plugin {
                         let model = this.collection.find(model => path.join(path.sep, path.normalize(ph).split(this.root)[1]) == path.join(path.sep, path.normalize(model.get('path'))));
                         storage.push({
                             id: model.id,
-                            className: model.get('className'),
                             name: model.get('name'),
                             coordinates: coordinates[ph]
                         });
@@ -683,15 +715,13 @@ class iconsPlugin extends plugin {
                             dist_url: path.relative(path.join(this.dist, config.fs.dist.css), distPath).replace(/\\+/g, '/')
                         }
                     });
-                    this.log('Sprites successfully generated!');
+                    this.log('Svg sprite successfully generated!');
                 }
                 done();
             });
         });
+
         return res;
-    }
-    hasIcon(data) {
-        return this.collection.findWhere(data);
     }
     generateSvgSprite(models) {
         if(!models.length) {

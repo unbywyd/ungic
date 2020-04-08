@@ -41,8 +41,9 @@ function ungicReadline(callback, prefix='', closeCallback) {
                 this.done();
             });
         }).on('close', () => {
-            if(this.toClose) {
+            if(this._toClose || !this._toClose && !this.woExit) {
                 if(prefix == '') {
+                    console.log('exit');
                     process.exit(0);
                 } else if('function' == typeof closeCallback) {
                     closeCallback();
@@ -60,8 +61,13 @@ function ungicReadline(callback, prefix='', closeCallback) {
         this.rl.prompt();
     }
     this.close = () => {
-        this.toClose = true;
+        this._toClose = true;
         this.rl.close();
+    }
+    this.toClose = () => {
+        this.woExit = true;
+        this.rl.close();
+        this.woExit = false;
     }
     return this;
 }

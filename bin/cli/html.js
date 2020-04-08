@@ -1,11 +1,7 @@
 const inquirer = require('inquirer');
 const _ = require('underscore');
-let prompts = async function(questions) {
-    this.rl.rl.close();
-    let answers = await inquirer.prompt(questions);
-    this.rl.begin();
-    return answers;
-}
+const prompts = require('../modules/prompt.js');
+
 module.exports = function(yargs, done) {
    yargs
     .command('valid <path>', 'Check page from the dist directory using validator.w3.org', args => {
@@ -94,6 +90,10 @@ module.exports = function(yargs, done) {
             }
 
             let answers = await prompts.call(this, questions);
+            if(!answers) {
+                done('action canceled');
+                return
+            }
             answers.name = args.name;
             this.rl.rl.pause();
             try {
@@ -157,6 +157,10 @@ module.exports = function(yargs, done) {
                 let params = args;
                 if(questions.length) {
                     let answers = await prompts.call(this, questions);
+                    if(!answers) {
+                        done('action canceled');
+                        return
+                    }
                     params = _.extend(params, answers);
                 }
                 this.rl.rl.pause();

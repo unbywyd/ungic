@@ -1,0 +1,31 @@
+$icons: ({{#each icons}}{{className}}: (name: {{name}}, height: {{coordinates.height}}, width: {{coordinates.width}}, x: {{coordinate coordinates.x}}, y: {{coordinate coordinates.y}}),{{/each}});
+$url: "{{path}}";
+$className: "{{config.className}}";
+
+@mixin render {
+    .{{config.className}}-label {
+        border: 0;
+        clip: rect(1px, 1px, 1px, 1px);
+        clip-path: inset(50%);
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        padding: 0;
+        position: absolute;
+        width: 1px;
+        word-wrap: normal !important;
+    }
+    {{#each icons}}
+        .{{../config.className}} {
+            &-{{className}} {
+                width: {{coordinates.width}}px;
+                height: {{coordinates.height}}px;
+                display:inline-block;
+                vertical-align: middle;
+                text-decoration: none;
+                background-image:url("{{../path}}");
+                background-position: {{coordinate coordinates.x}} {{coordinate coordinates.y}};
+            }
+        }
+    {{/each}}
+}

@@ -1,6 +1,6 @@
 @use "sass:map";
 $icons: (
-    {{#each icons}}{{id}}:(
+    {{#each icons}}{{className}}:(
         unicode: {{unicode}},
         name: "{{name}}",
         {{#if title}} title: "{{title}}", {{/if}}
@@ -30,6 +30,9 @@ $icons: (
     text-transform: none;
     text-decoration: none;
     display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-size: {{config.font.size}};
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     &::selection {
@@ -69,6 +72,7 @@ $icons: (
             content: $unicode;
         }
     }
+    $save: ungic-save-font-icon($cid, $icon-name);
 }
 
 @mixin render {
@@ -79,12 +83,22 @@ $icons: (
         font-weight: normal;
         font-style: normal;
     }
-
-    @if(length(map.keys($icons))) {
-        .{{config.font.class}} {
-            @extend %core-icon;
+    .{{config.font.class}} {
+        @extend %core-icon;
+        &-label {
+            border: 0;
+            clip: rect(1px, 1px, 1px, 1px);
+            clip-path: inset(50%);
+            height: 1px;
+            margin: -1px;
+            overflow: hidden;
+            padding: 0;
+            position: absolute;
+            width: 1px;
+            word-wrap: normal !important;
         }
-
+    }
+    @if(length(map.keys($icons))) {
         @each $icon-name, $icon in $icons {
             .{{config.font.class}}-#{$icon-name} {
                 &:before {

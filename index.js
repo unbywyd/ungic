@@ -5,6 +5,7 @@ let ungic = require("./bin");
 let skeleton = require('./bin/modules/skeleton');
 let readline = require('./bin/modules/readline');
 const fg = require('fast-glob');
+let stdin = process.stdin;
 
 class App extends skeleton {
     constructor() {
@@ -71,9 +72,9 @@ class App extends skeleton {
 
         this.app = new ungic(config);
         if(config.log) {
-            console.log(colors.cyan('Log output to console enabled. You can disable this option using the "log 0" command.'));
+            console.log(colors.cyan('Log output to console enabled. You can disable this option using the "--log false" command.'));
         } else {
-            console.log(colors.cyan('Log output to console disabled. You can enable this option using the "log 1" command.'));
+            console.log(colors.cyan('Log output to console disabled. You can enable this option using the "--log true" command.'));
         }
         this.app.on('log', (type, message, args={}) => {
             if(!config.log && type != 'error') {
@@ -143,7 +144,7 @@ class App extends skeleton {
                         let name = path.basename(handler, path.extname(handler));
                         yargs
                             .command(name, `switch to ${name} menu`, {}, () => {
-                                this.rl.close();
+                                this.toClose();
                                 self.rl = new readline(function(yargs, done) {
                                     let handlerFunc = require(handler);
                                     handlerFunc.call(self, yargs, (message, type)=>{

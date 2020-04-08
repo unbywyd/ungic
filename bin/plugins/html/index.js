@@ -261,34 +261,52 @@ class htmlPlugin extends plugin {
                 return '/' + path.relative(this.dist, pathToSRC).replace(/\\+/g, '/');
             }
         });
+        /*Handlebars.registerHelper("sprite", (id, context) => {
+            let rootData = context.data.root.ungic;
+            let options = context.hash ? context.hash: {};
+            let config = this.config;
+            if(!this.iconsStorage.sprite) {
+                this.error(`Icon plugin does not generate sprites`);
+                return '';
+            }
+            if(!this.iconsStorage.sprite.data.icons.length) {
+                this.error('The icons plugin did not generate any sprites');
+                return '';
+            }
+
+            let icon = _.find(this.iconsStorage.sprite.data.icons, {id});
+            if(!icon) {
+                this.warning(`${id} icon not exists`);
+                this.iconsUsed.set({icon_id: id, page_id: rootData.page.id, 'sprite', rendered: false});
+                return '';
+            }
+            let iconsPlugin = this.project.plugins.get('icons');
+
+            let iconRendered = iconsPlugin.getIconForRender(icon.id, options);
+            if(iconRendered) {
+                this.iconsUsed.set({icon_id: id, page_id: rootData.page.id, 'sprite', rendered: true});
+                return iconRendered;
+            }
+            return '';
+        });*/
         Handlebars.registerHelper("icon", (id, context) => {
             let rootData = context.data.root.ungic;
             let options = context.hash ? context.hash: {};
             let config = this.config;
-            let type = options.type;
-            if(!type) {
-                this.error('<type> argument is required');
-                return '';
+            if(!_.keys(this.iconsStorage).length) {
+               this.error(`Icon plugin did not generate any icons`);
             }
-            if(!this.iconsStorage[type]) {
-                this.error(`Icon plugin does not generate ${type} type of icon`);
-                return '';
-            }
-            if(!this.iconsStorage[type].data.icons.length) {
-                this.error('The icons plugin did not generate any icons');
+            let iconsPlugin = this.project.plugins.get('icons');
+
+            if(!iconsPlugin.hasIcon({id})) {
+                this.error(id + ' icon does not exist or it was not generated');
+                this.iconsUsed.set({icon_id: id, page_id: rootData.page.id, rendered: false});
                 return '';
             }
 
-            let icon = _.find(this.iconsStorage[type].data.icons, {id});
-            if(!icon) {
-                this.warning(`${id} icon not exists`);
-                this.iconsUsed.set({icon_id: id, page_id: rootData.page.id, type, rendered: false});
-                return '';
-            }
-            let iconsPlugin = this.project.plugins.get('icons');
-            let iconRendered = iconsPlugin.getIconForRender(icon.id, options);
+            let iconRendered = iconsPlugin.getIconForRender(id, options);
             if(iconRendered) {
-                this.iconsUsed.set({icon_id: id, page_id: rootData.page.id, type, rendered: true});
+                this.iconsUsed.set({icon_id: id, page_id: rootData.page.id, rendered: true});
                 return iconRendered;
             }
             return '';
@@ -317,7 +335,10 @@ class htmlPlugin extends plugin {
                         iconsData.fonts = _.map(this.iconsStorage.fonts.data.icons, i => _.omit(i, 'svg'));
                     }
                     if(this.iconsStorage.svg_sprite) {
-                        iconsData.svg_sprite = _.map(this.iconsStorage.svg_sprite.data.icons, i => _.omit(i, 'svg'));
+                        iconsData.svg_sprites = _.map(this.iconsStorage.svg_sprite.data.icons, i => _.omit(i, 'svg'));
+                    }
+                    if(this.iconsStorage.sprite) {
+                        iconsData.sprites = this.iconsStorage.sprite.data.icons;
                     }
                     source.icons = iconsData;
                 } else {
@@ -403,10 +424,13 @@ class htmlPlugin extends plugin {
                             for(let o of sass_options) {
 
                                 let res = exportSearch(o);
-                                if(res.length) {
+                                if(res) {
                                     for(let r of res) {
                                         sass[r.id] = r.data;
-                                        this.sassUsed.set(r.id, rootData.ungic.page.id);
+                                        this.sassUsed.set({
+                                            oid: r.id,
+                                            page_id: rootData.ungic.page.id
+                                        });
                                     }
                                 }
                             }
@@ -759,17 +783,20 @@ class htmlPlugin extends plugin {
         });
         await this.renderMaster.run();
         let scssPlugin = this.project.plugins.get('scss');
-        scssPlugin.on('exports', (event, model) => {
-            let storage = this.sassUsed.storage;
-            let expOptions = _.filter(storage, e => e.eid == model.get('id'));
-            if(expOptions.length) {
-                let models = this.collection.filter(model => _.find(expOptions, e => e.page_id == model.id));
-                if(models.length) {
-                    let pages = models.map(model=>model.toJSON());
-                    this.renderMaster.add({
-                        description: `assembly pages: ${_.pluck(pages, 'path').join(', ')}`,
-                        models: models
-                    });
+        scssPlugin.on('exports', (event, models) => {
+            if(Array.isArray(models)) {
+                let storage = this.sassUsed.storage;
+                let ids = _.map(models, m => m.model.id);
+                let expOptions = _.filter(storage, e => ids.indexOf(e.oid) != -1);
+                if(expOptions.length) {
+                    let models = this.collection.filter(model => _.find(expOptions, e => e.page_id == model.id));
+                    if(models.length) {
+                        let pages = models.map(model=>model.toJSON());
+                        this.renderMaster.add({
+                            description: `assembly pages: ${_.pluck(pages, 'path').join(', ')}`,
+                            models: models
+                        });
+                    }
                 }
             }
         });

@@ -3,25 +3,17 @@ module.exports = {
         type: 'number',
         default: 61696
     },
+    icons_mode: {
+        type: 'string',
+        enum: ["svg_sprites", "fonts"],
+        required: true,
+        default: 'svg_sprites'
+    },
     sprites: {
         type: 'object',
         default: {
-            className: 'sprite'
-        },
-        properties: {
-            className: {
-                type: 'string'
-            }
-        }
-    },
-    svg_sprite: {
-        type: 'object',
-        default: {
-            width: '2em',
-            height: '2em',
-            external: false,
-            enabled: true,
-            className: 'svg-icon'
+            className: 'sprite',
+            enabled: true
         },
         properties: {
             className: {
@@ -29,6 +21,20 @@ module.exports = {
             },
             enabled: {
                 type: 'boolean'
+            }
+        }
+    },
+    svg_sprites: {
+        type: 'object',
+        default: {
+            width: '2em',
+            height: '2em',
+            external: false,
+            className: 'svg-icon'
+        },
+        properties: {
+            className: {
+                type: 'string'
             },
             external: {
                 type: 'boolean'
@@ -47,10 +53,6 @@ module.exports = {
             }
         }
     },
-    fonts_to_sprite: {
-        type: 'boolean',
-        default: false
-    },
     fonts: {
         type: 'object',
         default: {
@@ -59,15 +61,12 @@ module.exports = {
             fontHeight: 512,
             centerHorizontally: true,
             normalize: true,
-            enabled: true,
-            className: 'icon'
+            className: 'icon',
+            fontSize: '2em'
         },
         properties: {
             className: {
                 type: 'string'
-            },
-            enabled: {
-                type: 'boolean'
             },
             name: {
                 type: 'string'
@@ -86,6 +85,12 @@ module.exports = {
             },
             normalize: {
                 type: 'boolean'
+            },
+            fontSize: {
+                "oneOf": [
+                    { type: "string" },
+                    { type: "number" }
+                ]
             }
         }
     }
