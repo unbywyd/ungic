@@ -14,8 +14,14 @@ class ungicPlugin extends skeleton {
     }
     watch() {
         fg('**/*', {cwd: this.root}).then(() => {
+            this.project.watcher.add(this.root);
+            this.project.watcher.add(path.join(this.root, '*'));
             this.project.watcher.add(path.join(this.root, '**/*'));
+        }).catch(e => {
+            console.log(e);
         });
+        this.unwatched = false;
+        this.project.watch(this);
     }
     log(message, type="log", args={}) {
         if(message instanceof Error) {
@@ -34,7 +40,11 @@ class ungicPlugin extends skeleton {
         this.log(message, 'warning', args);
     }
     unwatch() {
+        this.project.watcher.unwatch(this.root);
+        this.project.watcher.unwatch(path.join(this.root, '*'));
         this.project.watcher.unwatch(path.join(this.root, '**/*'));
+        this.project.unwatch(this);
+        this.unwatched = true;
     }
 }
 

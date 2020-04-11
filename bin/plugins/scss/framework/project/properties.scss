@@ -1,3 +1,7 @@
+/*
+*   Various default properties
+*   These properties are available for use when creating components, each component can override specific properties.
+*/
 @use "ungic.utils" as utils;
 $font-size: 16px;
 $line-height:1.5;

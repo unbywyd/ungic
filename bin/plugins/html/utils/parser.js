@@ -46,6 +46,8 @@ class htmlParser {
 					 this.get(name)(args, custom_args, content).then(res =>{
 						 res = (res == null || !res) ? '' : res;
 						 callback(null, res);
+					 }).catch(e => {
+					 	console.log(e);
 					 });
 				} else {
 					 callback(null, match);

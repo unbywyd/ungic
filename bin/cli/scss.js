@@ -156,10 +156,13 @@ module.exports = function(yargs, done) {
                         })
                     });
                 }
+
+                this.rl.toClose();
                 let answers;
                 if(questions.length) {
-                    answers = await prompts.call(this, questions);
+                    answers = await prompts.call(this, questions, true);
                     if(!answers) {
+                        this.rl.begin();
                         done('action canceled');
                         return
                     }
@@ -182,7 +185,9 @@ module.exports = function(yargs, done) {
                             }
                         })
                     }
-                ]);
+                ], true);
+                this.rl.begin();
+
                 if(!answers2) {
                     done('action canceled');
                     return
@@ -205,12 +210,12 @@ module.exports = function(yargs, done) {
             done();
         });
     })
-    .command('unwatch', 'Disable file watcher', {}, () => {
+    .command('unwatch', 'Skip file changes for this plugin', {}, () => {
         let plugin = this.app.project.plugins.get('scss');
         plugin.unwatch();
-        done('Watcher disabled');
+        done('Watcher skipped');
     })
-    .command('watch', 'Enable file watcher', {}, () => {
+    .command('watch', 'Continue to watch file changes for this plugin', {}, () => {
         let plugin = this.app.project.plugins.get('scss');
         plugin.watch();
         done('Watcher enabled');

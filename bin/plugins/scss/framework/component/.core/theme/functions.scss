@@ -9,6 +9,9 @@
 
 $theme: meta.module-variables(theme);
 
+/*
+*   Color lighten method
+*/
 @function lighten($color, $percent) {
     @if type-of($color) == string {
         $color: colors($color);
@@ -38,6 +41,9 @@ $theme: meta.module-variables(theme);
     @return hsl($h, $s, $l);
 }
 
+/*
+*   Color darken method
+*/
 @function darken($color, $percent) {
     $percent: math.abs($percent);
     @if type-of($color) == string {
@@ -67,6 +73,9 @@ $theme: meta.module-variables(theme);
     @return hsl($h, $s, $l);
 }
 
+/*
+*   Get color from palette
+*/
 @function palette($color-name, $tint-name, $hue-offset: 0) {
     @if type-of($color-name) != string {
         @warn '#{$color-name} must be a registered color-name';
@@ -93,6 +102,9 @@ $theme: meta.module-variables(theme);
     @return color.adjust($color, $hue: $hue-offset);
 }
 
+/*
+*   Smart Lightening Method
+*/
 @function lightness($color, $percent) {
     @if strip-unit($percent) < 0 {
         @if get(theme-type) == light {
@@ -109,6 +121,9 @@ $theme: meta.module-variables(theme);
     }
 }
 
+/*
+*   Smart color brightness control method
+*/
 @function brightness($color, $percent, $hue-offset: null) {
     @if $percent < 0 {
         @if get(theme-type) == light {
@@ -125,6 +140,9 @@ $theme: meta.module-variables(theme);
     }
 }
 
+/*
+*   Method for dimming color
+*/
 @function dim($color, $percent, $hue-offset: null) {
     @if type-of($color) == string {
         $color: colors($color);
@@ -158,6 +176,9 @@ $theme: meta.module-variables(theme);
     @return hsl(list.nth($hsl, 1), $h, list.nth($hsl, 3));
 }
 
+/*
+*  Method for brightening color brightness
+*/
 @function brighten($color, $percent, $hue-offset: null) {
     @if type-of($color) == string {
         $color: colors($color);
@@ -191,6 +212,9 @@ $theme: meta.module-variables(theme);
     @return hsl(list.nth($hsl, 1), $h, list.nth($hsl, 3));
 }
 
+/*
+*   Get a tint for the color
+*/
 @function tint($color, $amount) {
     $options: (
         light-odd-offset: 8,
@@ -250,6 +274,9 @@ $theme: meta.module-variables(theme);
     @return color.adjust($color, $hue: $amount * map.get($options, hue-offset));
 }
 
+/*
+*   Get theme config
+*/
 @function config($key:'') {
     $config: get(config);
     @if map.has-key($config, $key) {
@@ -260,6 +287,9 @@ $theme: meta.module-variables(theme);
     @return $config;
 }
 
+/*
+*   Get values by key from $theme
+*/
 @function get($key:'') {
     @if map.has-key($theme, $key) {
         @return map.get($theme, $key);
@@ -269,6 +299,9 @@ $theme: meta.module-variables(theme);
     @return map.remove($theme, settings);
 }
 
+/*
+*   Return value relative to active theme type
+*/
 @function subs($light, $dark) {
     $type: theme(theme-type);
     @if $type == light {
@@ -277,7 +310,9 @@ $theme: meta.module-variables(theme);
     @return $dark;
 }
 
-
+/*
+*   Get theme colors or specific color
+*/
 @function colors($color: '') {
     $colors: get(colors);
     @if map.has-key($colors, $color) {
@@ -288,6 +323,9 @@ $theme: meta.module-variables(theme);
     @return transparent;
 }
 
+/*
+*   Get gray color with $offset
+*/
 @function gray($offset:0) {
     $saturation: 0;
     $hue: 0;
@@ -308,6 +346,12 @@ $theme: meta.module-variables(theme);
 
     @return  lightness(color.adjust(color.grayscale(color.mix(colors(background-color), colors(text-color))), $saturation: $saturation, $hue: $hue), $offset);
 }
+
+/*
+*   The main function for working with colors of theme
+*   $color-name - get color by $color-name
+*   $color-tint - may be a tint from the palette or $offset
+*/
 
 @function color($color-name, $color-tint: 0, $hue-offset: 0) {
     @if type-of($color-tint) == string {

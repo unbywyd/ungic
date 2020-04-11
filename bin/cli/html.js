@@ -164,8 +164,8 @@ module.exports = function(yargs, done) {
                     params = _.extend(params, answers);
                 }
                 this.rl.rl.pause();
-                await plugin.toRelease(params);
                 try {
+                    await plugin.toRelease(params);
                     done();
                 } catch(e) {
                     done(e);
@@ -179,15 +179,15 @@ module.exports = function(yargs, done) {
         if(!pages.length) {
             return done('This project has no pages');
         }
-        console.log(_.map(pages, p => '● ' + p.path).join('\n'));
-        done();
+        //this.rl.log();
+        done(_.map(pages, p => '● ' + p.path).join('\n'));
     })
-    .command('unwatch', 'Disable file watcher', {}, () => {
+    .command('unwatch', 'Skip file changes for this plugin', {}, () => {
         let plugin = this.app.project.plugins.get('html');
         plugin.unwatch();
-        done('Watcher disabled');
+        done('Watcher skipped');
     })
-    .command('watch', 'Enable file watcher', {}, () => {
+    .command('watch', 'Continue to watch file changes for this plugin', {}, () => {
         let plugin = this.app.project.plugins.get('html');
         plugin.watch();
         done('Watcher enabled');

@@ -1,6 +1,6 @@
 @use "sass:map";
 $icons: (
-    {{#each icons}}{{className}}:(
+    {{#each icons}}{{id}}:(
         unicode: {{unicode}},
         name: "{{name}}",
         {{#if title}} title: "{{title}}", {{/if}}
@@ -21,7 +21,7 @@ $icons: (
     }
 }
 
-%core-icon {
+@mixin core_icon {
     font-family: {{config.font.name}} !important;
     speak: none;
     font-style: normal;
@@ -39,6 +39,7 @@ $icons: (
         background-color: transparent;
     }
 }
+
 
 @function icon-exists($icon-name) {
     @if(not map.has-key($icons, $icon-name)) {
@@ -63,12 +64,12 @@ $icons: (
     $unicode: get-icon($icon-name);
     @if($unicode != null) {
         @if($before) {
-            @extend %core-icon;
+            @include core_icon();
             &:before {
                 content: $unicode;
             }
         } @else {
-            @extend %core-icon;
+            @include core_icon();
             content: $unicode;
         }
     }
@@ -84,7 +85,7 @@ $icons: (
         font-style: normal;
     }
     .{{config.font.class}} {
-        @extend %core-icon;
+        @include core_icon();
         &-label {
             border: 0;
             clip: rect(1px, 1px, 1px, 1px);

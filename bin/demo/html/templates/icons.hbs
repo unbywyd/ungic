@@ -1,0 +1,34 @@
+<div class="icons-page">
+    {{#if icons.svg_sprites}}
+        <h2>Svg sprites</h2>
+        <div class="icons-items">
+            {{#each icons.svg_sprites}}
+                <div class="icons-item">
+                    {{{icon id}}}
+                </div>
+            {{/each}}
+        </div>
+    {{/if}}
+
+    {{#if icons.sprites}}
+        <h2>Sprites</h2>
+        <div class="icons-items">
+            {{#each icons.sprites}}
+                <div class="icons-item">
+                    {{{icon id}}}
+                </div>
+            {{/each}}
+        </div>
+    {{/if}}
+
+    {{#if icons.fonts}}
+        <h2>Font icons</h2>
+        <div class="icons-items">
+            {{#each icons.fonts}}
+                <div class="icons-item">
+                    {{{icon id}}}
+                </div>
+            {{/each}}
+        </div>
+    {{/if}}
+</div>

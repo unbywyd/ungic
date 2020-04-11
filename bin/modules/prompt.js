@@ -1,7 +1,9 @@
 const inquirer = require('inquirer');
 
-module.exports = async function(questions) {
-    this.rl.toClose();
+module.exports = async function(questions, ignorePrompt) {
+    if(!ignorePrompt) {
+        this.rl.toClose();
+    }
     var prompt = inquirer.createPromptModule();
     const ui = new inquirer.ui.Prompt((prompt).prompts, {});
     const rl = ui.rl
@@ -17,6 +19,8 @@ module.exports = async function(questions) {
             resolve(res);
         });
     });
-    this.rl.begin();
+    if(!ignorePrompt) {
+        this.rl.begin();
+    }
     return answers;
 }

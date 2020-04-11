@@ -19,9 +19,36 @@ module.exports = {
             className: {
                 type: 'string'
             },
+            maxWidth: {
+                type: 'number'
+            },
+            maxHeight: {
+                type: 'number'
+            },
             enabled: {
                 type: 'boolean'
             }
+        }
+    },
+    render: {
+        properties: {
+            id: {
+                type: 'string'
+            },
+            timeout: {
+                type: 'number'
+            },
+            pause: {
+                type: 'boolean'
+            },
+            autorun: {
+                type: 'boolean'
+            }
+        },
+        default: {
+            timeout: 200,
+            pause: false,
+            autorun: true
         }
     },
     svg_sprites: {

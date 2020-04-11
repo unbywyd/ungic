@@ -1,5 +1,31 @@
+import JSONTreeView from "json-tree-view";
+
+
 import io from 'socket.io-client';
 document.addEventListener("DOMContentLoaded", function() {
+    let debugs = document.querySelectorAll('.un-debug');
+    if(debugs.length) {
+        for(let debug of debugs) {
+            let text = debug.innerHTML;
+            try {
+                let data = JSON.parse(text);
+                let path = debug.getAttribute('data-path');
+                if(!path) {
+                    path = 'debug'
+                }
+                let view = new JSONTreeView(path, data);
+                debug.style.display = 'none';
+                let wrap = document.createElement('div');
+                wrap.setAttribute('class', 'jsonViewWrap');
+                wrap.appendChild(view.dom);
+                debug.parentNode.insertBefore(wrap, debug);
+                view.expand(true);
+                view.readonly = true;
+            } catch(e) {
+                console.log(e);
+            }
+        }
+    }
     let connect = document.querySelector('[data-connect]').getAttribute('data-connect');
     const socket = io(connect);
     let elements = [];

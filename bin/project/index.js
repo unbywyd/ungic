@@ -18,6 +18,7 @@ class ungicProject extends skeleton {
         config = this.config;
         this.dist = path.join(this.root, config.fs.dirs.dist);
         this.plugins = new Map;
+        this.skipWatch = new Set;
     }
     async initialize() {
         let config = this.config;
@@ -40,7 +41,10 @@ class ungicProject extends skeleton {
 
         htmlPlugin = new htmlPlugin(Object.assign(config.plugins.html || {}, {
             fs: config.fs
-        }), {project: this});
+        }), {
+            project: this
+        });
+
 
         htmlPlugin.on('log', (type, message, args) => {
             this.log(message, type, args);
@@ -102,6 +106,17 @@ class ungicProject extends skeleton {
                 stabilityThreshold: 50
             },
         }).on('all', (event, ph, stat) => {
+            let paths = [...this.skipWatch.values()];
+            //console.log('ignore', paths);
+            //console.log('active ph', ph);
+            if(paths.length) {
+                for(let p of paths) {
+                    if(path.normalize(ph).split(path.normalize(p)).length > 1) {
+                        console.log('Ignored');
+                        return
+                    }
+                }
+            }
             let ph_splitter = _.filter(ph.split(this.root)[1].split(path.sep), ph => ph != "");
             let watchEvent = (storage, dir, prev="", prevdir="") => {
                 if(storage[dir]) {
@@ -119,6 +134,12 @@ class ungicProject extends skeleton {
             }
         });
         this.begined = true;
+    }
+    unwatch(plugin) {
+        this.skipWatch.add(plugin.root);
+    }
+    watch(plugin) {
+        this.skipWatch.delete(plugin.root);
     }
     destroy() {
         this.watcher.close();

@@ -1,13 +1,13 @@
 $colors: (
-    primary: #3930D8,
-    secondary: #e43591,
-    success: #FFF,
-    danger: #FFF,
-    info: #FFF,
-    warning: #FFF,
-    system: #FFF,
-    text-color: #444,
-    background-color: #FAFAFA
+    primary: #9cef0a,
+    secondary: #ecef0a,
+    success: #53d146,
+    danger: #d14674,
+    info: #4bafee,
+    warning: #eee84b,
+    system: #3e62fc,
+    text-color: #272b29,
+    background-color: #FFF
 );
 
 $config: (
@@ -24,6 +24,7 @@ $config: (
 
 $palettes: (
     primary: (
-        tint: #3930D8
+        lighten: #e4ffb5,
+        darken: #263211
     )
 );

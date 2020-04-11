@@ -1,3 +1,7 @@
+/*
+*   The main functions for working with the component
+*/
+
 @use "../config" as this;
 @use "ungic.default-properties" as default-props;
 
@@ -8,10 +12,34 @@
 @use "sass:string" as str;
 @use "ungic.meta" as un-meta;
 @use "property-handlers" as *;
+@use "sass:selector";
 
+/*
+*   Checks if component exists
+*/
+@function exist() {
+    @return true;
+}
+/*
+*   Export Options to Json
+*   Params:
+*       $oid - Custom option id
+*       $data - Any data
+*/
 @function export($oid, $data) {
     @return un-meta.export(this.$cid, $oid, $data);
 }
+
+/*
+*   Adds a selector with the component class name
+*/
+@function this($selector) {
+    @return inspect(nth(selector.append(cid(true), $selector), 1));
+}
+
+/*
+*   Get component CID or selector with true param
+*/
 @function cid($as_selector:null) {
     $cid: this.$cid;
     @if $as_selector {
@@ -19,9 +47,18 @@
     }
     @return $cid;
 }
+
+/*
+*   Gel all component properties
+*/
 @function properties() {
     @return this.$properties;
 }
+
+/*
+*   Function to work with the properties
+*   Checks if a property is supported by a function for processing it, then calls this function and passes arguments to it otherwise returns the default property value
+*/
 @function prop($prop, $args...) {
     $props: map.keys(this.$properties);
 
@@ -80,6 +117,9 @@
     @return map.get(this.$properties, $prop);
 }
 
+/*
+*   Checks if the property value is different from the default (default properties are exclusively in the core of the framework)
+*/
 @function is-prop-changed($prop) {
     $props: meta.module-variables(default-props);
     @if not map.has-key($props, $prop) {
@@ -91,6 +131,9 @@
     @return true;
 }
 
+/*
+*   Returns the default property value (From core of framework)
+*/
 @function default-prop($prop) {
     $props: meta.module-variables(default-props);
     @if not map.has-key($props, $prop) {
@@ -99,6 +142,9 @@
     @return map.get($props, $prop);
 }
 
+/*
+*   Get project property value
+*/
 @function project-prop($prop) {
     $props: map.get(this.$project, properties);
     @if not map.has-key($props, $prop) {
@@ -107,6 +153,9 @@
     @return map.get($props, $prop);
 }
 
+/*
+*   Get processed config of component
+*/
 @function config($key:'') {
     @if map.has-key(this.$config, $key) {
         @return map.get(this.$config, $key);

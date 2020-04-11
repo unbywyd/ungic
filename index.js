@@ -31,7 +31,7 @@ class App extends skeleton {
                 description: 'Providing the mode configuration. Manipulates NODE_ENV environment variable.',
                 default: 'development'
             })
-            .command('init', "Initializes a project for the first time", args => {
+            .command('init', "Initial initialization of the project", args => {
                 this.setConfig({
                     command: 'init'
                 });
@@ -61,6 +61,7 @@ class App extends skeleton {
     }
     async initialize() {
         let config = this.config;
+
         if(['init', 'run'].indexOf(config.command) == -1) {
             console.log(colors.yellow.bold('To get started with ungic, you need to follow these simple steps:'));
             console.log(colors.yellow('● Select a previously prepared directory or new empty directory'));
@@ -71,6 +72,7 @@ class App extends skeleton {
         }
 
         this.app = new ungic(config);
+
         if(config.log) {
             console.log(colors.cyan('Log output to console enabled. You can disable this option using the "--log false" command.'));
         } else {
@@ -170,5 +172,9 @@ class App extends skeleton {
 
 (async() => {
     let app = new App;
-    await app.initialize();
+    try {
+        await app.initialize();
+    } catch(e) {
+        console.log(e);
+    }
 })();

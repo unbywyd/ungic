@@ -1,0 +1,73 @@
+/*
+*   The main component file that is responsible for the generation of css styles (rules).
+*   This file may include everything that is required to write the rules.
+*   But the main recommended modules are:
+*       .core         component core
+*           .$config or .config() - get component configuration (processed variables after overrides)
+*           .$project - get access to source project variables
+*       .core/theme -   get access to project theme
+*     Also recommended
+*       functions - custom functions for this component
+*       mixins - custom mixins for this component
+*     System:
+*       ungic.sprites - get sprites from icons plugin
+*       ungic.font-icons - get font icons from icons plugin
+*       ungic.components - get all components id of project
+*       ungic.components.CID - get specific component (Gets its core)
+*       ungic.components.CID.render - get component rules. Example for use: @include meta.load-css("ungic.components.grid.render");
+*/
+
+@use ".core" as this;
+@use ".core/theme" as theme;
+@use "functions" as *;
+@use "mixins" as *;
+@use "ungic.meta" as un-meta;
+@use "ungic.utils" as un-utils;
+@use "ungic.components" as components;
+@use "ungic.sprites" as sprites;
+@use "ungic.font-icons" as fonts;
+
+@use "sass:meta" as meta;
+@use "sass:map" as map;
+
+@if (meta.mixin-exists('render', sprites)) {
+    @include sprites.render();
+}
+@if (meta.mixin-exists('render', fonts)) {
+   @include fonts.render();
+}
+
+
+@include this.component {
+   &-page {
+        max-width: 1000px;
+        margin: 20px auto;
+        h2 {
+            font-size: 2em;
+            margin-bottom: 1em;
+            color: theme.gray(-.6);
+            font-weight: normal;
+        }
+       .icon {
+           &-name {
+                display: block;
+                line-height: 1;
+                margin-top: .5em;
+                color: theme.gray(-.4);
+           }
+       }
+   }
+   &-items {
+        display: flex;
+        flex-wrap: wrap;
+        margin-bottom: 2em;
+        padding-bottom: 2em;
+        &:not(:last-child) {
+            border-bottom: 2px solid theme.gray(.9);
+        }
+   }
+   &-item {
+        padding: 1.5em;
+        text-align: center;
+   }
+}

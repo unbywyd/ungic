@@ -10,12 +10,15 @@ function ungicReadline(callback, prefix='', closeCallback) {
         this.app.log(message, type);
         this.done();
     }
-    this.begin = () => {
-        this.rl = require('readline').createInterface({
+    this.begin = (withOutLabel) => {
+        let data = {
             input: process.stdin,
-            output: process.stdout,
-            prompt: this.prefix
-        });
+            output: process.stdout
+        }
+        if(!withOutLabel) {
+           data.prompt = this.prefix;
+        }
+        this.rl = require('readline').createInterface(data);
         this.rl.on('line', input => {
             if(input.replace(/\s\n/g, '') == '') {
                 return this.rl.prompt();

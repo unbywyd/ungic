@@ -19,12 +19,13 @@ const svg2ttf = require('svg2ttf');
 const ttf2eot = require('ttf2eot');
 const ttf2woff = require('ttf2woff');
 const ttf2woff2 = require('wawoff2');
-const xmlConverter = require('xml-js');
 const stream = require('stream');
 const watchGrouping = require('../../modules/watch-grouping');
 const hbs = require('handlebars');
 const sass = require('sass');
 const Spritesmith = require('spritesmith');
+const resizeImg = require('resize-img');
+var sizeOf = require('image-size');
 hbs.registerHelper("coordinate", function(val) {
     return !val ? val : val * -1 + 'px';
 });
@@ -91,14 +92,25 @@ class iconsPlugin extends plugin {
         this.collection = new collection();
         this.collection.on('all', (event, model) => {
             if(event == 'updated' || event == 'added' || event == 'removed') {
-                if(!model.has('svg') && config.sprites.enabled) {
-                    this.allSpritesToRender();
-                } else if(model.has('svg')) {
+                if(model.has('svg')) {
                     if(config.icons_mode == 'fonts') {
                         this.allFontsToRender();
                     } else {
                         this.allSVGToRender();
                     }
+                } else if(config.sprites.enabled) {
+                    this.allSpritesToRender();
+                }
+            } else if(event == 'add') {
+                let hasSvg = _.find(model, m => m.model.has('svg'));
+                if(hasSvg) {
+                    if(config.icons_mode == 'fonts') {
+                        this.allFontsToRender();
+                    } else {
+                        this.allSVGToRender();
+                    }
+                } else if(config.sprites.enabled) {
+                    this.allSpritesToRender();
                 }
             }
         });
@@ -118,6 +130,7 @@ class iconsPlugin extends plugin {
     }
     async render(events) {
         let config = this.config;
+        //console.log(events);
         for(let event of events) {
             if(event.type == 'fonts') {
                 await this.fontGeneration(_.sortBy(event.models, model => model.get('id')));
@@ -135,6 +148,7 @@ class iconsPlugin extends plugin {
         }
     }
     async fileChanged(events) {
+       // console.log(this.collection.size());
         let paths = [];
         for(let event in events) {
             for(let ev of events[event]) {
@@ -165,6 +179,7 @@ class iconsPlugin extends plugin {
                 this.allSVGToRender();
             }
         }
+        //console.log(this.collection.size());
     }
     async setEntityByPath(ph, options={}) {
         let supports = ['png', 'svg', 'jpeg', 'jpg'];
@@ -180,6 +195,12 @@ class iconsPlugin extends plugin {
                 return model.get('path') == path.normalize(ph);
             });
             if(model) {
+
+                if(model.has('finalPath')) {
+                    if(await fsp.exists(model.get('finalPath'))) {
+                        fse.remove(model.get('finalPath'));
+                    }
+                }
                 this.collection.remove(model.id, options);
             }
             return;
@@ -187,7 +208,7 @@ class iconsPlugin extends plugin {
 
         let entityData = {
             name: path.basename(ph, path.extname(ph)).replace(/[_-]+/g, ' '),
-            className: path.basename(ph, path.extname(ph)).replace(/[^\w]+/g, '-'),
+            //className: path.basename(ph, path.extname(ph)).replace(/[^\w]+/g, '-'),
             id: ph.replace(path.extname(ph), '').replace(/[^\w]+/g, '-'),
             path: path.normalize(ph)
         }
@@ -198,7 +219,7 @@ class iconsPlugin extends plugin {
                 svgSource = await this.svgo.optimize(svgSource);
                 let dom = new JSDOM(svgSource.data);
                 let svg = dom.window.document.querySelector('svg');
-                svg.setAttribute('id', entityData.className);
+                svg.setAttribute('id', entityData.id);
                 svg.removeAttribute('style');
                 let symbols = svg.querySelectorAll('symbol');
                 if(symbols.length) {
@@ -226,6 +247,33 @@ class iconsPlugin extends plugin {
             } catch(e) {
                 this.log(e);
             }
+        } else {
+            let tempDir = path.join(this.project.root, config.fs.dirs.temp);
+            if(!await fsp.exists(tempDir)) {
+                await fse.ensureDir(tempDir);
+            }
+            entityData.finalPath =  fullPath;
+            if(config.sprites.maxWidth || config.sprites.maxHeight) {
+                var dimensions = sizeOf(fullPath);
+                if((config.sprites.maxWidth && dimensions.width > config.sprites.maxWidth) || (config.sprites.maxHeight && dimensions.height > config.sprites.maxHeight)) {
+                    let settings = {};
+                    if(config.sprites.maxWidth && dimensions.width > config.sprites.maxWidth) {
+                        settings.width = config.sprites.maxWidth;
+                    }
+                    if(config.sprites.maxHeight && dimensions.height > config.sprites.maxHeight) {
+                        settings.height = config.sprites.maxHeight;
+                    }
+                    let image = await resizeImg(fs.readFileSync(fullPath), settings);
+                    await fse.outputFile(path.join(tempDir, entityData.path), image);
+                    entityData.finalPath = path.join(tempDir, entityData.path);
+                }
+            }
+        }
+
+        if(this.collection.has(entityData.id)) {
+            let suffix = this.collection.where(model => model.id == entityData.id).length + 1;
+            entityData.id = entityData.id + suffix;
+            entityData.name = entityData.name + suffix;
         }
         await this.collection.add(entityData, options);
     }
@@ -247,18 +295,21 @@ class iconsPlugin extends plugin {
         let className = config.svg_sprites.className;
         if(!options.presentation && title) {
             let titleTag = dom.window.document.createElement("title");
-            titleTag.setAttribute('id', className + '-' + model.get('className') + '-title');
+            titleTag.setAttribute('id', className + '-' + model.get('id') + '-title');
             titleTag.innerHTML = title;
-            svg.setAttribute('aria-labelledby', className + '-' + model.get('className') + '-title');
+            svg.setAttribute('aria-labelledby', className + '-' + model.get('id') + '-title');
             svg.appendChild(titleTag);
         } else {
             svg.setAttribute('aria-hidden', true);
         }
         let useTag = dom.window.document.createElement("use");
 
-        let url = '#' + className + '-' + model.get('className');
+        let url = '#' + className + '-' + model.get('id');
         if(config.svg_sprites.external) {
             url = 'ungic-sprite.svg' + url;
+            if(!options.relative_src) {
+                url = this.project.fastify.address + '/' + url;
+            }
         }
         useTag.setAttribute('xlink:href', url);
         svg.appendChild(useTag);
@@ -294,9 +345,9 @@ class iconsPlugin extends plugin {
            label = '';
         }
         if(options.href) {
-            return `<a href="${options.href}"><i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${model.get('className')}"></i>${label}</a>`;
+            return `<a href="${options.href}"><i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${model.get('id')}"></i>${label}</a>`;
         } else {
-            return `<i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${model.get('className')}"></i>${label}`;
+            return `<i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${model.get('id')}"></i>${label}`;
         }
     }
     getHTMlSpriteIcon(id, options={}) {
@@ -315,9 +366,9 @@ class iconsPlugin extends plugin {
            label = '';
         }
         if(options.href) {
-            return `<a href="${options.href}"><i aria-hidden="true" class="${config.sprites.className}-${model.get('className')}"></i>${label}</a>`;
+            return `<a href="${options.href}"><i aria-hidden="true" class="${config.sprites.className}-${model.get('id')}"></i>${label}</a>`;
         } else {
-            return `<i aria-hidden="true" class="${config.sprites.className}-${model.get('className')}"></i>${label}`;
+            return `<i aria-hidden="true" class="${config.sprites.className}-${model.get('id')}"></i>${label}`;
         }
     }
     getSymbol(id, asHTML) {
@@ -379,7 +430,55 @@ class iconsPlugin extends plugin {
         await fse.outputFile(toPath, JSON.stringify(result, null, 4));
         return toPath;
     }
-    async importIcons(relativePath) {
+    async release(releaseData, icons) {
+        let result = true;
+        let {version, name, type} = releaseData;
+        let dist = this.dist;
+        let fontsDist = this.fontsDist;
+        let spritesDist = this.spritesDist;
+        let config = this.config;
+        this.dist =  path.join(this.dist, 'releases', name + '.' + version);
+        this.fontsDist = path.join(this.dist, config.fs.dist.fonts);
+        this.spritesDist = path.join(this.dist, config.fs.dist.img, 'sprites');
+
+        this.skipIconsEvent = true;
+
+        try {
+            if(type == 'Fonts') {
+                // Send icons to fonts
+                await this.fontGeneration(icons);
+            } else if (type == 'Image sprite') {
+                // Send sprite to release
+                await this.generateSprite(icons);
+            } else {
+                // Send to svg sprite
+                await this.generateSvgSprite(icons);
+            }
+        } catch(e) {
+            console.log(e);
+            result = false;
+        }
+        this.dist = dist;
+        this.fontsDist = fontsDist;
+        this.spritesDist = spritesDist;
+        delete this.skipIconsEvent;
+        return result;
+    }
+    getIconsList(onlySvg) {
+        let models = this.collection.get();
+        if(!models.length) {
+            throw new Error('No icons');
+        }
+
+        models = _.filter(models, m => {
+            if(onlySvg && m.has('svg') || !onlySvg && !m.has('svg')) {
+                return m;
+            }
+        });
+
+        return _.map(models, model => model.toJSON());
+    }
+    async importIcons(relativePath, saveIts) {
         let toPath = relativePath ? path.join(this.dist, relativePath) : this.dist;
 
         if(path.extname(toPath) == '') {
@@ -393,46 +492,69 @@ class iconsPlugin extends plugin {
         icons = JSON.parse(icons);
 
         let items = [];
+        let unwatched = this.unwatched;
+        this.unwatch();
         for(let icon of icons) {
             let active = this.collection.findByID(icon.id);
+            if(saveIts && icon.path) {
+                let toExt = path.join(this.root, icon.path);
+                await fse.outputFile(toExt, icon.svg);
+            }
             if(active && active.get('svg') != icon.svg || !active) {
                 icon.codepoint = this.getCodepoint();
                 icon.unicode = String.fromCharCode(icon.codepoint);
                 items.push(icon);
             }
         }
-        this.collection.add(items);
+        if(!unwatched) {
+            this.watch();
+        }
+        this.collection.add(items, {lastEvent: true});
         return true
     }
-    async generateSpriteSass(icons, spritesPath) {
+    async generateSpriteSass(icons, local) {
         let template = path.join(__dirname, 'templates', 'sprites_sass.hbs');
         let config = this.config;
         let dist =  path.join(this.spritesDist, config.sprites.className + '.png');
+
+        let toPath =  path.relative(path.join(this.dist, config.fs.dist.css), dist).replace(/\\+/g, '/');
+        // path.join(spritesPath, dist)
+        if(local) {
+            toPath = this.project.fastify.address + '/' + path.relative(this.project.dist, dist).replace(/\\+/g, '/');
+        }
         let source = {
             config: {
                 className: config.sprites.className
             },
             icons,
-            path: spritesPath ? spritesPath : path.relative(path.join(this.dist, config.fs.dist.css), dist).replace(/\\+/g, '/')
+            path: toPath
         }
         template = await fsp.readFile(template, 'UTF-8');
         //console.log(source);
         let content = hbs.compile(template)(source);
         return content;
     }
-    async getFontsSass(models, fonts_path) {
+    async getFontsSass(models, local) {
         let template = path.join(__dirname, 'templates', 'fonts_sass.hbs');
         let config = this.config;
+        let toPath = path.relative(path.join(this.dist, config.fs.dist.css), this.fontsDist).replace(/\\+/g, '/') + '/';
+        if(local) {
+            toPath = this.project.fastify.address + '/' + path.relative(this.project.dist, this.fontsDist).replace(/\\+/g, '/') + '/'
+        }
         let source = {
             config: this.fontConfiguration(),
-            icons: _.map(models, m => _.omit(m.toJSON(), 'svg')),
-            fonts_path: fonts_path ? fonts_path : path.relative(path.join(this.dist, config.fs.dist.css), this.fontsDist).replace(/\\+/g, '/') + '/'
+            icons: _.map(models, m => {
+                let data = _.omit(m.toJSON(), 'svg');
+                data.unicode = data.codepoint.toString(16);
+                return data;
+            }),
+            fonts_path: toPath
         }
         template = await fsp.readFile(template, 'UTF-8');
         let content = hbs.compile(template)(source);
         return content;
     }
-    async getCSS(fonts_path, force) {
+    async getFontsCSS() {
         if(!this.iconsStorage.fonts) {
             this.error('Icons plugin did not generate icon fonts');
             return ' ';
@@ -441,14 +563,33 @@ class iconsPlugin extends plugin {
             this.error('No generated font icons');
             return ' ';
         }
-        let sassSource = await this.getFontsSass(this.iconsStorage.fonts.models, fonts_path);
-        if(!this.lastCSSGeneratedDate || this.lastCSSGeneratedDate != this.iconsStorage.fonts.date || force) {
-            this.lastCSSGeneratedDate = this.iconsStorage.fonts.date;
+        let sassSource = await this.getFontsSass(this.iconsStorage.fonts.models, true);
+        if(!this.lastFontsCSSGeneratedDate || this.lastFontsCSSGeneratedDate != this.iconsStorage.fonts.date) {
+            this.lastFontsCSSGeneratedDate = this.iconsStorage.fonts.date;
             let result = sass.renderSync({data:`${sassSource} @include render();`});
-            this.lastCSS = result.css.toString();
-            return this.lastCSS;
+            this.lastFontsCSS = result.css.toString();
+            return this.lastFontsCSS;
         } else {
-            return this.lastCSS;
+            return this.lastFontsCSS;
+        }
+    }
+    async getSpritesCSS() {
+        if(!this.iconsStorage.sprite) {
+            this.error('Icons plugin did not generate sprites');
+            return ' ';
+        }
+        if(!this.iconsStorage.sprite.data.icons.length) {
+            this.error('No generated sprites');
+            return ' ';
+        }
+        let sassSource = await this.generateSpriteSass(this.iconsStorage.sprite.data.icons, true);
+        if(!this.lastSpritesCSSGeneratedDate || this.lastSpritesCSSGeneratedDate != this.iconsStorage.sprite.date) {
+            this.lastSpritesCSSGeneratedDate = this.iconsStorage.sprite.date;
+            let result = sass.renderSync({data:`${sassSource} @include render();`});
+            this.lastSpriteCSS = result.css.toString();
+            return this.lastSpriteCSS;
+        } else {
+            return this.lastSpriteCSS;
         }
     }
     async fontGeneration(ids) {
@@ -460,20 +601,40 @@ class iconsPlugin extends plugin {
             this.warning('No icons');
             return
         }
-
+        let config = this.config;
         let sassSource = await this.getFontsSass(models);
         let fontConfig = this.fontConfiguration();
-        this.emit('icons', {
-            type: 'fonts',
-            models,
-            date: new Date,
-            data: {
-                icons: _.map(models, m => _.omit(m.toJSON(), 'svg')),
-                config: fontConfig,
-                sass: sassSource
+        if(!this.skipIconsEvent) {
+            this.emit('icons', {
+                type: 'fonts',
+                models,
+                date: new Date,
+                data: {
+                    icons: _.map(models, m => _.omit(m.toJSON(), 'svg')),
+                    config: fontConfig,
+                    sass: sassSource
+                }
+            });
+        } else {
+            let renderConfig = {
+                data: sassSource + ' @include render();'
             }
-        });
-        let config = this.config;
+            let css = await new Promise((res, rej) => {
+                sass.render(renderConfig, (err, result) => {
+                    if(err) {
+                        console.log(err);
+                        this.error(err.message);
+                        return res(false);
+                    }
+                    res(result.css);
+                });
+            });
+            if(!css) {
+                this.error('Icon sass generation error');
+            }
+            await fse.outputFile(path.join(this.dist, config.fs.dist.css, config.fonts.name  + '.css'), css);
+        }
+
         let svgStreams = [];
         const fontStream = new svgicons({
             fontName: config.fonts.name,
@@ -488,7 +649,9 @@ class iconsPlugin extends plugin {
         });
 
         let streamPath = path.join(this.fontsDist, config.fonts.name + '.svg');
-
+        if(!await fsp.exists(streamPath)) {
+            await fse.outputFile(streamPath, '');
+        }
         let Proccess = [];
         Proccess.push(new Promise((done, rej) => {
             fontStream.pipe(fs.createWriteStream(streamPath)).on('finish', async() => {
@@ -503,7 +666,7 @@ class iconsPlugin extends plugin {
                     this.log(e);
                 }
                 done(true);
-            }).on('error', function(err) {
+            }).on('error', (err) => {
                 this.log(`Font generation error`, err);
                 done(false);
             });
@@ -520,6 +683,7 @@ class iconsPlugin extends plugin {
                 unicode: [String.fromCharCode(model.get('codepoint'))],
                 name: model.id
             }
+            //console.log(model.get('unicode'));
             fontStream.write(iconStream);
         }
         fontStream.end();
@@ -527,7 +691,9 @@ class iconsPlugin extends plugin {
             if(r) {
                 this.log('Icon fonts successfully generated!');
             }
-        });
+        }).catch(e => {
+            console.log(e);
+        })
         return;
     }
     getCodepoint() {
@@ -550,6 +716,14 @@ class iconsPlugin extends plugin {
                 models,
                 type: 'fonts'
             });
+        } else if(this.iconsStorage['fonts']) {
+            let ids = _.map(this.iconsStorage['fonts'].models, model => model.get('id'));
+            delete this.iconsStorage['fonts'];
+            this.emit('icons', {
+                type: 'fonts',
+                ids,
+                date: new Date
+            });
         }
     }
     allSVGToRender() {
@@ -561,6 +735,14 @@ class iconsPlugin extends plugin {
                 description: `svg icons: ${_.pluck(icons, 'id').join(', ')} to render`,
                 models,
                 type: 'svg_sprite'
+            });
+        } else if(this.iconsStorage['svg_sprite']) {
+            let ids = _.map(this.iconsStorage['svg_sprite'].models, model => model.get('id'));
+            delete this.iconsStorage['svg_sprite'];
+            this.emit('icons', {
+                type: 'svg_sprite',
+                ids,
+                date: new Date
             });
         }
     }
@@ -575,6 +757,14 @@ class iconsPlugin extends plugin {
                     description: `sprites to render`,
                     models,
                     type: 'sprite'
+                });
+            } else if(this.iconsStorage['sprite']) {
+                let ids = _.map(this.iconsStorage['sprite'].models, model => model.get('id'));
+                delete this.iconsStorage['sprite'];
+                this.emit('icons', {
+                    type: 'sprite',
+                    ids,
+                    date: new Date()
                 });
             }
         }
@@ -599,6 +789,7 @@ class iconsPlugin extends plugin {
             console.log(e);
         }
         this.on('watcher:'+ config.fs.dirs.source + ':' +config.fs[config.fs.dirs.source].icons, (event, ph, stat) => {
+
             let supports = ['.png', '.svg', '.jpeg', '.jpg'];
             if(supports.indexOf(path.extname(ph)) != -1) {
                 this.watchController.emit('bind', event, ph);
@@ -617,7 +808,7 @@ class iconsPlugin extends plugin {
             let symbol = this.getSymbol(model, true);
             svg.appendChild(symbol);
         }
-        if(config.svg_sprites.external) {
+        if(config.svg_sprites.external || this.skipIconsEvent) {
             fse.outputFileSync(path.join(this.dist, 'ungic-sprite.svg'), svg.outerHTML);
         }
         return svg.outerHTML;
@@ -649,45 +840,80 @@ class iconsPlugin extends plugin {
 
         let res = await new Promise((done, rej) => {
 
-            let sprites = _.map(models, model => path.join(this.root, model.get('path')));
+            let sprites = _.map(models, model => model.get('finalPath'));
+            /*
+            *   Пробежать и срезать размер в тем папку и сохранить все ссылки, отправить в смитх и затем временные крякнуть*
+            */
             Spritesmith.run({src: sprites}, async (err, result) => {
-                if(err) {
-                    this.log(err);
-                } else {
-                    let distPath = path.join(this.spritesDist, config.sprites.className + '.png');
+                 try {
+                    if(err) {
+                        this.log(err);
+                    } else {
+                        let distPath = path.join(this.spritesDist, config.sprites.className + '.png');
 
-                    await fse.outputFile(distPath, result.image);
-                    let coordinates = result.coordinates;
-                    let storage = [];
+                        await fse.outputFile(distPath, result.image);
+                        let coordinates = result.coordinates;
+                        let storage = [];
 
-                    for(let ph in coordinates) {
-                        let model = this.collection.find(model => path.join(path.sep, path.normalize(ph).split(this.root)[1]) == path.join(path.sep, path.normalize(model.get('path'))));
-                        storage.push({
-                            id: model.id,
-                            className: model.get('className'),
-                            name: model.get('name'),
-                            coordinates: coordinates[ph]
-                        });
-                    }
 
-                    let sass = await this.generateSpriteSass(storage);
+                        for(let ph in coordinates) {
 
-                    this.emit('icons', {
-                        type: 'sprite',
-                        models,
-                        date: new Date,
-                        data: {
-                            icons: storage,
-                            sass,
-                            dist: distPath,
-                            dist_url: path.relative(path.join(this.dist, config.fs.dist.css), distPath).replace(/\\+/g, '/')
+                            let model = this.collection.find(model => model.has('finalPath') && path.normalize(model.get('finalPath')) == path.normalize(ph)); // path.join(path.sep, path.normalize(ph).split(this.root)[1]) == path.join(path.sep, path.normalize(model.get('path')))
+                            storage.push({
+                                id: model.id,
+                                //className: model.get('className'),
+                                name: model.get('name'),
+                                coordinates: coordinates[ph]
+                            });
                         }
-                    });
-                    this.log('Sprites successfully generated!');
+
+                        let sassOut = await this.generateSpriteSass(storage);
+
+                        if(!this.skipIconsEvent) {
+                            this.emit('icons', {
+                                type: 'sprite',
+                                models,
+                                date: new Date,
+                                data: {
+                                    icons: storage,
+                                    sass: sassOut,
+                                    dist: distPath,
+                                    dist_url: path.relative(path.join(this.dist, config.fs.dist.css), distPath).replace(/\\+/g, '/')
+                                }
+                            });
+                        } else {
+                            let renderConfig = {
+                                data: sassOut + ' @include render();'
+                            }
+                            try {
+                                let css = await new Promise((ready, rej) => {
+                                    sass.render(renderConfig, (err, result) => {
+                                        if(err) {
+                                            console.log(err);
+                                            this.error(err.message);
+                                            return ready(false);
+                                        }
+                                        ready(result.css);
+                                    });
+                                });
+                                if(!css) {
+                                    this.error('Icon sass generation error');
+                                }
+                                await fse.outputFile(path.join(this.dist, config.fs.dist.css, config.sprites.className  + '.css'), css);
+                            } catch(e) {
+                                console.log(e);
+                            }
+                        }
+                        this.log('Sprites successfully generated!');
+                    }
+                    done();
+                } catch(e) {
+                    console.log(e);
                 }
-                done();
             });
         });
+
+
         return res;
     }
     hasIcon(data) {
@@ -701,16 +927,18 @@ class iconsPlugin extends plugin {
         let config = this.config;
         try {
             let sprite = this.getSvgSprite(models);
-            this.emit('icons', {
-                type: 'svg_sprite',
-                models,
-                date: new Date,
-                data: {
-                    icons: _.map(models, m => _.omit(m.toJSON(), 'svg')),
-                    sprite,
-                    external: config.svg_sprites.external,
-                }
-            });
+            if(!this.skipIconsEvent) {
+                this.emit('icons', {
+                    type: 'svg_sprite',
+                    models,
+                    date: new Date,
+                    data: {
+                        icons: _.map(models, m => _.omit(m.toJSON(), 'svg')),
+                        sprite,
+                        external: config.svg_sprites.external,
+                    }
+                });
+            }
             this.log('Svg sprite successfully generated!');
         } catch(e) {
             console.log(e);
@@ -722,7 +950,7 @@ class iconsPlugin extends plugin {
         } catch(e) {
             console.log(e);
         }
-
+        //console.log(this.collection.toJSON());
         this.emit('begined', this.iconsStorage);
     }
 }

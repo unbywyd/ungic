@@ -20,7 +20,6 @@ class ungicStructure {
             let configPath = path.join(this.appRoot, path.extname(config) != '' ? config : config + '.json');
             if(!fs.existsSync(configPath)) {
                 config = {};
-                    //throw new Error(`Configuration file ${configPath} not exists`);
             } else {
                 config = fs.readFileSync(configPath, 'UTF-8');
             }

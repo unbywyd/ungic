@@ -11,6 +11,8 @@ class Collector extends skeleton {
             }
         }, {}, options);
         let config = this.config;
+       // console.log(config);
+
         this.timer = new Timer(config.timeout);
         this.timer.on('finish', () => {
             this._finish();

@@ -17,7 +17,7 @@ const open = require('open');
 
 class app extends skeleton {
     constructor(args={}) {
-        let cmd = {
+        let config_cmd = {
             server: {
                 port: args.port
             },
@@ -25,7 +25,13 @@ class app extends skeleton {
             verbose: args.verbose,
             openInBrowser: args.open
         }
-        let config = {}
+        let config = {
+            plugins: {
+                "scss": {},
+                "html": {},
+                "icons": {}
+            }
+        }
         let configPath = appPaths.config;
         let packagePath = appPaths.package;
         if(packagePath) {
@@ -45,9 +51,9 @@ class app extends skeleton {
             }
         }
         if(configPath) {
-            config = Object.assign(config, require(configPath), cmd);
+            config = Object.assign(config, require(configPath), config_cmd);
         } else {
-            config = Object.assign(config, cmd);
+            config = Object.assign(config, config_cmd);
         }
 
         super(require('./model-scheme'), {objectMerge: true}, config);
@@ -66,7 +72,8 @@ class app extends skeleton {
                 message: 'You want to continue without installation npm package.json?'
             });
             if(!response.next) {
-                return
+                this.log('Please initialize npm first', 'Note');
+                return process.exit();
             }
             response = await prompts([
                 {
@@ -89,7 +96,6 @@ class app extends skeleton {
             ]);
             this.setConfig(response);
             await fse.outputFile(path.join(appPaths.root, 'ungic.config.json'), JSON.stringify(this.config, null, 4));
-            return;
         }
 
         let prj = new ungicProject(this.config);
@@ -97,8 +103,10 @@ class app extends skeleton {
             await prj.initialize();
         } catch(e) {
             this.log(e);
+            return
         }
-        return;
+        this.log('Project successfully initialized. Use "ungic run" command for starting', 'Note');
+        process.exit();
     }
     async begin() {
         if(!appPaths.config && !appPaths.package) {
@@ -122,25 +130,8 @@ class app extends skeleton {
             }
         });
 
-        this.fastify.register(require('fastify-swagger'), {
-          routePrefix: '/documentation',
-          swagger: {
-            info: {
-              title: 'Ungic api',
-              version: config.version
-            },
-            host: 'localhost',
-            schemes: ['http'],
-            consumes: ['application/json'],
-            produces: ['application/json']
-          },
-          exposeRoute: true
-        });
         await require('./api')(this.fastify, this);
 
-        this.fastify.get('/ungic', async (request, reply) => {
-            return { hello: 'world' }
-        });
         this.fastify.use((req, res, next) => {
             if(req.originalUrl != 'ungic' && !/^\/ungic\//.test(req.originalUrl)) {
                 return handler(req, res, {
@@ -171,11 +162,6 @@ class app extends skeleton {
                 next();
             }
         });
-        this.fastify.ready(err => {
-            if (err) throw err;
-            this.fastify.swagger();
-        });
-
         let address;
         let start = async port => {
             try {

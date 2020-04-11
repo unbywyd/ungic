@@ -1,4 +1,4 @@
-$icons: ({{#each icons}}{{className}}: (name: {{name}}, height: {{coordinates.height}}, width: {{coordinates.width}}, x: {{coordinate coordinates.x}}, y: {{coordinate coordinates.y}}),{{/each}});
+$icons: ({{#each icons}}{{id}}: (name: {{name}}, height: {{coordinates.height}}, width: {{coordinates.width}}, x: {{coordinate coordinates.x}}, y: {{coordinate coordinates.y}}),{{/each}});
 $url: "{{path}}";
 $className: "{{config.className}}";
 
@@ -17,7 +17,7 @@ $className: "{{config.className}}";
     }
     {{#each icons}}
         .{{../config.className}} {
-            &-{{className}} {
+            &-{{id}} {
                 width: {{coordinates.width}}px;
                 height: {{coordinates.height}}px;
                 display:inline-block;

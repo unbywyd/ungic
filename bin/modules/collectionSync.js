@@ -182,8 +182,14 @@ class Collection {
     add(models, options={}) {
         options.remove = "remove" in options ? options.remove : false;
         options.merge = "merge" in options ? options.merge : true;
+        if(options.lastEvent) {
+            options.silent = true;
+        }
         let changed = this._set(models, options);
         if(!options.silent && changed.length) {
+            this.#change('add', changed);
+        }
+        if(options.lastEvent && Array.isArray(models)) {
             this.#change('add', changed);
         }
     }

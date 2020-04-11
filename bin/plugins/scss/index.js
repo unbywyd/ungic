@@ -132,7 +132,7 @@ class scssPlugin extends plugin {
                                 });
 
                             } else {
-                                this.error('To include font-icons sass module, you need to activate "fonts" mode in the icons plugin');
+                                this.error('To include font-icons sass module, you need to activate "fonts" mode in the icons plugin and add to the project svg icons');
                             }
                             return done({
                                 contents: ''
@@ -151,7 +151,7 @@ class scssPlugin extends plugin {
                                 if(!await fsp.exists(path.join(this.components, cid))) {
                                     this.error(`${cid} component does not exist`);
                                     return done({
-                                        contents: ''
+                                        contents: '@function exist() {@return false}'
                                     });
                                 }
                                 return done({
@@ -205,6 +205,13 @@ class scssPlugin extends plugin {
     _sassRender(data, cids, config={}) {
         let exportsStorage = [];
         let functions = _.extend(encodeFunction, {
+            "release()": () => {
+                if(config.release) {
+                    return sass.types.Boolean.TRUE
+                } else {
+                    return sass.types.Boolean.FALSE
+                }
+            },
             "to-export($cid, $oid, $data)":  (cid, oid, data) => {
                 cid = cid.getValue();
                 oid = oid.getValue();
@@ -294,6 +301,10 @@ class scssPlugin extends plugin {
         let cleanscssMerging = _.extend({level: 2}, process.env.postcss_clean);
         if(release) {
             plugins.push(clean(cleanscssMerging));
+        } else {
+            plugins.push(clean({
+                level: 1
+            }));
         }
         if(buildConfig.theme_mode == 'external' && release) {
             events.push(new Promise(res => {
@@ -363,12 +374,12 @@ class scssPlugin extends plugin {
             if(source.theme == 'default') {
                 source.theme_prefix = false;
             }
-            let res = await this._sassRender(hbs.compile(renderTemplate)(source), components); //  {main: true}
+            let res = await this._sassRender(hbs.compile(renderTemplate)(source), components, {release}); //  {main: true}
             if(res) {
                 data.push(res);
                 source.inverse = buildConfig.inverse;
                 if(source.inverse) {
-                    data.push(await this._sassRender(hbs.compile(renderTemplate)(source), components));
+                    data.push(await this._sassRender(hbs.compile(renderTemplate)(source), components, {release}));
                 }
 
                 if(themes.length) {
@@ -376,10 +387,10 @@ class scssPlugin extends plugin {
                         source.theme_prefix = (theme  == 'default') ? false : true;
                         source.inverse = false;
                         source.theme = theme;
-                        data.push(await this._sassRender(hbs.compile(renderTemplate)(source), components)); // {main: true}
+                        data.push(await this._sassRender(hbs.compile(renderTemplate)(source), components, {release})); // {main: true}
                         source.inverse = buildConfig.inverse;
                         if(source.inverse) {
-                            data.push(await this._sassRender(hbs.compile(renderTemplate)(source), components));
+                            data.push(await this._sassRender(hbs.compile(renderTemplate)(source), components, {release}));
                         }
                     }
                 }
@@ -579,6 +590,13 @@ class scssPlugin extends plugin {
         if(options.icons) {
             this.iconsStorage = options.icons;
         }
+        this.project.on('icons', e => {
+            if(!e.data && this.iconsStorage[e.type]) {
+                delete this.iconsStorage[e.type];
+                return
+            }
+            this.iconsStorage[e.type] = e;
+        });
         try {
             await this.renderMaster.run();
         } catch(e) {
@@ -601,10 +619,13 @@ class scssPlugin extends plugin {
         if(await fsp.exists(toPath)) {
             throw new Error(`${cid} component already exists`);
         }
+        let watched = this.unwatched;
         this.unwatch();
         await fse.copy(path.join(this.framework, 'component'), toPath);
         this.emit('added', cid);
-        this.watch();
+        if(!watched) {
+            this.watch();
+        }
         this.renderMaster.add({
             description: `${cid} component`,
             components: [cid]
@@ -626,10 +647,13 @@ class scssPlugin extends plugin {
             if(deps.length) {
                 throw new Error(`"${deps.join(', ')}" components depend on this component.`);
             }
+            let watched = this.unwatched;
             this.unwatch();
             await fse.remove(toPath);
             this.emit('removed', cid);
-            this.watch();
+            if(!watched) {
+                this.watch();
+            }
         } else {
             throw new Error(`${cid} component not exists`);
         }

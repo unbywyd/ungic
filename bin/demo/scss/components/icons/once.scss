@@ -1,0 +1,7 @@
+/*
+*   Any actions that need to be performed only once when compiling this component
+*   For example, export of options
+*/
+
+@use ".core" as this;
+$test: this.export('test', 124);

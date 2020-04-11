@@ -51,6 +51,9 @@ module.exports = {
                     },
                     dist: {
                         type: 'string'
+                    },
+                    temp: {
+                        type: 'string'
                     }
                 }
             },
@@ -89,7 +92,8 @@ module.exports = {
         default: {
             "dirs": {
                 "source": "source",
-                "dist": "dist"
+                "dist": "dist",
+                "temp": "temp"
             },
             "dist": {
                 "css": "css",

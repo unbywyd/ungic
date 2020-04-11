@@ -1,7 +1,12 @@
 @use "sass:map";
 $cid: null !default;
 $config: () !default;
+$properties: () !default;
 
+/*
+*   This file is used to override the properties and configuration of components
+*   To redefine a specific component, check the $cid variable (Component id)
+*/
 @if($cid == helloworld) {
-    $config: (name: 'Arkasha');
+    $config: map.merge($config, ());
 }
