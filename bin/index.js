@@ -162,7 +162,6 @@ class app extends skeleton {
                 next();
             }
         });
-        let address;
         let start = async port => {
             try {
                 this.fastify.address = await this.fastify.listen(port);
@@ -181,7 +180,7 @@ class app extends skeleton {
         });
         let port = this.fastify.server.address().port;
         this.setConfig({port: port});
-        this.log(`Server is listening on ${address}`);
+        this.log(`Server is listening on ${this.fastify.address}`);
         this.project = new ungicProject(this.config);
         this.project.on('log', (type, message, args={}) => {
             this.log(message, type, args);
@@ -198,7 +197,7 @@ class app extends skeleton {
             console.log(e);
         }
         if(config.openInBrowser) {
-            await open(address);
+            await open(this.fastify.address);
         }
     }
 }
