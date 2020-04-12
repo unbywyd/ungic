@@ -165,8 +165,7 @@ class app extends skeleton {
         let address;
         let start = async port => {
             try {
-                address = await this.fastify.listen(port);
-                this.fastify.decorate('address', address);
+                this.fastify.address = await this.fastify.listen(port);
             } catch(err) {
                 this.log(err.message);
                 await start(port+1);
