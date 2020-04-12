@@ -19,22 +19,16 @@
 
 @use ".core" as this;
 @use ".core/theme" as theme;
-@use "functions" as *;
-@use "mixins" as *;
-@use "ungic.meta" as un-meta;
-@use "ungic.utils" as un-utils;
-@use "ungic.components" as components;
+@use "sass:meta" as meta;
+
+
 @use "ungic.sprites" as sprites;
 @use "ungic.font-icons" as fonts;
-
-@use "sass:meta" as meta;
-@use "sass:map" as map;
-
-@if (meta.mixin-exists('render', sprites)) {
+@if (meta.mixin-exists('render', sprites) and release()) {
     @include sprites.render();
 }
-@if (meta.mixin-exists('render', fonts)) {
-   @include fonts.render();
+@if (meta.mixin-exists('render', fonts) and release()) {
+    @include fonts.render();
 }
 
 
@@ -63,11 +57,16 @@
         margin-bottom: 2em;
         padding-bottom: 2em;
         &:not(:last-child) {
-            border-bottom: 2px solid theme.gray(.9);
+            border: none;
+            border-bottom: 2px solid theme.gray(.8);
         }
    }
    &-item {
         padding: 1.5em;
         text-align: center;
+        transition: all .2s;
+        &:hover {
+          transform:scale(1.2);
+        }
    }
 }

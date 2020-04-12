@@ -13,7 +13,8 @@ module.exports = {
         type: 'object',
         default: {
             className: 'sprite',
-            enabled: true
+            enabled: true,
+            maxWidth: 100
         },
         properties: {
             className: {
@@ -46,7 +47,7 @@ module.exports = {
             }
         },
         default: {
-            timeout: 200,
+            timeout: 50,
             pause: false,
             autorun: true
         }

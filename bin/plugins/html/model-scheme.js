@@ -77,7 +77,7 @@ module.exports = {
     },
     relative_src: {
         type: 'boolean',
-        default: true
+        default: false
     },
     dev_validation: {
         type: 'boolean',

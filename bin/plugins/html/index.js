@@ -54,6 +54,7 @@ class htmlPlugin extends plugin {
         this.iconsStorage = {};
         this.ungicParser = new(require('./utils/parser'));
         this.resources = new Map;
+        this.lastAmountAddedIcons = {};
         this.typeHandlers = new typeHandlers;
         this.typeHandlers.set('md', async attrs => {
             attrs.source = attrs.body;
@@ -63,6 +64,7 @@ class htmlPlugin extends plugin {
 
         this.sassUsed = new Storage;
         this.iconsUsed = new Storage;
+        this.iconsDataUsed = new Storage;
         this.typeHandlers.set('json', async attrs => {
             try {
                 attrs.body = JSON.parse(attrs.body);
@@ -117,7 +119,6 @@ class htmlPlugin extends plugin {
                         dom.window.document.querySelector('head').appendChild(linkicons);
                     }
                 }
-
                 if(this.iconsStorage.svg_sprite  && this.iconsStorage.svg_sprite.data.icons.length && !this.iconsStorage.svg_sprite.data.external) {
                     let domSprite = new JSDOM(this.iconsStorage.svg_sprite.data.sprite);
                     dom.window.document.querySelector('body').appendChild(domSprite.window.document.querySelector('svg'));
@@ -156,6 +157,7 @@ class htmlPlugin extends plugin {
             if(event == 'updated' || event == 'added' || event == 'removed') {
                 this.sassUsed.clean(m => m.page_id == model.id);
                 this.iconsUsed.clean(m => m.page_id == model.id);
+                this.iconsDataUsed.clean(m => m.page_id == model.id);
                 if(event == 'removed') {
                     if(model.get('type') == 'page') {
                         if(config.delete_from_dist) {
@@ -368,6 +370,7 @@ class htmlPlugin extends plugin {
             }
             if(options.data) {
                 if(options.data == 'icons') {
+                    this.iconsDataUsed.set({page_id: source.ungic.page.id});
                     let iconsData = {};
                     if(this.iconsStorage.fonts) {
                         iconsData.fonts = _.map(this.iconsStorage.fonts.data.icons, i => _.omit(i, 'svg'));
@@ -588,7 +591,6 @@ class htmlPlugin extends plugin {
             this.log(e);
         }
         entityData.body = body;
-        //console.log('Add to collection', entityData, options);
         await this.collection.add(entityData, options);
     }
     toRelease(args) {
@@ -644,6 +646,9 @@ class htmlPlugin extends plugin {
                 models: this.collection.filter(model => args.pages.indexOf(model.get('path')) != -1)
             });
         });
+    }
+    toUpdate(ph) {
+        return this.setEntityByPath('add', ph, {merge: true});
     }
     async validate(content, name) {
         name = name ? name : 'This';
@@ -835,6 +840,9 @@ class htmlPlugin extends plugin {
     async begin(options) {
         if(options.icons) {
             this.iconsStorage = options.icons;
+            for(let type in this.iconsStorage) {
+                this.lastAmountAddedIcons[type] = (this.iconsStorage[type].models) ? this.iconsStorage[type].models.length : 0;
+            }
         }
         let config = this.config;
         let types = _.keys(config.supported_types).join('|');
@@ -845,17 +853,6 @@ class htmlPlugin extends plugin {
 
         let models = this.collection.findAllWhere({type: 'page'}, false);
 
-        if(Array.isArray(models) && !models.length || !models) {
-            this.renderMaster.launched = true;
-            return;
-        }
-        let pages = models.map(model=>model.toJSON());
-
-        this.renderMaster.add({
-            description: `assembly pages: ${_.pluck(pages, 'path').join(', ')}`,
-            models
-        });
-        await this.renderMaster.run();
         let scssPlugin = this.project.plugins.get('scss');
         scssPlugin.on('exports', (event, models) => {
             if(Array.isArray(models)) {
@@ -874,30 +871,65 @@ class htmlPlugin extends plugin {
                 }
             }
         });
-        this.project.on('icons', e => {
-            this.iconsStorage[e.type] = e;
-            let ids;
-            if(!e.data && e.ids.length) {
-                delete this.iconsStorage[e.type];
-                ids = e.ids;
-            } else if(e.data) {
-                ids = _.map(e.data.icons, i => i.id);
-            } else {
-                return
-            }
-            let used = _.filter(this.iconsUsed.storage, i => ids.indexOf(i.icon_id) != -1);
-            if(used.length) {
-                let page_ids = _.uniq(_.map(used, i => i.page_id));
-                let models = this.collection.filter(m => page_ids.indexOf(m.id) != -1);
-                if(models.length) {
-                    let pages = models.map(model=>model.toJSON());
-                    this.renderMaster.add({
-                        description: `assembly pages: ${_.pluck(pages, 'path').join(', ')}`,
-                        models: models
-                    });
+        this.project.on('icons', async e => {
+            try {
+                let ids, added = false;
+                let newAmountIcons = (e.models) ? e.models.length : 0;
+                let prevCount = this.lastAmountAddedIcons[e.type] ? this.lastAmountAddedIcons[e.type] : 0;
+                if(prevCount < newAmountIcons) {
+                    added = true;
                 }
+
+                this.lastAmountAddedIcons[e.type] = (e.models) ? e.models.length : 0;
+                this.iconsStorage[e.type] = e;
+
+
+                /*
+                *   Страницы которые требуют дату иконок, но не были сгенерированы / Если иконки добавились
+                */
+                if((!this.iconsUsed.storage.length && e.models.length && this.iconsDataUsed.storage.length) || added) {
+                    for(let data of this.iconsDataUsed.storage) {
+                        let page = this.collection.findByID(data.page_id);
+                        await this.setEntityByPath('add', page.get('path'), {merge: true});
+                    }
+                    return
+                }
+                /*
+                *   Если все иконки удалены
+                */
+                if(!e.data && e.ids.length) {
+                    delete this.iconsStorage[e.type];
+                    ids = e.ids;
+                } else if(e.data) {
+                    ids = _.map(e.data.icons, i => i.id);
+                } else {
+                    return
+                }
+                let used = _.filter(this.iconsUsed.storage, i => ids.indexOf(i.icon_id) != -1);
+                if(used.length) {
+                    let page_ids = _.uniq(_.pluck(used, 'page_id'));
+                    for(let page_id of page_ids) {
+                        let page = this.collection.findByID(page_id);
+                        await this.setEntityByPath('add', page.get('path'), {merge: true});
+                    }
+                }
+            } catch(e) {
+                console.log(e);
             }
         });
+
+        if(Array.isArray(models) && !models.length || !models) {
+            this.renderMaster.launched = true;
+            return;
+        }
+        let pages = models.map(model=>model.toJSON());
+
+        this.renderMaster.add({
+            description: `assembly pages: ${_.pluck(pages, 'path').join(', ')}`,
+            models
+        });
+        await this.renderMaster.run();
+
     }
 }
 
