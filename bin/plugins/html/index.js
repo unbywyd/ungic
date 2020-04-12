@@ -54,7 +54,7 @@ class htmlPlugin extends plugin {
         this.iconsStorage = {};
         this.ungicParser = new(require('./utils/parser'));
         this.resources = new Map;
-        this.lastAmountAddedIcons = {};
+        //this.lastAmountAddedIcons = {};
         this.typeHandlers = new typeHandlers;
         this.typeHandlers.set('md', async attrs => {
             attrs.source = attrs.body;
@@ -840,9 +840,9 @@ class htmlPlugin extends plugin {
     async begin(options) {
         if(options.icons) {
             this.iconsStorage = options.icons;
-            for(let type in this.iconsStorage) {
+            /*for(let type in this.iconsStorage) {
                 this.lastAmountAddedIcons[type] = (this.iconsStorage[type].models) ? this.iconsStorage[type].models.length : 0;
-            }
+            }*/
         }
         let config = this.config;
         let types = _.keys(config.supported_types).join('|');
@@ -873,30 +873,31 @@ class htmlPlugin extends plugin {
         });
         this.project.on('icons', async e => {
             try {
-                let ids, added = false;
-                let newAmountIcons = (e.models) ? e.models.length : 0;
+                let ids; //, added = false;
+                /*let newAmountIcons = (e.models) ? e.models.length : 0;
                 let prevCount = this.lastAmountAddedIcons[e.type] ? this.lastAmountAddedIcons[e.type] : 0;
                 if(prevCount < newAmountIcons) {
                     added = true;
-                }
+                }*/
 
-                this.lastAmountAddedIcons[e.type] = (e.models) ? e.models.length : 0;
+                //this.lastAmountAddedIcons[e.type] = (e.models) ? e.models.length : 0;
                 this.iconsStorage[e.type] = e;
 
+                if(this.iconsDataUsed.storage.length) {
+                    for(let data of this.iconsDataUsed.storage) {
+                        let page = this.collection.findByID(data.page_id);
+                        await this.setEntityByPath('add', page.get('path'), {merge: true});
+                    }
+                }
 
-                /*
-                *   Страницы которые требуют дату иконок, но не были сгенерированы / Если иконки добавились
-                */
-                if((!this.iconsUsed.storage.length && e.models.length && this.iconsDataUsed.storage.length) || added) {
+                /*if((!this.iconsUsed.storage.length && e.models.length && this.iconsDataUsed.storage.length) || added) {
                     for(let data of this.iconsDataUsed.storage) {
                         let page = this.collection.findByID(data.page_id);
                         await this.setEntityByPath('add', page.get('path'), {merge: true});
                     }
                     return
                 }
-                /*
-                *   Если все иконки удалены
-                */
+
                 if(!e.data && e.ids.length) {
                     delete this.iconsStorage[e.type];
                     ids = e.ids;
@@ -912,7 +913,7 @@ class htmlPlugin extends plugin {
                         let page = this.collection.findByID(page_id);
                         await this.setEntityByPath('add', page.get('path'), {merge: true});
                     }
-                }
+                }*/
             } catch(e) {
                 console.log(e);
             }
