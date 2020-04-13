@@ -3,7 +3,7 @@
         <h2>Svg sprites</h2>
         <div class="icons-items">
             {{#each icons.svg_sprites}}
-                <div class="icons-item">
+                <div role="button" class="icons-item" data-id="{{id}}">
                     {{{icon id}}}
                 </div>
             {{/each}}
@@ -14,7 +14,7 @@
         <h2>Sprites</h2>
         <div class="icons-items">
             {{#each icons.sprites}}
-                <div class="icons-item">
+                <div role="button" class="icons-item" data-id="{{id}}">
                     {{{icon id}}}
                 </div>
             {{/each}}
@@ -25,10 +25,44 @@
         <h2>Font icons</h2>
         <div class="icons-items">
             {{#each icons.fonts}}
-                <div class="icons-item">
+                <div role="button" class="icons-item" data-id="{{id}}">
                     {{{icon id}}}
                 </div>
             {{/each}}
         </div>
     {{/if}}
 </div>
+<script>
+    document.querySelector('.icons-item').addEventListener('click', function() {
+        let id = this.getAttribute('data-id');
+        var copyText = document.createElement("input");
+        copyText.value = id;
+        copyText.style.height = '1px';
+        copyText.style.width = '1px';
+        copyText.style.opacity = 0;
+        document.querySelector('body').appendChild(copyText);
+        copyText.select();
+        copyText.setSelectionRange(0, 99999);
+        document.execCommand("copy");
+
+        let alert = document.createElement('div');
+        alert.style.backgroundColor = '#5cc80d';
+        alert.style.color = '#FFF';
+        alert.style.fontSize = '20px';
+        alert.style.padding = '8px 20px';
+        alert.style.borderRadius = '4px';
+        alert.style.position = 'fixed';
+        alert.style.fontFamily = 'Arial';
+        alert.style.left = '20px';
+        alert.style.top = '20px';
+        alert.style.boxShadow = '3px 3px 12px rgba(0,0,0,.2)';
+        alert.style.zIndex = '1000';
+        alert.innerHTML = 'ID copied!'
+        document.querySelector('body').appendChild(alert);
+
+        setTimeout(function() {
+            alert.remove();
+        }, 1000);
+
+    });
+</script>

@@ -104,7 +104,7 @@ module.exports = function(yargs, done) {
             }
         })();
     })
-    .command('release', 'Assemble components in a release', yargs => {
+    .command('release', 'Assemble pages in a release', yargs => {
             return yargs.option('name', {
                 alias: 'n',
                 type: 'string',

@@ -181,5 +181,15 @@ module.exports = function(yargs, done) {
             }
         })();
     })
+    .command('unwatch', 'Skip file changes for this plugin', {}, () => {
+        let plugin = this.app.project.plugins.get('icons');
+        plugin.unwatch();
+        done('Watcher skipped');
+    })
+    .command('watch', 'Continue to watch file changes for this plugin', {}, () => {
+        let plugin = this.app.project.plugins.get('icons');
+        plugin.watch();
+        done('Watcher enabled');
+    })
     .argv;
 }
