@@ -111,14 +111,14 @@ class scssPlugin extends plugin {
                                     cid = this.cidByPath(prev);
                                 }
                                 return done({
-                                    contents: `$cid:${cid}; ` + this.iconsStorage.sprite.data.sass
+                                    contents: `@function exist() {@return true}; $cid:${cid}; ` + this.iconsStorage.sprite.data.sass
                                 });
 
                             } else {
-                                this.error('To include sprite sass module, you need to activate "sprites" mode in the icons plugin');
+                                this.warning('To include sprite sass module, you need to activate "sprites" mode in the icons plugin');
                             }
                             return done({
-                                contents: ''
+                                contents: '@function exist() {@return false}'
                             });
                         }
                         if(/^ungic\.font-icons/.test(url)) {
@@ -128,14 +128,14 @@ class scssPlugin extends plugin {
                                     cid = this.cidByPath(prev);
                                 }
                                 return done({
-                                    contents: `$cid:${cid}; ` + this.iconsStorage.fonts.data.sass
+                                    contents: `@function exist() {@return true}; $cid:${cid}; ` + this.iconsStorage.fonts.data.sass
                                 });
 
                             } else {
-                                this.error('To include font-icons sass module, you need to activate "fonts" mode in the icons plugin and add to the project svg icons');
+                                this.warning('To include font-icons sass module, you need to activate "fonts" mode in the icons plugin and add to the project svg icons');
                             }
                             return done({
-                                contents: ''
+                                contents: '@function exist() {@return false}'
                             });
                         }
                         if(/^ungic\.components/.test(url)) {
@@ -161,6 +161,10 @@ class scssPlugin extends plugin {
                                 let route = parsed.pop();
                                 if(route == 'core') {
                                     route = '.core';
+                                }
+
+                                if(route == 'theme') {
+                                    route = '.core/theme';
                                 }
 
                                 if(componentsMethods[route]) {
@@ -268,26 +272,23 @@ class scssPlugin extends plugin {
     }
     async _postcss(data, buildConfig, release) {
         let postcssTheme = require('../../modules/postcss-theme');
+        let postcssThemeAfter = require('../../modules/postcss-theme-after');
         let postcssSplitter = require('../../modules/postcss-splitter');
         let plugins = [];
-        if(buildConfig.autoprefixer) { // autoprefixer, rtl(rtlOptions)
+        if(buildConfig.autoprefixer) {
             plugins.push(autoprefixer);
         }
+        let build = this.builder.config;
         let rtlOptions;
         if(buildConfig.direction) {
-            rtlOptions = {
-                 addPrefixToSelector: (selector, prefix) => {
-                    if(prefix == '[dir]' || prefix.indexOf(buildConfig.direction) != -1) {
-                        return selector;
-                    }
-                    return `${prefix} ${selector}`;
+            if(buildConfig.direction == 'rtl' || buildConfig.opposite_direction) {
+                rtlOptions = {}
+                if(buildConfig.direction == 'rtl' && buildConfig.opposite_direction) {
+                    rtlOptions.fromRTL = true;
                 }
-            }
-            if(buildConfig.direction == 'rtl' && buildConfig.opposite_direction) {
-                rtlOptions.fromRTL = true;
-            }
-            if(!buildConfig.opposite_direction) {
-                rtlOptions.onlyDirection = buildConfig.direction;
+                if(!buildConfig.opposite_direction) {
+                    rtlOptions.onlyDirection = buildConfig.direction;
+                }
             }
         }
 
@@ -296,7 +297,16 @@ class scssPlugin extends plugin {
         let events = [];
 
         if(rtlOptions) {
+            if(build.rtl_prefix.prefixType) {
+                rtlOptions.prefixType = build.rtl_prefix.prefixType;
+            }
+            if('string' == typeof build.rtl_prefix.prefix && build.rtl_prefix.prefix.length) {
+                rtlOptions.prefix = build.rtl_prefix.prefix;
+            }
             plugins.push(rtl(rtlOptions));
+            if(build.top_selector == 'html') {
+                plugins.push(postcssThemeAfter());
+            }
         }
         let cleanscssMerging = _.extend({level: 2}, process.env.postcss_clean);
         if(release) {
@@ -315,12 +325,14 @@ class scssPlugin extends plugin {
                 }));
             }))
         }
+        let config = this.config;
         events.push(new Promise(done => {
             postcss(plugins)
             .process(data, {from: undefined})
             .then(result => {
-                //console.log(result.css);
                 done(result.css);
+            }).catch(e => {
+                console.log(e);
             });
         }));
         return Promise.all(events);
@@ -340,10 +352,13 @@ class scssPlugin extends plugin {
         if(!await fsp.exists(this.root, 'project', 'themes', source.theme) && !await fsp.exists(this.root, 'project', 'themes', source.theme + '.scss')) {
             this.error(`${source.theme} theme in the project does not exist`, {exit: true});
         }
+        source.top_selector = build.top_selector;
+
         if(!release) {
             source.theme = build.dev.default_theme;
             let data = [];
-            source.theme_prefix = source.theme == 'default' ? false : build.single_theme_prefix;
+            source.theme_prefix = false;
+            source.default_theme = true;
             let res = await this._sassRender(hbs.compile(renderTemplate)(source), components);
             if(res) {
                 data.push(res);
@@ -352,6 +367,7 @@ class scssPlugin extends plugin {
                     data.push(await this._sassRender(hbs.compile(renderTemplate)(source), components));
                 }
             }
+            //console.log('Data length 365', data.length);
             if(data.length) {
                 let result = await this._postcss(Buffer.concat(data), buildConfig);
                 if(result.length === 1) {
@@ -370,10 +386,14 @@ class scssPlugin extends plugin {
             buildConfig = release.build;
             source.theme = release.config.default_theme;
             let themes = release.config.themes ? release.config.themes : [];
-            source.theme_prefix = themes.length ? true : build.single_theme_prefix;
-            if(source.theme == 'default') {
+            source.theme_prefix = false;
+            /*if(source.theme == 'default') {
                 source.theme_prefix = false;
-            }
+            }*/
+            source.default_theme = true;
+            source.release = true;
+            source.default_inverse = buildConfig.default_inverse;
+
             let res = await this._sassRender(hbs.compile(renderTemplate)(source), components, {release}); //  {main: true}
             if(res) {
                 data.push(res);
@@ -384,6 +404,7 @@ class scssPlugin extends plugin {
 
                 if(themes.length) {
                     for(let theme of themes) {
+                        source.default_theme = false;
                         source.theme_prefix = (theme  == 'default') ? false : true;
                         source.inverse = false;
                         source.theme = theme;
@@ -525,21 +546,21 @@ class scssPlugin extends plugin {
             await fse.copy(path.join(this.framework, 'project'), path.join(this.root, 'project'));
         }
 
-        if(!await fsp.exists(path.join(this.root, 'builder.json'))) {
+        if(!await fsp.exists(path.join(this.root, 'build_schemes.json'))) {
             this.builder = new builder(require('./framework/model-scheme'));
-            await fse.outputFile(path.join(this.root, 'builder.json'), JSON.stringify(this.builder.config, null, 4));
+            await fse.outputFile(path.join(this.root, 'build_schemes.json'), JSON.stringify(this.builder.config, null, 4));
         } else {
-            let build = await fsp.readFile(path.join(this.root, 'builder.json'), 'UTF-8');
+            let build = await fsp.readFile(path.join(this.root, 'build_schemes.json'), 'UTF-8');
             try {
                 build = JSON.parse(build);
             } catch(e) {
-                this.error('Builder.json file has invalid json format. Origin: ' + e.message, {exit: true});
+                this.error('build_schemes.json file has invalid json format. Origin: ' + e.message, {exit: true});
             }
 
             try {
                 this.builder = new builder(require('./framework/model-scheme'), build);
             } catch(e) {
-                return this.error('Builder.json file has incorrect data. Origin: ' + e.message, {exit: true});
+                return this.error('build_schemes.json file has incorrect data. Origin: ' + e.message, {exit: true});
             }
         }
 

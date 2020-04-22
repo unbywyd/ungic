@@ -7,21 +7,33 @@
 
 $theme-options: meta.module-variables(theme);
 
+
 $cids: ({{#each components}}{{.}},{{/each}});
-// Настраиваем components
+
+$top-selector: #{"{{top_selector}}"};
+$theme-prefix: {{theme_prefix}};
+$default-theme: {{default_theme}};
+
 @use "ungic.components" with ($cids: $cids);
 $inverse-mode: false;
 {{#if inverse}}
    $inverse-mode: true;
 {{/if}}
 
+// default_inverse
 $project: meta.module-variables(project);
-$project: map.merge($project, (theme: $theme-options, inverse-mode: $inverse-mode));
+$theme-options: map.merge($theme-options, (theme-name: {{theme}}));
+{{#if release}}
+    $theme-config: map.get($theme-options, config);
+    $theme-config: map.merge($theme-config, (inverse: {{default_inverse}}));
+    $theme-options: map.merge($theme-options, (config: $theme-config));
+{{/if}}
+$project: map.merge($project, (theme: $theme-options, theme-prefix: $theme-prefix, default-theme: $default-theme, top-selector: $top-selector, inverse-mode: $inverse-mode));
 
 
 {{#unless inverse}}
+    $export: un-meta.export(project, theme, $theme-options);
     {{#if advanced_export}}
-        $export: un-meta.export(project, theme, map.merge($theme-options, (inverse-mode: $inverse-mode)));
         $export: un-meta.export(project, properties, map.get($project, properties));
     {{/if}}
     $export: un-meta.export(project, config, map.get($project, config));
@@ -86,4 +98,3 @@ $project: map.merge($project, (theme: $theme-options, inverse-mode: $inverse-mod
         {{/unless}}
     {{/unless}}
 {{/each}}
-

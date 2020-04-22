@@ -32,9 +32,6 @@ class Timer {
         if(this.timer) {
             clearTimeout(this.timer);
         }
-        if(!this.time) {
-            return this._end();
-        }
         this._timer();
     }
 }

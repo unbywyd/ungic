@@ -7,6 +7,12 @@
 @use "../utils/" as *;
 @use "ungic.project.config" as config;
 
+/*
+*   Export data for a specific component
+*   $cid -> Component id
+*   $oid -> Option Name (any key name)
+*   $data -> Any data
+*/
 @function export($cid, $oid, $data) {
     @if(type-of($oid) != 'string' and type-of($oid) != 'number') {
         @warn "oid should be a string or a number";

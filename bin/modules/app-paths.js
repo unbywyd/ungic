@@ -5,10 +5,10 @@ module.exports = function(p) {
     let pathConfig = finder('ungic.config.json');
     let pathNpmConfig = finder('package.json');
     let root = cwd;
-    if(pathConfig) {
-        root = path.dirname(pathConfig);
-    } else if(pathNpmConfig) {
+    if(pathNpmConfig) {
         root = path.dirname(pathNpmConfig);
+    } else if(pathConfig) {
+        root = path.dirname(pathConfig);
     }
     return {
         root,

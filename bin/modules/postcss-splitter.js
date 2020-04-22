@@ -41,7 +41,7 @@ module.exports = postcss.plugin('ungic-splitter', function (opts) {
         }
     });
     root.walkAtRules(rule => {
-        if(!rule.nodes.length) {
+        if(!rule.nodes || rule.nodes && !rule.nodes.length) {
             rule.remove();
         }
     });

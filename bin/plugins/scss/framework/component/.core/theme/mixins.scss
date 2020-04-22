@@ -1,0 +1,92 @@
+@use "functions" as *;
+@use "init" as config;
+@use "sass:map";
+
+$top_selector: map.get(config.$project, top-selector);
+@mixin _wrap($prepend) {
+    $output: ();
+    @if(&) {
+        @at-root #{$prepend} & {
+            @content;
+        }
+    } @else {
+        @at-root #{$prepend} {
+            @content;
+        }
+    }
+}
+
+/*
+*  Generate css rules for theme inversion only
+*/
+@mixin is-inverse {
+    $inverse: get(inverse);
+    $inverse-mode: get(inverse-mode);
+    @if $inverse and not $inverse-mode {
+        @include _wrap('[un-prefix="#{$top_selector}:not(.un-inverse)"]') {
+            @content;
+        }
+    } @else if $inverse {
+        @include _wrap('[un-save-inverse-props]') {
+            @content;
+        }
+    }
+}
+
+/*
+*   To make css rules by theme type (dark / light)
+*/
+@mixin is-type($type) {
+    $inverse: get(inverse);
+    $inverse-mode: get(inverse-mode);
+    @if get(theme-type) == $type and not $inverse-mode {
+        @include _wrap('[un-prefix="#{$top_selector}:not(.un-inverse)"]') {
+            @content;
+        }
+    } @else if $inverse-mode and get(theme-type) == $type {
+        @include _wrap('[un-save-inverse-props]') {
+            @content;
+        }
+    }
+}
+@mixin is-dark() {
+    @include is-type(dark) {
+        @content
+    }
+}
+@mixin is-light() {
+    @include is-type(light) {
+        @content
+    }
+}
+
+/*
+*   To make css rules by theme name
+*/
+@mixin is-theme($theme-name) {
+    $theme-prefix: map.get(config.$project, theme-prefix);
+    $active-name: get(name);
+    @if $theme-name == $active-name {
+        @include _wrap('[un-save-props]') {
+            @content;
+        }
+    }
+}
+
+/*
+*   Ignore inversion
+*/
+@mixin ignore-inverse {
+    @include _wrap('[un-inverse-ignore]') {
+        @content;
+    }
+}
+
+/*
+*   Custom method for manual inversion control
+*/
+@mixin is($prefix) {
+    @include _wrap("[un-prefix='#{$prefix}']") {
+        @content;
+    }
+}

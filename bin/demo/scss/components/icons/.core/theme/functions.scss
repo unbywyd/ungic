@@ -1,0 +1,375 @@
+@use "ungic.utils" as *;
+@use "ungic.meta" as un-meta;
+@use "sass:color";
+@use "sass:list";
+@use "sass:map";
+@use "sass:math";
+@use "sass:meta";
+@use "config" as theme;
+
+$theme: meta.module-variables(theme);
+
+/*
+*   Color lighten method
+*/
+@function lighten($color, $percent) {
+    @if type-of($color) == string {
+        $color: colors($color);
+    }
+    @if type-of($color) != color {
+        @warn "#{$color} is not a color";
+        @return '';
+    }
+    @if math.is-unitless($percent) {
+        $percent: math.percentage($percent);
+    }
+    $relative-theme: config(relative-light-limit);
+    @if not $relative-theme {
+        @return color.scale($color, $lightness: $percent);
+    }
+    $color: un-meta.hsl($color);
+    $h: list.nth($color, 1);
+    $s: list.nth($color, 2);
+    $l: list.nth($color, 3);
+
+    $text-color: colors(text-color);
+    $background-color: colors(background-color);
+    $light-color: un-meta.lightest($background-color, $text-color);
+
+    $d: list.nth(un-meta.hsl($light-color), 3);
+    $l: ((($d - $l) * $percent) / 100) + $l;
+    @return hsl($h, $s, $l);
+}
+
+/*
+*   Color darken method
+*/
+@function darken($color, $percent) {
+    $percent: math.abs($percent);
+    @if type-of($color) == string {
+        $color: colors($color);
+    }
+    @if type-of($color) != color {
+        @warn "#{$color} is not a color";
+        @return '';
+    }
+    @if math.is-unitless($percent) {
+        $percent: math.percentage($percent);
+    }
+    $relative-theme: config(relative-light-limit);
+    @if not $relative-theme {
+        @return color.scale($color, $lightness: negative($percent));
+    }
+    $color: un-meta.hsl($color);
+    $h: list.nth($color, 1);
+    $s: list.nth($color, 2);
+    $l: list.nth($color, 3);
+
+    $text-color: colors(text-color);
+    $background-color: colors(background-color);
+    $dark-color: un-meta.darkest($background-color, $text-color);
+    $d: list.nth(un-meta.hsl($dark-color), 3);
+    $l: $l - (($l - $d) * $percent) / 100;
+    @return hsl($h, $s, $l);
+}
+
+/*
+*   Get color from palette
+*/
+@function palette($color-name, $tint-name, $hue-offset: 0) {
+    @if type-of($color-name) != string {
+        @warn '#{$color-name} must be a registered color-name';
+        @return transparent;
+    }
+    @if not un-meta.check-color-name($color-name) {
+        @return transparent;
+    }
+    $palettes: get(palettes);
+    @if not map.has-key($palettes, $color-name) {
+        @warn '#{$color-name} does not have a palette';
+        @return colors($color-name);
+    }
+    @if type-of(map.get($palettes, $color-name)) != map {
+        @warn 'Palette of #{$color-name} color must be a map';
+        @return colors($color-name);
+    }
+    $palette: map.get($palettes, $color-name);
+    @if not map.has-key($palette, $tint-name) {
+        @warn '#{$tint-name} tint for #{$color-name} color not exist';
+        @return colors($color-name);
+    }
+    $color: map.get($palette, $tint-name);
+    @return color.adjust($color, $hue: $hue-offset);
+}
+
+/*
+*   Smart Lightening Method
+*/
+@function lightness($color, $percent) {
+    @if strip-unit($percent) < 0 {
+        @if get(theme-type) == light {
+            @return darken($color, $percent);
+        } @else {
+            @return lighten($color, $percent);
+        }
+    } @else {
+        @if get(theme-type) == light {
+            @return lighten($color, $percent);
+        } @else {
+            @return darken($color, $percent);
+        }
+    }
+}
+
+/*
+*   Smart color brightness control method
+*/
+@function brightness($color, $percent, $hue-offset: null) {
+    @if $percent < 0 {
+        @if get(theme-type) == light {
+            @return dim($color, $percent, $hue-offset);
+        } @else {
+            @return brighten($color, $percent, $hue-offset);
+        }
+    } @else {
+        @if get(theme-type) == light {
+            @return brighten($color, $percent, $hue-offset);
+        } @else {
+            @return dim($color, $percent, $hue-offset);
+        }
+    }
+}
+
+/*
+*   Method for dimming color
+*/
+@function dim($color, $percent, $hue-offset: null) {
+    @if type-of($color) == string {
+        $color: colors($color);
+    }
+    @if type-of($color) != color {
+        @warn "#{$color} is not a color";
+        @return '';
+    }
+    $percent: math.abs($percent);
+    @if math.is-unitless($percent) {
+        $percent: math.percentage($percent);
+    }
+    $options: (
+        offset: 0
+    );
+    @if type-of(config(brightness)) == map {
+        $options: map.merge($options, config(brightness));
+    }
+    $offset: map.get($options, offset);
+    @if $hue-offset != null {
+        $offset: $hue-offset;
+    } @else {
+        $offset: ($offset * strip-unit($percent) / 100);
+    }
+
+    $color: color.adjust(darken($color, $percent), $hue: $offset);
+    $hsl: un-meta.hsl($color);
+
+    $h: list.nth($hsl, 2) - ((100 - list.nth($hsl, 2)) * strip-unit($percent) / 100);
+
+    @return hsl(list.nth($hsl, 1), $h, list.nth($hsl, 3));
+}
+
+/*
+*  Method for brightening color brightness
+*/
+@function brighten($color, $percent, $hue-offset: null) {
+    @if type-of($color) == string {
+        $color: colors($color);
+    }
+    @if type-of($color) != color {
+        @warn "#{$color} is not a color";
+        @return '';
+    }
+    $percent: math.abs($percent);
+    @if math.is-unitless($percent) {
+        $percent: math.percentage($percent);
+    }
+    $options: (
+        offset: -20deg
+    );
+    @if type-of(config(brightness)) == map {
+        $options: map.merge($options, config(brightness));
+    }
+    $offset: map.get($options, offset);
+    @if $hue-offset != null {
+        $offset: $hue-offset;
+    } @else {
+        $offset: ($offset * strip-unit($percent) / 100);
+    }
+
+    $color: color.adjust(lighten($color, $percent), $hue: $offset);
+    $hsl: un-meta.hsl($color);
+
+    $h: ((100 - list.nth($hsl, 2)) * strip-unit($percent) / 100) + list.nth($hsl, 2);
+
+    @return hsl(list.nth($hsl, 1), $h, list.nth($hsl, 3));
+}
+
+/*
+*   Get a tint for the color
+*/
+@function tint($color, $amount) {
+    $options: (
+        light-odd-offset: 8,
+        light-even-offset: 4,
+        hue-offset: 16,
+        saturation-odd-offset: 8,
+        saturation-even-offset: 4
+    );
+    @if config(tint) and type-of(config(tint)) == map {
+        $options: map.merge($options, config(tint));
+    }
+    @if type-of($color) == string {
+        $color: colors($color);
+    }
+    @if type-of($color) != color {
+        @warn "#{$color} is not a color";
+        @return '';
+    }
+    @if strip-unit($amount) == 0 {
+        @return $color;
+    }
+    $hsl: un-meta.hsl($color);
+    $light: list.nth($hsl, 3);
+    $saturation: list.nth($hsl, 2);
+    $light-odd-offset: map.get($options, light-odd-offset);
+    $light-even-offset: map.get($options, light-even-offset);
+    @if math.abs($amount) % 2 != 0 {
+        @if math.ceil($light) + $light-odd-offset <= 100 {
+            $light: $light + $light-odd-offset;
+        } @else {
+            $light: $light - $light-odd-offset;
+        }
+    } @else {
+        @if math.ceil($light) + $light-even-offset <= 100 {
+            $light: $light + $light-even-offset;
+        } @else {
+            $light: $light - $light-even-offset;
+        }
+    }
+
+    $saturation-even-offset: map.get($options, saturation-even-offset);
+    $saturation-odd-offset: map.get($options, saturation-odd-offset);
+    @if math.abs($amount) % 2 != 0 {
+        @if math.ceil($saturation) + $saturation-odd-offset <= 100 {
+            $saturation: $saturation + $saturation-odd-offset;
+        } @else {
+            $saturation: $saturation - $saturation-odd-offset;
+        }
+    } @else {
+        @if math.ceil($saturation) + $saturation-even-offset <= 100 {
+            $saturation: $saturation + $saturation-even-offset;
+        } @else {
+            $saturation: $saturation - $saturation-even-offset;
+        }
+    }
+    $color: hsl(list.nth($hsl, 1), $saturation, $light);
+    @return color.adjust($color, $hue: $amount * map.get($options, hue-offset));
+}
+
+/*
+*   Get theme config
+*/
+@function config($key:'') {
+    $config: get(config);
+    @if map.has-key($config, $key) {
+        @return map.get($config, $key);
+    } @else if $key != '' {
+        @return false;
+    }
+    @return $config;
+}
+
+/*
+*   Get values by key from $theme
+*/
+@function get($key:'') {
+    @if map.has-key($theme, $key) {
+        @return map.get($theme, $key);
+    } @else if $key != '' {
+        @return null;
+    }
+    @return map.remove($theme, settings);
+}
+
+/*
+*   Return value relative to active theme type
+*/
+@function subs($light, $dark) {
+    $type: theme(theme-type);
+    @if $type == light {
+        @return $light;
+    }
+    @return $dark;
+}
+
+/*
+*   Get theme colors or specific color
+*/
+@function colors($color: '') {
+    $colors: get(colors);
+    @if map.has-key($colors, $color) {
+        @return map.get($colors, $color);
+    } @else if $color != '' {
+        @warn '#{$color} is not a registered color';
+    }
+    @return transparent;
+}
+
+/*
+*   Get gray color with $offset
+*/
+@function gray($offset:0) {
+    $saturation: 0;
+    $hue: 0;
+    $theme-config: get(config);
+
+    @if map.has-key($theme-config, gray) and type-of(map.get($theme-config, gray)) == map {
+        @if map.has-key(map.get($theme-config, gray), saturation) {
+            $saturation: map.get(map.get($theme-config, gray), saturation);
+        }
+        @if map.has-key(map.get($theme-config, gray), hue) {
+            $hue: map.get(map.get($theme-config, gray), hue);
+        }
+    }
+
+    @if type-of($hue) == color {
+        $hue: list.nth(un-meta.hsl($hue), 1);
+    }
+
+    @return  lightness(color.adjust(color.grayscale(color.mix(colors(background-color), colors(text-color))), $saturation: $saturation, $hue: $hue), $offset);
+}
+
+/*
+*   The main function for working with colors of theme
+*   $color-name - get color by $color-name
+*   $color-tint - may be a tint from the palette or $offset
+*/
+
+@function color($color-name, $color-tint: 0, $hue-offset: 0) {
+    @if type-of($color-tint) == string {
+        @return palette($color-name, $color-tint, $hue-offset);
+    }
+    @if $color-name == gray or $color-name  == grey {
+        @return gray($color-tint);
+    }
+    @if type-of($color-name) != string {
+        @warn '#{$color-name} must be a registered color-name';
+        @return transparent;
+    }
+    @if not un-meta.check-color-name($color-name) {
+        @return transparent;
+    }
+    $offset: null;
+    @if $hue-offset != 0 and type-of($hue-offset) == number {
+        $offset: $hue-offset;
+    }
+    @return brightness($color-name, $color-tint, $offset);
+}

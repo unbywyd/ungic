@@ -1,0 +1,10 @@
+/*
+*   Any custom mixins
+*/
+@use "../.core" as this;
+
+@mixin testMixin() {
+    @include this.component {
+        @content;
+    }
+}

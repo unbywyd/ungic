@@ -161,6 +161,9 @@ module.exports = function(yargs, done) {
                 let answers;
                 if(questions.length) {
                     answers = await prompts.call(this, questions, true);
+                    if(!answers.name && name && !buildConfig.name) {
+                        answers.name = name;
+                    }
                     if(!answers) {
                         this.rl.begin();
                         done('action canceled');
@@ -173,30 +176,30 @@ module.exports = function(yargs, done) {
 
                 themes = _.reject(themes, t => t == answers.default_theme);
 
-                let answers2 = await prompts.call(this, [
-                    {
-                        type: 'checkbox',
-                        name: 'themes',
-                        message: `Include themes`,
-                        choices: _.map(themes, theme => {
-                            return {
-                                value: theme,
-                                checked: false
-                            }
-                        })
+                if(themes.length) {
+                    let answers2 = await prompts.call(this, [
+                        {
+                            type: 'checkbox',
+                            name: 'themes',
+                            message: `Include themes`,
+                            choices: _.map(themes, theme => {
+                                return {
+                                    value: theme,
+                                    checked: false
+                                }
+                            })
+                        }
+                    ], true);
+                    if(!answers2) {
+                        this.rl.begin();
+                        done('action canceled');
+                        return
                     }
-                ], true);
-                this.rl.begin();
-
-                if(!answers2) {
-                    done('action canceled');
-                    return
+                    answers = _.extend(answers, answers2);
                 }
-
-               answers = _.extend(answers, answers2);
-               this.rl.rl.pause();
-               await plugin.release(answers.name, answers);
-               done();
+                await plugin.release(answers.name, answers);
+                this.rl.begin();
+                done();
             })();
     })
     .command('components', 'Show list of existing components', {}, args => {

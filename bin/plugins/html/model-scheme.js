@@ -90,9 +90,5 @@ module.exports = {
     delete_from_dist: {
         type: 'boolean',
         default: false
-    },
-    relative_include: {
-        type: 'boolean',
-        default: true
     }
 }

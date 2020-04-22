@@ -64,6 +64,18 @@ class app extends skeleton {
         this.socketsArgs = [];
     }
     async initialize() {
+        //
+        let dirs = await fsp.readdir(appPaths.root);
+        if(dirs.length) {
+            for(let dir of dirs) {
+                let stat = await fsp.lstat(path.join(appPaths.root, dir));
+                if(stat.isDirectory()) {
+                    this.log('Directory is not empty', 'error');
+                    return process.exit();
+                }
+            }
+        }
+
         if(!appPaths.config && !appPaths.package) {
             this.log('Note! Recommended to create package.json using npm init command.', 'warning');
             let response = await prompts({
@@ -95,8 +107,8 @@ class app extends skeleton {
                 }
             ]);
             this.setConfig(response);
-            await fse.outputFile(path.join(appPaths.root, 'ungic.config.json'), JSON.stringify(this.config, null, 4));
         }
+        await fse.outputFile(path.join(appPaths.root, 'ungic.config.json'), JSON.stringify(this.config, null, 4));
 
         let prj = new ungicProject(this.config);
         try {
@@ -179,7 +191,12 @@ class app extends skeleton {
             });
         });
         let port = this.fastify.server.address().port;
-        this.setConfig({port: port});
+
+        let serverConfig = config.server;
+        serverConfig.port = port;
+        serverConfig.address = this.fastify.address;
+        this.setConfig({server:serverConfig});
+
         this.log(`Server is listening on ${this.fastify.address}`);
         this.project = new ungicProject(this.config);
         this.project.on('log', (type, message, args={}) => {
@@ -199,6 +216,7 @@ class app extends skeleton {
         if(config.openInBrowser) {
             await open(this.fastify.address);
         }
+        process.title = `[${config.name}] ungic project`;
     }
 }
 module.exports = app;

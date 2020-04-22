@@ -1,7 +1,22 @@
 module.exports = {
-    single_theme_prefix: {
-        type: 'boolean',
-        default: false
+    top_selector: {
+        type: 'string',
+        default: 'html'
+    },
+    rtl_prefix: {
+        type: "object",
+        properties: {
+            prefixType: {
+                type: 'string',
+                enum: ['attribute', 'class']
+            },
+            prefix: {
+                type: 'string'
+            }
+        },
+        default: {
+            prefixType: "attribute"
+        }
     },
     dev: {
         type: "object",
@@ -20,10 +35,6 @@ module.exports = {
                     inverse: {
                         type: ["boolean"]
                     },
-                    theme_mode: {
-                        type: ["string"],
-                        enum: ["combined", "external"]
-                    },
                     direction: {
                         type: ["string"],
                         enum: ["ltr", "rtl"]
@@ -36,7 +47,6 @@ module.exports = {
         },
         default: {
             config: {
-                theme_mode: "external",
                 inverse: true,
                 autoprefixer: true,
                 direction: 'ltr',
@@ -58,6 +68,9 @@ module.exports = {
                                 default: true
                             },
                             inverse: {
+                                type: ["boolean"]
+                            },
+                            default_inverse: {
                                 type: ["boolean"]
                             },
                             theme_mode: {
@@ -126,6 +139,7 @@ module.exports = {
                 default: {
                     theme_mode: "external",
                     inverse: true,
+                    default_inverse: false,
                     autoprefixer: true,
                     direction: 'ltr',
                     opposite_direction: true

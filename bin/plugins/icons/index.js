@@ -288,9 +288,9 @@ class iconsPlugin extends plugin {
         svgOrigin = svgOrigin.window.document.querySelector('svg');
         let dom = new JSDOM('<svg class="ungic-icon" role="img"></svg>');
         let svg = dom.window.document.querySelector('svg.ungic-icon');
-        let title = model.get('title');
-        if(options.label) {
-            title = options.label;
+        let title = model.get('name');
+        if(options.title) {
+            title = options.title;
         }
         let className = config.svg_sprites.className;
         if(!options.presentation && title) {
@@ -323,8 +323,13 @@ class iconsPlugin extends plugin {
             svg.setAttribute('height', config.svg_sprites.height);
         }
         svg = svg.outerHTML;
+
+        let label = '';
+        if(options.label) {
+            label = options.label;
+        }
         if(options.href) {
-            return `<a href="${options.href}">${svg}</a>`;
+            return `<a href="${options.href}">${svg}${label}</a>`;
         } else {
             return svg;
         }
@@ -336,18 +341,22 @@ class iconsPlugin extends plugin {
         }
         let fontConfig = this.fontConfiguration();
 
-        let title = model.get('title');
-        if(options.label) {
-            title = options.label;
+        let title = model.get('name');
+        if(options.title) {
+            title = options.title;
         }
-        let label = title ? `<span class="${fontConfig.font.class}-label">${title}</span>` : '';
+        title = `<span class="${fontConfig.font.class}-label">${title}</span>`;
         if(options.presentation) {
-           label = '';
+           title = '';
+        }
+        let label = '';
+        if(options.label) {
+            label = options.label;
         }
         if(options.href) {
-            return `<a href="${options.href}"><i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${model.get('id')}"></i>${label}</a>`;
+            return `<a href="${options.href}"><i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${model.get('id')}"></i>${title}${label}</a>`;
         } else {
-            return `<i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${model.get('id')}"></i>${label}`;
+            return `<i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${model.get('id')}"></i>${title}`;
         }
     }
     getHTMlSpriteIcon(id, options={}) {
@@ -358,17 +367,21 @@ class iconsPlugin extends plugin {
         let config = this.config;
 
         let title = model.get('name');
-        if(options.label) {
-            title = options.label;
+        if(options.title) {
+            title = options.title;
         }
-        let label = title ? `<span class="${config.sprites.className}-label">${title}</span>` : '';
+        title = `<span class="${config.sprites.className}-label">${title}</span>`;
         if(options.presentation) {
-           label = '';
+           title = '';
+        }
+        let label = '';
+        if(options.label) {
+            label = options.label;
         }
         if(options.href) {
-            return `<a href="${options.href}"><i aria-hidden="true" class="${config.sprites.className}-${model.get('id')}"></i>${label}</a>`;
+            return `<a href="${options.href}"><i aria-hidden="true" class="${config.sprites.className}-${model.get('id')}"></i>${title}${label}</a>`;
         } else {
-            return `<i aria-hidden="true" class="${config.sprites.className}-${model.get('id')}"></i>${label}`;
+            return `<i aria-hidden="true" class="${config.sprites.className}-${model.get('id')}"></i>${title}`;
         }
     }
     getSymbol(id, asHTML) {

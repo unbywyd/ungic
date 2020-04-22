@@ -47,6 +47,26 @@ class typeHandlers extends skeleton {
     }
 }
 
+let getDeepEl = (str, data) => {
+    let spl = str.split(/(?<!\\)\./);
+    spl = _.map(spl, e => e.replace(/\\./g, '.'));
+    let search = function(key, data) {
+        let sub = data[key];
+        if(sub || !spl.length) {
+            if(!spl.length) {
+                return sub;
+            }
+            return search(spl.shift(), sub);
+        } else {
+            return data;
+        }
+    }
+    if(spl.length) {
+        data = search(spl.shift(), data);
+    }
+    return data;
+}
+
 class htmlPlugin extends plugin {
     constructor(config={}, sysconfig={}) {
         config.id = 'html';
@@ -89,46 +109,13 @@ class htmlPlugin extends plugin {
         this.typeHandlers.set('html', async attrs => {
             attrs.body = await this.ungicParser.parse(attrs.body, attrs);
             const dom = new JSDOM(attrs.body);
-            if(!dom.window.document.querySelector('head').children.length && dom.window.document.querySelector('body').innerHTML.replace(/\s/g, '') != '') {
-                attrs.body = dom.window.document.querySelector('body').innerHTML;
-            } else if (dom.window.document.querySelector('html').innerHTML.replace(/\s/g, '') != '') {
-                attrs.type = "page";
-                if(!this.release) {
-                    let script = dom.window.document.createElement("script");
-                    script.setAttribute('src', this.project.fastify.address + '/ungic/js/dist/pipe.min.js');
-                    script.setAttribute('data-connect', this.project.fastify.address);
-                    script.setAttribute('data-src', path.relative(this.dist, path.join(this.dist, attrs.path)).replace(/\\+/g, '/'));
-                    dom.window.document.querySelector('body').appendChild(script);
-
-                    let link = dom.window.document.createElement('link');
-                    link.setAttribute('href',  this.project.fastify.address + '/ungic/css/devtools.css');
-                    link.setAttribute('rel', 'stylesheet');
-                    dom.window.document.querySelector('head').appendChild(link);
-
-                    if(this.iconsStorage.fonts && this.iconsStorage.fonts.data.icons.length) {
-                        let linkicons = dom.window.document.createElement("link");
-                        linkicons.setAttribute('href', this.project.fastify.address + '/ungic/font-icons');
-                        linkicons.setAttribute('rel', 'stylesheet');
-                        dom.window.document.querySelector('head').appendChild(linkicons);
-                    }
-
-                    if(this.iconsStorage.sprite && this.iconsStorage.sprite.data.icons.length) {
-                        let linkicons = dom.window.document.createElement("link");
-                        linkicons.setAttribute('href', this.project.fastify.address + '/ungic/sprites');
-                        linkicons.setAttribute('rel', 'stylesheet');
-                        dom.window.document.querySelector('head').appendChild(linkicons);
-                    }
-                }
-                if(this.iconsStorage.svg_sprite  && this.iconsStorage.svg_sprite.data.icons.length && !this.iconsStorage.svg_sprite.data.external) {
-                    let domSprite = new JSDOM(this.iconsStorage.svg_sprite.data.sprite);
-                    dom.window.document.querySelector('body').appendChild(domSprite.window.document.querySelector('svg'));
-                }
-                attrs.body = '<!DOCTYPE html>\n' + dom.window.document.documentElement.outerHTML;
+            let body = attrs.body;
+            body = body.replace(/<!-{1,}[\w\W]+?-{2,}>/gm, '');
+            if((/<html/g.test(body) && /<\/html/g.test(body)) || (/<body/g.test(body) && /<\/body/g.test(body))) {
+                attrs.type = 'page';
                 if(dom.window.document.querySelector('html').hasAttribute('⚡')) {
                     attrs.amp = true;
                 }
-            } else {
-                return;
             }
             return attrs;
         });
@@ -223,10 +210,10 @@ class htmlPlugin extends plugin {
                         }
                         output += `<link rel="stylesheet" href="${href}" />`;
 
-                    if(!await fsp.exists(pathToCSS)) {
-                        let entity = args.path ? args.path : args.id;
-                        this.log(`css file by path ${pathToCSS} not exist.`, 'warning');
-                    }
+                    //if(!await fsp.exists(pathToCSS)) {
+                        //let entity = args.path ? args.path : args.id;
+                        //this.log(`css file by path ${pathToCSS} not exist.`, 'warning');
+                    //}
                 }
             }
 
@@ -244,6 +231,18 @@ class htmlPlugin extends plugin {
         });
         let self = this;
         this.MustacheHelpers = {
+            debug_it: function() {
+                return function(searchBy) {
+                    if(self.release) {
+                        return '';
+                    }
+                    let data = this;
+                    if(searchBy) {
+                        data = getDeepEl(searchBy, data);
+                    }
+                    return '<pre data-path="'+this.ungic.model.path+'" class="un-debug">' + JSON.stringify(data, null, 4) + '</pre>';
+                }
+            },
             debug: function() {
                 if(self.release) {
                     return '';
@@ -257,11 +256,16 @@ class htmlPlugin extends plugin {
                 return JSON.stringify(this, null, 4);
             }
         }
-        Handlebars.registerHelper("debug", function() {
+        Handlebars.registerHelper("debug", function(searchBy) {
             if(self.release) {
                 return '';
             }
-            return '<pre data-path="'+this.ungic.model.path+'" class="un-debug">' + JSON.stringify(this, null, 4) + '</pre>';
+            let data = this;
+
+            if('string' == typeof searchBy) {
+                data = getDeepEl(searchBy, data);
+            }
+            return '<pre data-path="'+this.ungic.model.path+'" class="un-debug">' + JSON.stringify(data, null, 4) + '</pre>';
         });
         Handlebars.registerHelper("debug_source", function() {
             if(self.release) {
@@ -363,8 +367,9 @@ class htmlPlugin extends plugin {
             let source = {ungic: _.clone(rootData.ungic)};
             let activeModel = this.collection.findByID(source.ungic.model ? source.ungic.model.id : source.ungic.page.id);
             let options = context.hash ? context.hash: {};
-            let dirname = source.ungic.dirname ? source.ungic.dirname : path.dirname(source.ungic.page.path);
-            let cwd = config.relative_include ? path.join(this.root, dirname) : this.root;
+            //let dirname = source.ungic.dirname ? source.ungic.dirname : path.dirname(source.ungic.page.path);
+            let cwd = this.root; // config.relative_include ? path.join(this.root, dirname) :
+           // console.log(source);
             if(options.cwd) {
                 cwd = path.join(this.root, options.cwd);
             }
@@ -410,7 +415,8 @@ class htmlPlugin extends plugin {
                 this.log(`File by path ${templatePath} not exists. Error building ${rootData.ungic.page.path} page`, 'error');
             } else {
                 let model = this.collection.findWhere({path: path.relative(this.root, templatePath)}, false);
-
+                /*delete source.ungic.dirname;
+                delete source.ungic.model;*/
                 if(model) {
                     if(activeModel.get('type') == 'template' && model.get('type') != 'template') {
                         return this.log(`Templates can include only templates. Error building ${rootData.ungic.page.path} page in ${activeModel.get('path')} entity`, 'error');
@@ -421,7 +427,7 @@ class htmlPlugin extends plugin {
                     if(supported_include_types.indexOf(model.get('type')) == -1) {
                         return this.log(`${model.get('type')} type not supported for including. Error building ${rootData.ungic.page.path} page in ${activeModel.get('path')} entity`, 'error');
                     }
-                    source.ungic.dirname = path.dirname(path.relative(this.root, templatePath));
+                    //source.ungic.dirname = path.dirname(path.relative(this.root, templatePath));
                     source.ungic.model = {
                         id: model.id,
                         path: model.get('path')
@@ -441,7 +447,7 @@ class htmlPlugin extends plugin {
                         let exportSearch = function(str) {
                             let spl = str.split('.');
                             let data;
-                            let search = function(id, data) {
+                            let search = function(id, data={}) {
                                 let res = scssPlugin.exports.chain().filter(model => model.id.indexOf(id) == 0).map(m => m.toJSON()).value();
                                 if(res.length) {
                                     if(!spl.length) {
@@ -479,23 +485,27 @@ class htmlPlugin extends plugin {
                         }
                         source.sass = sass;
                     }
-                    if(model.get('type') == 'template') {
+
+                    let inlineData = {}
+                    if(options.inline) {
+                        options.inline = options.inline.replace(/\&amp;/g, '&');
+                        try {
+                            inlineData = queryString.parse(options.inline);
+                        } catch(e) {
+                            this.log(e);
+                        }
+                    }
+                    if(model.get('type') == 'template' || model.get('type') == 'mustache_template' || model.get('type') == 'underscore_template' || model.get('type') == 'pug_template') {
+                        source = _.extend(source, inlineData);
                         if('object' == typeof options.extend) {
                             source = _.extend(source, options.extend);
                         }
-                        if(options.inline) {
-                            let inlineData = {}
-                            try {
-                                inlineData = queryString.parse(options.inline);
-                            } catch(e) {
-                                this.log(e);
-                            }
-                            source = _.extend(source, inlineData);
-                        }
+                    }
+                    if(model.get('type') == 'template') {
                         content = Handlebars.compile(content)(source);
                     }
                     if(model.get('type') == 'mustache_template') {
-                        source = _.extend(this.MustacheHelpers, source);
+                        source = _.extend({}, this.MustacheHelpers, source);
                         content = Mustache.render(content, source);
                     }
 
@@ -503,14 +513,14 @@ class htmlPlugin extends plugin {
                         let compiled = _.template(content, {
                             interpolate: /\{\{(.+?)\}\}/g
                         });
-                        content = compiled(_.extend(source, {
+                        content = compiled(_.extend({}, source, {
                             debug: '<pre data-path="'+source.ungic.model.path+'" class="un-debug">' + JSON.stringify(source, null, 4) + '</pre>'
                         }));
                     }
 
                     let self = this;
                     if(model.get('type') == 'pug_template') {
-                        content = pug.compile(content)(_.extend(source, {
+                        content = pug.compile(content)(_.extend({}, source, {
                             debug: function() {
                                 if(self.release) {
                                     return '';
@@ -803,6 +813,40 @@ class htmlPlugin extends plugin {
                         }
                     }
                 }
+
+                const dom = new JSDOM(output);
+
+                if(!this.release) {
+                    let script = dom.window.document.createElement("script");
+                    script.setAttribute('src', this.project.fastify.address + '/ungic/js/dist/pipe.min.js');
+                    script.setAttribute('data-connect', this.project.fastify.address);
+                    script.setAttribute('data-src', path.relative(this.dist, path.join(this.dist, attrs.path)).replace(/\\+/g, '/'));
+                    dom.window.document.querySelector('body').appendChild(script);
+
+                    let link = dom.window.document.createElement('link');
+                    link.setAttribute('href',  this.project.fastify.address + '/ungic/css/devtools.css');
+                    link.setAttribute('rel', 'stylesheet');
+                    dom.window.document.querySelector('head').appendChild(link);
+
+                    if(this.iconsStorage.fonts && this.iconsStorage.fonts.data.icons.length) {
+                        let linkicons = dom.window.document.createElement("link");
+                        linkicons.setAttribute('href', this.project.fastify.address + '/ungic/font-icons');
+                        linkicons.setAttribute('rel', 'stylesheet');
+                        dom.window.document.querySelector('head').appendChild(linkicons);
+                    }
+
+                    if(this.iconsStorage.sprite && this.iconsStorage.sprite.data.icons.length) {
+                        let linkicons = dom.window.document.createElement("link");
+                        linkicons.setAttribute('href', this.project.fastify.address + '/ungic/sprites');
+                        linkicons.setAttribute('rel', 'stylesheet');
+                        dom.window.document.querySelector('head').appendChild(linkicons);
+                    }
+                }
+                if(this.iconsStorage.svg_sprite  && this.iconsStorage.svg_sprite.data.icons.length && !this.iconsStorage.svg_sprite.data.external) {
+                    let domSprite = new JSDOM(this.iconsStorage.svg_sprite.data.sprite);
+                    dom.window.document.querySelector('body').appendChild(domSprite.window.document.querySelector('svg'));
+                }
+                output = dom.serialize();
                 distPath = path.join(distPath, attrs.path);
                 await fse.outputFile(distPath, output);
                 this.log(`${attrs.path} page successfully compiled to ${distPath}`);

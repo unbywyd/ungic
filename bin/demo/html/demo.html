@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" class="un-inverse">
+<head>
+    <meta charset="UTF-8">
+    <title>Demo of features</title>
+    <!-- Include dev css components -->
+    <un-pipe css="myproject, test"></un-pipe>
+</head>
+<body>
+   <!--  Start with the container with the project name. My project name is myproject -->
+    <div class="myproject">
+        <!--
+            Using Icons
+        -->
+        <h2>Use icons with <b>icon</b> handlebars helper</h2>
+        <div class="myproject-section">
+            <p>{{{icon "svg-bitbucket"}}} <a href="#">Bitbucket</a></p>
+
+            <!-- Icon as link -->
+            <p>{{{icon "svg-bitbucket" href="/" label="Bitbucket"}}}</p>
+
+            <h3>Icon with custom name</h3>
+            <!-- Set icon name -->
+            <p>{{{icon "svg-bitbucket" title="Bitbucket icon"}}}</p>
+
+            <h3>One helper for any icons type, sprite image</h3>
+            <p>{{{icon "images-magic"}}}</p>
+
+            <h3>Accessibility, presentation only</h3>
+            <!-- Accessibility -->
+            <p>{{{icon "svg-bitbucket" presentation="true"}}}</p>
+        </div>
+
+        <br>
+        <!-- Include handlebars template with icons data -->
+        <h2>Use <b>icons</b> data in your templates</h2>
+        <div class="myproject-section">
+        {{{include "templates/test_all_icons.hbs" data="icons"}}}
+        </div>
+        <br>
+        <h2>Get data from SASS</h2>
+        <div class="myproject-section">
+            {{{include "templates/test_sass_component_data.hbs" sass="test.demo_data"}}}
+            {{{include "templates/test.mustache" sass="test.demo_data"}}}
+        </div>
+
+        <h2>Include text with cwd param</h2>
+        <div class="myproject-section">
+            <p>{{{include "test.txt" cwd="other"}}}</p>
+        </div>
+
+        <div class="myproject-section">
+            {{{include "test.md" cwd="other"}}}
+        </div>
+
+        <h2>Templates with custom data JSON/YAML</h2>
+        <div class="myproject-section">
+            <p>{{{include "test.pug" cwd="test" data="test.json"}}}</p>
+            <p>{{{include "templates/test_with_data.hbs" data="data/test.yaml"}}}</p>
+        </div>
+
+
+
+
+        <h2>Deep include, extend method and inline data</h2>
+        <div class="myproject-section">
+            <!-- Inline data from querystring -->
+            {{{include "templates/test_part1.hbs" inline="first_name=Artem"}}}
+        </div>
+        <h2>Partition</h2>
+        <div class="myproject-section">
+            {{{include "parts/test_part1.html"}}}
+            {{{include "parts/test_part2.html"}}}
+        </div>
+    </div>
+</body>
+</html>

@@ -98,7 +98,7 @@ module.exports = function(yargs, done) {
             this.rl.rl.pause();
             try {
                 let created = await plugin.createPage(answers);
-                done(`${args.name} page successfully created!`);
+                done(`Done!`);
             } catch(e) {
                 done(e);
             }

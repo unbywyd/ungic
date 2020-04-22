@@ -1,17 +1,17 @@
 $colors: (
     primary: #9cef0a,
-    secondary: #ecef0a,
-    success: #53d146,
-    danger: #d14674,
+    secondary: #3d3931,
+    success: #cce678,
+    danger: #e6787d,
     info: #4bafee,
     warning: #eee84b,
-    system: #3e62fc,
-    text-color: #272b29,
-    background-color: #FFF
+    system: (#cf7e16, #e8a900),
+    text-color: (#3a3b39, #fff9ea),
+    background-color: (#FFF, #202120)
 );
 
 $config: (
-    inverse: true,
+    inverse: false,
     brightness: (
         offset: 20,
     ),
@@ -24,7 +24,11 @@ $config: (
 
 $palettes: (
     primary: (
-        lighten: #e4ffb5,
-        darken: #263211
+        lighten: #e8f2c7,
+        darken: #4c5d15
+    ),
+    secondary: (
+        lighten: #f5f3e6,
+        darken: #2a2925
     )
 );
