@@ -3,7 +3,7 @@ Ungic packer is web layout environment with own modular [Dart Sass](https://sass
 
 Ungic packer is the environment for web layout coder. His purpose is to facilitate the preparation of materials for front-end, but rather, helps to solve the following tasks:
 ### Basic task
-* Prepare a structure for the future web template  
+* Prepare a structure for the future web template
 * Provide a local server for working with project files
 * Provide live server
 * Provide the necessary tools for web coder
@@ -55,14 +55,14 @@ To work with css, i developed a sophisticated framework that allows you to write
 * **--help** - It will returns the help about the active menu
 * **exit** -  Action back or exit
 * **html** - Switch to html plugin menu
-    * **valid &lt;path&gt;** - Check page from the dist directory using validator.w3.org
-    * **amp_valid &lt;path&gt;** - Check page from the dist directory using amp-validator
-    * **create &lt;name&gt;** - Create New Page
+    * **valid <path>** - Check page from the dist directory using validator.w3.org
+    * **amp_valid <path>** - Check page from the dist directory using amp-validator
+    * **create <name>** - Create New Page
     * **release** - Create release
     * **pages** - Show pages
     * **unwatch** - Skip file changes for this plugin
     * **watch** - To watch file changes for this plugin
-    * **remove &lt;name&gt;** - Remove page
+    * **remove <name>** - Remove page
 * **icons** - Switch to icons plugin menu
     * **export** - Export svg icons to json file
     * **import** - Import svg icons from exported file
@@ -70,10 +70,10 @@ To work with css, i developed a sophisticated framework that allows you to write
     * **unwatch**
     * **watch**
 * **sass** - Switch to sass plugin menu
-    * **create &lt;cid&gt;** - Create sass component
+    * **create <cid>** - Create sass component
     * **release [name]** - Assemble components in a release
     * **components** - Show list of existing components
-    * **remove &lt;name&gt;** - Remove component
+    * **remove <name>** - Remove component
     * **unwatch**
     * **watch**
 * **other** - Switch to other menu
