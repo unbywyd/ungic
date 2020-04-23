@@ -28,22 +28,24 @@ module.exports = function(yargs, done) {
                 done(e);
                 return
             }
-            this.log('Copying files ...', 'Note');
+            this.log('File copying in progress, please wait', 'Note');
             await fse.copy(demoPath, path.join(app.project.root, app.project.fsDirs('source')), {
                 overwrite:true
             });
-            scssPlugin.renderMaster.collector.on('finish', events => {
+            function toCollect(events) {
                 collector.add(events);
-            });
-            htmlPlugin.renderMaster.collector.on('finish', events => {
-                collector.add(events);
-            });
-            iconsPlugin.renderMaster.collector.on('finish', events => {
-                collector.add(events);
-            });
-            collector.on('finish', () => {
-                this.log('The files were copied successfully, need to rebuild the project, wait until the end!', 'Note');
-                prompts.call(this, [
+            }
+            scssPlugin.renderMaster.collector.on('finish', toCollect);
+            htmlPlugin.renderMaster.collector.on('finish', toCollect);
+            iconsPlugin.renderMaster.collector.on('finish', toCollect);
+            let _this = this;
+            function toFinish() {
+                _this.log('The files were copied successfully, need to rebuild the project, wait until the end!', 'Note');
+                collector.off('finish', toFinish);
+                scssPlugin.renderMaster.collector.off('finish', toCollect);
+                htmlPlugin.renderMaster.collector.off('finish', toCollect);
+                iconsPlugin.renderMaster.collector.off('finish', toCollect);
+                prompts.call(_this, [
                     {
                         type: 'confirm',
                         name: 'next',
@@ -62,7 +64,8 @@ module.exports = function(yargs, done) {
                         done('Action canceled');
                     }
                 });
-            });
+            }
+            collector.on('finish', toFinish);
         })();
     })
     .command('create_config', 'Generate configuration file', args => {
