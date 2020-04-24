@@ -926,11 +926,11 @@ class htmlPlugin extends plugin {
 
                 //this.lastAmountAddedIcons[e.type] = (e.models) ? e.models.length : 0;
                 this.iconsStorage[e.type] = e;
-
                 if(this.iconsDataUsed.storage.length) {
                     for(let data of this.iconsDataUsed.storage) {
                         let page = this.collection.findByID(data.page_id);
-                        await this.setEntityByPath('add', page.get('path'), {merge: true});
+                        this.collection.remove(page.id, {silent: true});
+                        await this.setEntityByPath('add', page.get('path')); // , {merge: true}
                     }
                 }
 
@@ -974,7 +974,6 @@ class htmlPlugin extends plugin {
             models
         });
         await this.renderMaster.run();
-
     }
 }
 
