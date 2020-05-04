@@ -287,7 +287,7 @@ class htmlPlugin extends plugin {
             page_ids.push(rootData.page.id);
             this.resources.set(path.relative(this.dist, pathToSRC), page_ids);
             if(!fs.existsSync(pathToSRC)) {
-                this.log(`Resource by path ${pathToSRC} not exist`);
+                this.log(`Resource by path ${pathToSRC} not exist`, 'warning');
             }
 
             if(this.release) {

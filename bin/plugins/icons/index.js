@@ -208,11 +208,10 @@ class iconsPlugin extends plugin {
 
         let entityData = {
             name: path.basename(ph, path.extname(ph)).replace(/[_-]+/g, ' '),
-            //className: path.basename(ph, path.extname(ph)).replace(/[^\w]+/g, '-'),
-            id: ph.replace(path.extname(ph), '').replace(/[^\w]+/g, '-'),
+            id: extname == 'svg' ? ph.replace(path.extname(ph), '').replace(/[^\w]+/g, '_') : ph.replace(/[^\w]+/g, '_'),
             path: path.normalize(ph)
         }
-        //console.log(entityData);
+
         if(extname == 'svg') {
             let svgSource = await fsp.readFile(fullPath, 'UTF-8');
             try {
@@ -269,13 +268,15 @@ class iconsPlugin extends plugin {
                 }
             }
         }
-
-        if(this.collection.has(entityData.id)) {
+        /*if(this.collection.has(entityData.id)) {
             let suffix = this.collection.where(model => model.id == entityData.id).length + 1;
             entityData.id = entityData.id + suffix;
             entityData.name = entityData.name + suffix;
-        }
+        }*/
         await this.collection.add(entityData, options);
+    }
+    uniqid() {
+        return 'un_' + Math.random().toString(36).substr(2, 9);
     }
     getHTMLSvgSprite(id, options={}) {
         let model = id;
@@ -293,11 +294,12 @@ class iconsPlugin extends plugin {
             title = options.title;
         }
         let className = config.svg_sprites.className;
+        let uniqid = this.uniqid();
         if(!options.presentation && title) {
             let titleTag = dom.window.document.createElement("title");
-            titleTag.setAttribute('id', className + '-' + model.get('id') + '-title');
+            titleTag.setAttribute('id', uniqid);
             titleTag.innerHTML = title;
-            svg.setAttribute('aria-labelledby', className + '-' + model.get('id') + '-title');
+            svg.setAttribute('aria-labelledby', uniqid);
             svg.appendChild(titleTag);
         } else {
             svg.setAttribute('aria-hidden', true);
@@ -815,8 +817,9 @@ class iconsPlugin extends plugin {
             this.warning('No icons');
             return
         }
-        let dom = new JSDOM('<svg class="ungic-svg-sprite" hidden style="display:none"></svg>');
+        let dom = new JSDOM('<svg class="ungic-svg-sprite" style="display:none"></svg>');
         let svg = dom.window.document.querySelector('svg.ungic-svg-sprite');
+
         for(let model of models) {
             let symbol = this.getSymbol(model, true);
             svg.appendChild(symbol);
