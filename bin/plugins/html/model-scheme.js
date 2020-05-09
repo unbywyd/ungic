@@ -75,6 +75,10 @@ module.exports = {
         type: 'boolean',
         default: true
     },
+    minifier: {
+        type: ['object', 'boolean'],
+        default: false
+    },
     relative_src: {
         type: 'boolean',
         default: false

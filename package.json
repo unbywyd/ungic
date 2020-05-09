@@ -1,6 +1,6 @@
 {
   "name": "ungic",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "",
   "main": "index.js",
   "bin": {
@@ -34,6 +34,7 @@
     "find-nearest-file": "^1.1.0",
     "fs-extra": "^8.1.0",
     "handlebars": "^4.7.6",
+    "html-minifier": "^4.0.0",
     "html5-validator": "^1.2.1",
     "image-size": "^0.8.3",
     "inquirer": "^7.1.0",
