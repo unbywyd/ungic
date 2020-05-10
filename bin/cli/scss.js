@@ -142,7 +142,7 @@ module.exports = function(yargs, done) {
                         })
                     });
                }
-               if(!defaultTheme) {
+               if(!defaultTheme && themes.length > 1) {
                     questions.push({
                         type: 'list',
                         name: 'default_theme',
@@ -155,6 +155,8 @@ module.exports = function(yargs, done) {
                             }
                         })
                     });
+                } else if(themes.length == 1) {
+                    buildConfig.default_theme = themes[0];
                 }
 
                 this.rl.toClose();
@@ -175,7 +177,6 @@ module.exports = function(yargs, done) {
                 }
 
                 themes = _.reject(themes, t => t == answers.default_theme);
-
                 if(themes.length) {
                     let answers2 = await prompts.call(this, [
                         {

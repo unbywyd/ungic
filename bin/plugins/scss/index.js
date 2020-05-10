@@ -18,7 +18,7 @@ const sass = require("sass");
 const Fiber = require("fibers");
 const encodeFunction = require('../../modules/sass-json');
 const postcss = require('postcss');
-const clean = require('postcss-clean');
+const clean = require('../../modules/postcss-clean');
 const rtl = require('postcss-rtl');
 const autoprefixer = require('autoprefixer');
 const Storage = require('../../modules/storage');
@@ -316,8 +316,9 @@ class scssPlugin extends plugin {
                 level: 1
             }));
         }
+
         if(buildConfig.theme_mode == 'external' && release) {
-            events.push(new Promise(res => {
+           events.push(new Promise(res => {
                 plugins.push(postcssSplitter({
                     callback: function(themes) {
                         res(themes);

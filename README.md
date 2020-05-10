@@ -17,6 +17,7 @@ Ungic packer is the environment for web coder. His purpose is to facilitate the 
 * Provide html5 validation
 * Provide AMP page validation
 * Provide functionality of release implementation
+* Provide html minification and optimization
 
 ### Web icons preparation
 * Provide optimization SVG files
