@@ -139,8 +139,9 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
                 rule.selector = rule.selector.replace('[un-inverse-ignore]', '');
             }
             if(rule.selector.indexOf('[un-prefix') != -1) {
-                let regexp = /\[un-prefix=(?:'|")([^\]]+)(?:'|")\]/;
+                let regexp = /\[un-prefix=(?:'|")+?([^\]]+)(?:'|")+?\]/;
                 let search = rule.selector.match(regexp);
+
                 rule.selector = rule.selector.replace(regexp, search[1]);
             }
             rule.walkDecls(decl => {

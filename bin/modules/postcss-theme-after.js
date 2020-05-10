@@ -4,12 +4,16 @@ const extractor = require('css-color-extractor');
 module.exports = postcss.plugin('ungic-theme', function (opts) {
   opts = opts || {}
   return function (root, result) {
-    let regexp = /((^\[dir[^\s]+)\s+)(.un-inverse|.un-theme)/;
+    let regexp = /((\[dir[^\s]+)\s+)(.un-inverse|.un-theme)/;
     root.walkRules(function(rule) {
-        let search = rule.selector.match(regexp);
-        if(search) {
-            rule.selector = rule.selector.replace(search[1], search[2]);
+        let toReplace = (selector) => {
+          let search = selector.match(regexp);
+          if(search) {
+              return toReplace(selector.replace(search[1], search[2]));
+          }
+          return selector;
         }
+        rule.selector = toReplace(rule.selector);
     });
   }
 });

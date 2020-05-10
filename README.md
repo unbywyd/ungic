@@ -1,7 +1,7 @@
 # About ungic packer
-Ungic packer is web layout environment with modular [Dart Sass](https://sass-lang.com/dart-sass) framework and a set of tools for web coder
+Ungic packer is a web template development environment with modular [Dart Sass](https://sass-lang.com/dart-sass) framework and a set of tools for web coder.
 
-Ungic packer is the environment for web coder. His purpose is to facilitate the preparation of materials for front-end, but rather, helps to solve the following tasks:
+Its purpose is to facilitate the preparation of materials to front-end, but rather, helps to solve the following tasks:
 ### Basic tasks
 * Prepare a structure for the future web template
 * Provide a local server for working with project files
