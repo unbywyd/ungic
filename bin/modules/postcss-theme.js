@@ -31,6 +31,8 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
             'border-left-color',
             'border-right-color',
             'border-bottom-color',
+            'stroke',
+            'fill',
             'color',
             'outline',
             'outline-color',
@@ -114,7 +116,7 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
                         if(selectors.has(originSelector + '-' + decl.prop)) {
                             let originValue = selectors.get(originSelector + '-' + decl.prop);
                             if(originValue == decl.value) {
-                                decl.remove();
+                                //decl.remove();
                                 return
                             }
                         }

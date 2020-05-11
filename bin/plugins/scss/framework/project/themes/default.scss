@@ -1,4 +1,4 @@
-$colors: (
+$colors: ( // List type possible for all colors (is_light_theme, is_dark_theme)
     primary: #9cef0a,
     secondary: #3d3931,
     success: #cce678,
@@ -13,12 +13,15 @@ $colors: (
 $config: (
     inverse: false,
     brightness: (
-        offset: 20,
+        offset-brighten: 20,            // List type possible (is_light_theme, is_dark_theme)
+        offset-dim: 20,                 // List type possible (is_light_theme, is_dark_theme)
+        saturation-brighten: (0, 0),    // List type possible (is_light_theme, is_dark_theme)
+        saturation-dim: (0, 0)          // List type possible (is_light_theme, is_dark_theme)
     ),
     relative-light-limit : true,
     gray: (
-        saturation: 5%,
-        hue: blue
+        saturation: 5%,     // List type possible (is_light_theme, is_dark_theme)
+        hue: blue           // List type possible (is_light_theme, is_dark_theme)
     )
 );
 

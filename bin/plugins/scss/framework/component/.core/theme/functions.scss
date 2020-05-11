@@ -3,6 +3,7 @@
 @use "sass:color";
 @use "sass:list";
 @use "sass:map";
+@use "sass:string";
 @use "sass:math";
 @use "sass:meta";
 @use "config" as theme;
@@ -150,18 +151,18 @@ $theme: meta.module-variables(theme);
 *   Smart color brightness control method
 *   Saturation control
 */
-@function brightness($color, $percent, $hue-offset: null) {
+@function brightness($color, $percent, $hue-offset: null, $saturation: 0) {
     @if $percent < 0 {
         @if get(theme-type) == light {
-            @return dim($color, $percent * -1, $hue-offset);
+            @return dim($color, $percent * -1, $hue-offset, $saturation);
         } @else {
-            @return brighten($color, $percent * -1, $hue-offset);
+            @return brighten($color, $percent * -1, $hue-offset, $saturation);
         }
     } @else {
         @if get(theme-type) == light {
-            @return brighten($color, $percent, $hue-offset);
+            @return brighten($color, $percent, $hue-offset, $saturation);
         } @else {
-            @return dim($color, $percent, $hue-offset);
+            @return dim($color, $percent, $hue-offset, $saturation);
         }
     }
 }
@@ -170,7 +171,7 @@ $theme: meta.module-variables(theme);
 *   Method for dimming color
 *   Saturation control
 */
-@function dim($color, $percent, $hue-offset: null) {
+@function dim($color, $percent, $hue-offset: null, $saturation: 0) {
     @if type-of($color) == string {
         $color: colors($color);
     }
@@ -188,7 +189,20 @@ $theme: meta.module-variables(theme);
     @if type-of(config(brightness)) == map {
         $options: map.merge($options, config(brightness));
     }
+
     $offset: map.get($options, offset);
+    @if(map.has-key($options, offset-dim)) {
+        $offset: map.get($options, offset-dim);
+    }
+
+    @if type-of($offset) == list {
+        $type: get(theme-type);
+        @if($type == light) {
+            $offset: list.nth($offset, 1);
+        } @else {
+            $offset: list.nth($offset, 2);
+        }
+    }
     @if $hue-offset != null {
         $offset: $hue-offset;
     } @else {
@@ -198,15 +212,37 @@ $theme: meta.module-variables(theme);
     $color: color.adjust(darken($color, $percent), $hue: $offset);
     $hsl: un-meta.hsl($color);
 
-    $h: list.nth($hsl, 2) - ((100 - list.nth($hsl, 2)) * strip-unit($percent) / 100);
-    @return hsl(list.nth($hsl, 1), $h, list.nth($hsl, 3));
+    $s: list.nth($hsl, 2) - ((100 - list.nth($hsl, 2)) * strip-unit($percent) / 100);
+    $result: hsl(list.nth($hsl, 1), $s, list.nth($hsl, 3));
+
+    $change-saturation: $saturation;
+    @if $change-saturation == 0 {
+        @if map.has-key($options, saturation) {
+            $change-saturation: map.get($options, saturation);
+        }
+        @if map.has-key($options, saturation-dim) {
+            $change-saturation: map.get($options, saturation-dim);
+        }
+    }
+    @if $change-saturation != 0 {
+        @if type-of($change-saturation) == list {
+            $type: get(theme-type);
+            @if($type == light) {
+                $change-saturation: list.nth($change-saturation, 1);
+            } @else {
+                $change-saturation: list.nth($change-saturation, 2);
+            }
+        }
+        $result: color.scale($result, $saturation: $change-saturation + 0%);
+    }
+    @return $result;
 }
 
 /*
 *  Method for brightening color brightness
 *   Saturation control
 */
-@function brighten($color, $percent, $hue-offset: null) {
+@function brighten($color, $percent, $hue-offset: null, $saturation: 0) {
     @if type-of($color) == string {
         $color: colors($color);
     }
@@ -225,6 +261,18 @@ $theme: meta.module-variables(theme);
         $options: map.merge($options, config(brightness));
     }
     $offset: map.get($options, offset);
+    @if(map.has-key($options, offset-brighten)) {
+        $offset: map.get($options, offset-brighten);
+    }
+
+    @if type-of($offset) == list {
+        $type: get(theme-type);
+        @if($type == light) {
+            $offset: list.nth($offset, 1);
+        } @else {
+            $offset: list.nth($offset, 2);
+        }
+    }
     @if $hue-offset != null {
         $offset: $hue-offset;
     } @else {
@@ -234,9 +282,30 @@ $theme: meta.module-variables(theme);
     $color: color.adjust(lighten($color, $percent), $hue: $offset);
     $hsl: un-meta.hsl($color);
 
-    $h: ((100 - list.nth($hsl, 2)) * strip-unit($percent) / 100) + list.nth($hsl, 2);
+    $s: ((100 - list.nth($hsl, 2)) * strip-unit($percent) / 100) + list.nth($hsl, 2);
+    $result: hsl(list.nth($hsl, 1), $s, list.nth($hsl, 3));
 
-    @return hsl(list.nth($hsl, 1), $h, list.nth($hsl, 3));
+    $change-saturation: $saturation;
+    @if $change-saturation == 0 {
+        @if map.has-key($options, saturation) {
+            $change-saturation: map.get($options, saturation);
+        }
+        @if map.has-key($options, saturation-brighten) {
+            $change-saturation: map.get($options, saturation-brighten);
+        }
+    }
+    @if $change-saturation != 0 {
+        @if type-of($change-saturation) == list {
+            $type: get(theme-type);
+            @if($type == light) {
+                $change-saturation: list.nth($change-saturation, 1);
+            } @else {
+                $change-saturation: list.nth($change-saturation, 2);
+            }
+        }
+        $result: color.scale($result, $saturation: $change-saturation + 0%);
+    }
+    @return $result;
 }
 
 /*
@@ -369,13 +438,28 @@ $theme: meta.module-variables(theme);
     $saturation: 0;
     $hue: 0;
     $theme-config: get(config);
-
     @if map.has-key($theme-config, gray) and type-of(map.get($theme-config, gray)) == map {
         @if map.has-key(map.get($theme-config, gray), saturation) {
             $saturation: map.get(map.get($theme-config, gray), saturation);
+            @if type-of($saturation) == list {
+                $type: get(theme-type);
+                @if($type == light) {
+                    $saturation: list.nth($saturation, 1);
+                } @else {
+                    $saturation: list.nth($saturation, 2);
+                }
+            }
         }
         @if map.has-key(map.get($theme-config, gray), hue) {
             $hue: map.get(map.get($theme-config, gray), hue);
+            @if type-of($hue) == list {
+                $type: get(theme-type);
+                @if($type == light) {
+                    $hue: list.nth($hue, 1);
+                } @else {
+                    $hue: list.nth($hue, 2);
+                }
+            }
         }
     }
 
@@ -383,11 +467,15 @@ $theme: meta.module-variables(theme);
         $hue: list.nth(un-meta.hsl($hue), 1);
     }
 
+
     $color: color.adjust(
         color.grayscale(color.mix(colors(background-color), colors(text-color))),
-        $saturation: $saturation,
-        $hue: $hue
+        $saturation: $saturation
     );
+
+    $hsl: un-meta.hsl($color);
+
+    $color: hsl($hue, list.nth($hsl, 2), list.nth($hsl, 3));
     @return lightness($color, $offset);
 }
 
@@ -397,7 +485,7 @@ $theme: meta.module-variables(theme);
 *   $color-tint - may be a tint from the palette or $offset
 */
 
-@function color($color-name, $color-tint: 0, $hue-offset: 0) {
+@function color($color-name, $color-tint: 0, $hue-offset: 0, $saturation: 0) {
     @if type-of($color-tint) == string {
         @return palette($color-name, $color-tint, $hue-offset);
     }
@@ -429,5 +517,5 @@ $theme: meta.module-variables(theme);
         @warn '$color-tint parameter must be a number from -1 to 1';
         @return transparent;
     }
-    @return brightness($color-name, $color-tint, $offset);
+    @return brightness($color-name, $color-tint, $offset, $saturation);
 }
