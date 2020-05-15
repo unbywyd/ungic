@@ -114,7 +114,7 @@ class htmlPlugin extends plugin {
             body = body.replace(/<!-{1,}[\w\W]+?-{2,}>/gm, '');
             if((/<html/g.test(body) && /<\/html/g.test(body)) || (/<body/g.test(body) && /<\/body/g.test(body))) {
                 attrs.type = 'page';
-                if(dom.window.document.querySelector('html').hasAttribute('⚡')) {
+                if(dom.window.document.querySelector('html').hasAttribute('⚡') || dom.window.document.querySelector('html').hasAttribute('amp')) {
                     attrs.amp = true;
                 }
             }

@@ -303,7 +303,9 @@ class scssPlugin extends plugin {
             if('string' == typeof build.rtl_prefix.prefix && build.rtl_prefix.prefix.length) {
                 rtlOptions.prefix = build.rtl_prefix.prefix;
             }
-            plugins.push(rtl(rtlOptions));
+            if(!(buildConfig.direction == 'ltr' && !buildConfig.opposite_direction)) {
+                plugins.push(rtl(rtlOptions));
+            }
             if(build.top_selector == 'html') {
                 plugins.push(postcssThemeAfter());
             }

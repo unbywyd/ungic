@@ -3,29 +3,29 @@ Ungic packer is a web template development environment with modular [Dart Sass](
 
 Its purpose is to facilitate the preparation of materials to front-end, but rather, helps to solve the following tasks:
 ### Basic tasks
-* Prepare a structure for the future web template
-* Provide a local server for working with project files
-* Provide live server
-* Provide the necessary tools for web coder
+* To prepare a structure for the future web template
+* To provide a local server for working with project files
+* To provide live server
+* To provide the necessary tools for web coder
 
 ### HTML preparation
-* Provide the ability to partition pages to (**templates, html parts, markdown and text files**) for multiple inclusion in your project.
-* Provide full-fledged work with popular template engines such as: **Handlebars, Mustache, Underscore, Pug**
-* Provide work with dynamic data for templates (**JSON, YAML, QueryString, SCSS options - the possibility of a sass ungic framework**)
-* Provide tools for debugging
-* Provide helpers to quickly render icons and include static project files
-* Provide html5 validation
-* Provide AMP page validation
-* Provide functionality of release implementation
-* Provide html minification and optimization
+* To provide the ability to partition pages to (**templates, html parts, markdown and text files**) for multiple inclusion in your project.
+* To provide full-fledged work with popular template engines such as: **Handlebars, Mustache, Underscore, Pug**
+* To provide work with dynamic data for templates (**JSON, YAML, QueryString, SCSS options - the possibility of a sass ungic framework**)
+* To provide tools for debugging
+* To provide helpers to quickly render icons and include static project files
+* To provide html5 validation
+* To provide AMP page validation
+* To provide functionality of release implementation
+* To provide html minification and optimization
 
 ### Web icons preparation
-* Provide optimization SVG files
-* Provide functionality for packaging icons into web fonts
-* Provide functionality for packaging SVG icons into  SVG sprites
-* Provide functionality to image processing and sprite generation
-* Provide functionality to import and export icons
-* Provide release implementation functionality
+* To provide optimization SVG files
+* To provide functionality for packaging icons into web fonts
+* To provide functionality for packaging SVG icons into  SVG sprites
+* To provide functionality to image processing and sprite generation
+* To provide functionality to import and export icons
+* To provide release implementation functionality
 
 ### CSS preparation / SASS framework
 To work with css, i developed a sophisticated framework that allows you to write components quickly and use them in your projects, each component can interact with another component using its functionality, in addition to components, there are other features, the features of the framework will be listed below

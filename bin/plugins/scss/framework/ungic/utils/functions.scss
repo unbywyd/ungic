@@ -33,6 +33,9 @@
     @return $result;
 }
 
+@function em($px, $def) {
+    @return (strip-unit($px) / strip-unit($def)) + 0em;
+}
 @function merge($maps...) {
     $result: ();
 
