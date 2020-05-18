@@ -1,10 +1,33 @@
+
+
 | Note: Its works stably for nodejs 12+ |
 | --- |
 
-# About ungic packer
-Ungic packer is a web template development environment with modular [Dart Sass](https://sass-lang.com/dart-sass) framework and a set of tools for web coder.
+|  Note: Dear friends, I must apologize to you, but I have problems with English, Try to understand my project, if you are interested, I will be glad to accept help from you, my spoken languages are Russian and Hebrew. Thank you for your understanding. 
+| PS. My contacts are below.
 
-Its purpose is to facilitate the preparation of materials to front-end, but rather, helps to solve the following tasks:
+# About ungic packer
+Ungic layout's packer is a web resources (styles, icons, html documents) development environment with modular [Dart Sass](https://sass-lang.com/dart-sass) framework and a set of tools for web coder.
+
+The purpose of ungic is to facilitate the preparation of materials to front-end, but rather, helps to solve the following tasks:
+
+# Ungic and Webpack!
+Ungic packer is very suitable for working with **webpack** or rather, it closes the part that is not quite suitable for the webpack.
+
+I believe that the webpack is good to use for working with JS but for working with styles (css), html and icons still better to use the ungic packer, since it was created just for this, it allows you to start working after entering only one **ungic run** command, and you get:
+
+* Live server and you don't need ~~webpack-dev-server~~! Just add **watch: true** option to your webpack configuration and configure output files to *dist* directory of the ungic packer. Live server of ungic can determine when to reload the page, and when to update files without reloading.
+* A complete style environment: SASS preprocessor, postcss postprocessor, postcss plugins as autoprefixer, rtl-css, clean-css and [ungic sass framework features](https://packer.ungic.com/#sass-framework) (Project concept, modularity, components, color inversion, themes and more).
+* Automatic processing of svg files and conversion to web icons (sprites or fonts)
+* Automatic image processing and conversion to sprites (Auto resizing and cropping functions)
+* Full integration between icons and sass (There are modules that you can include to sass components)
+* Almost any job with html and with template engines (It is possible to work with temporary data such as JSON or YAML)
+* Full integration with sass framework, inclusion of components to the page, receiving data from sass directly to template engines
+* Release and Package Management (You can to pack different sass components with different themes, you can to pack only specific icons and more.)
+* And many other features, [see here](https://packer.ungic.com/#about-packer)
+
+Webpack it's a wonderful thing but ungic complements it. You can use them together!
+
 ### Basic tasks
 * To prepare a structure for the future web template
 * To provide a local server for working with project files
@@ -93,6 +116,5 @@ Source code in a [bitbucket](https://bitbucket.org/ungic/ungic-packer-public/src
 
 NPM - **npm install ungic -g**
 
-Author [unbywyd](https://unbywyd.com)
-
-
+If you have questions or want to help me, contact me! Thks!
+Author [unbywyd](mailto:unbywyd@gmail.com)
