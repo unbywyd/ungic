@@ -117,4 +117,4 @@ Source code in a [bitbucket](https://bitbucket.org/ungic/ungic-packer-public/src
 NPM - **npm install ungic -g**
 
 If you have questions or want to help me, contact me! Thks!
-Author [unbywyd](mailto:unbywyd@gmail.com)
+Author [unbywyd](https://unbywyd.com)
