@@ -93,6 +93,6 @@ Source code in a [bitbucket](https://bitbucket.org/ungic/ungic-packer-public/src
 
 NPM - **npm install ungic -g**
 
-Author [unbywyd](mailto:unbywyd@gmail.com)
+Author [unbywyd](https://unbywyd.com)
 
 
