@@ -1,3 +1,6 @@
+| Note: Its works stably for nodejs 12+ |
+| --- |
+
 # About ungic packer
 Ungic packer is a web template development environment with modular [Dart Sass](https://sass-lang.com/dart-sass) framework and a set of tools for web coder.
 

@@ -72,7 +72,7 @@ module.exports = {
         default: ['txt', 'hbs', 'html', 'md', 'mustache', 'pug', '_']
     },
     pretty: {
-        type: 'boolean',
+        type: ['object', 'boolean'],
         default: true
     },
     minifier: {

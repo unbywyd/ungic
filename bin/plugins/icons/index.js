@@ -146,6 +146,7 @@ class iconsPlugin extends plugin {
                 }
             }
         }
+        this.emit('rendered', true);
     }
     async fileChanged(events) {
        // console.log(this.collection.size());

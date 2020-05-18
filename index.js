@@ -165,7 +165,7 @@ class App extends skeleton {
             yargs
                 .argv;
         }
-
+        this.log('The project has been successfully launched and is ready to go.');
         this.rl = new readline(appMenu);
     }
 }

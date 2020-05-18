@@ -23,6 +23,40 @@ module.exports = function(yargs, done) {
             }
         })();
     })
+    .command('pretty <path>', 'Convert to beautiful html from the dist directory', args => {
+        args.positional('path', {
+            describe: 'path to file in dist directory or file name',
+            type: 'string',
+            default: ''
+        });
+    }, args => {
+        let plugin = this.app.project.plugins.get('html');
+        (async()=>{
+            try {
+                await plugin.distPretty(args.path);
+                done('Done!');
+            } catch(e) {
+                done(e);
+            }
+        })();
+    })
+    .command('compress <path>', 'Compress html file of the dist directory', args => {
+        args.positional('path', {
+            describe: 'path to file in dist directory or file name',
+            type: 'string',
+            default: ''
+        });
+    }, args => {
+        let plugin = this.app.project.plugins.get('html');
+        (async()=>{
+            try {
+                await plugin.distCompress(args.path);
+                done('Done!');
+            } catch(e) {
+                done(e);
+            }
+        })();
+    })
     .command('amp_valid <path>', 'Check page from the dist directory using amp-validator', args => {
         args.positional('path', {
             describe: 'path to file in dist directory or file name',

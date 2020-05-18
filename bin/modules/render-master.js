@@ -34,7 +34,12 @@ class renderMaster extends skeleton {
             }
             this.events = _.uniq(_.union(this.events, events));
             if(config.autorun && this.launched) {
-                this.run();
+                this.run().then(()=> {
+                    let status = this.status();
+                    if(status.clean) {
+                        this.log(`Process completed`);
+                    }
+                });
             }
         });
         this.events = [];

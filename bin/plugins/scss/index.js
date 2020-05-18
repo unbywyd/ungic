@@ -508,6 +508,7 @@ class scssPlugin extends plugin {
             }
             this.log(`Styles for ${event.components.join(',')} components were successfully generated!`);
         }
+        this.emit('rendered', true);
     }
     async initialize() {
         let config = this.config;
@@ -528,10 +529,6 @@ class scssPlugin extends plugin {
 
         this.on('ready', async() => {
             let toPath = path.join(this.dist, 'sass-options.json');
-/*            let exps = {};
-            _.each(this.exports.toJSON(), m => {
-                exps[`${m.oid}-${m.cid}`] = m;
-            });*/
             await fse.outputFile(toPath, JSON.stringify(this.exports.toJSON(), null, 4));
         });
 
@@ -610,7 +607,6 @@ class scssPlugin extends plugin {
         }
     }
     async begin(options) {
-        //console.log(options);
         if(options.icons) {
             this.iconsStorage = options.icons;
         }

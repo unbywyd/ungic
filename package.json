@@ -1,6 +1,6 @@
 {
   "name": "ungic",
-  "version": "0.3.4",
+  "version": "0.9.0",
   "description": "",
   "main": "index.js",
   "bin": {
@@ -23,6 +23,7 @@
     "ajv": "^6.12.2",
     "amphtml-validator": "^1.0.30",
     "autoprefixer": "^9.7.6",
+    "cheerio": "^1.0.0-rc.3",
     "chokidar": "^3.3.1",
     "color-converter": "^1.4.1",
     "colors": "^1.4.0",
@@ -38,6 +39,7 @@
     "html5-validator": "^1.2.1",
     "image-size": "^0.8.3",
     "inquirer": "^7.1.0",
+    "js-beautify": "^1.11.0",
     "js-yaml": "^3.13.1",
     "jsdom": "^15.2.1",
     "json-tree-view": "^0.4.12",
@@ -47,7 +49,6 @@
     "open": "^7.0.3",
     "postcss": "^7.0.27",
     "postcss-rtl": "^1.7.3",
-    "pretty": "^2.0.0",
     "prompts": "^2.3.2",
     "pug": "^2.0.4",
     "query-string": "^6.12.1",
