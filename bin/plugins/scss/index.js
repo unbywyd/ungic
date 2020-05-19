@@ -622,6 +622,10 @@ class scssPlugin extends plugin {
         } catch(e) {
             console.log(e);
         }
+        let status = this.renderMaster.status();
+        if(status.clean) {
+            this.emit('rendered', true);
+        }
         this.emit('begined', true);
     }
     cidByPath(ph) {

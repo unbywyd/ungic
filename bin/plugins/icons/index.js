@@ -967,6 +967,10 @@ class iconsPlugin extends plugin {
         } catch(e) {
             console.log(e);
         }
+        let status = this.renderMaster.status();
+        if(status.clean) {
+            this.emit('rendered', true);
+        }
         //console.log(this.collection.toJSON());
         this.emit('begined', this.iconsStorage);
     }

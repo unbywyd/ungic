@@ -968,6 +968,7 @@ class htmlPlugin extends plugin {
             }
         });
         if(Array.isArray(models) && !models.length || !models) {
+            this.emit('rendered', true);
             this.renderMaster.launched = true;
             return;
         }
@@ -977,6 +978,10 @@ class htmlPlugin extends plugin {
             description: `assembly pages: ${_.pluck(pages, 'path').join(', ')}`,
             models
         });
+        let status = this.renderMaster.status();
+        if(status.clean) {
+            this.emit('rendered', true);
+        }
         await this.renderMaster.run();
     }
 }
