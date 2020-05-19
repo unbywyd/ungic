@@ -1,15 +1,15 @@
 
-
 | Note: Its works stably for nodejs 12+ |
 | --- |
 
-|  Note: Dear friends, I must apologize to you, but I have problems with English, Try to understand my project, if you are interested, I will be glad to accept help from you, my spoken languages are Russian and Hebrew. Thank you for your understanding. 
+|  Note: Dear friends, I must apologize to you, but I have problems with English, Try to understand my project, if you are interested, I will be glad to accept help from you, my spoken languages are Russian and Hebrew. Thank you for your understanding.
+
 | PS. My contacts are below.
 
 # About ungic packer
-Ungic layout's packer is a web resources (styles, icons, html documents) development environment with modular [Dart Sass](https://sass-lang.com/dart-sass) framework and a set of tools for web coder.
+Ungic layout's packer is a development environment for preparing web resources such as styles (css), icons and html documents. Ungic packer is based on its own modular [Dart Sass](https://sass-lang.com/dart-sass) framework.
 
-The purpose of ungic is to facilitate the preparation of materials to front-end, but rather, helps to solve the following tasks:
+The purpose of ungic packer is to facilitate the preparation of materials to front-end, but rather, helps to solve the following tasks:
 
 # Ungic and Webpack!
 Ungic packer is very suitable for working with **webpack** or rather, it closes the part that is not quite suitable for the webpack.
@@ -117,4 +117,5 @@ Source code in a [bitbucket](https://bitbucket.org/ungic/ungic-packer-public/src
 NPM - **npm install ungic -g**
 
 If you have questions or want to help me, contact me! Thks!
+
 Author [unbywyd](https://unbywyd.com)
