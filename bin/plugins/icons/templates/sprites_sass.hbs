@@ -1,31 +1,84 @@
-$icons: ({{#each icons}}{{id}}: (name: {{name}}, height: {{coordinates.height}}, width: {{coordinates.width}}, x: {{coordinate coordinates.x}}, y: {{coordinate coordinates.y}}),{{/each}});
+@use "sass:map";
+@use "sass:meta";
+$_icons: ({{#each icons}}{{id}}: (name: {{name}}, height: {{coordinates.height}}, width: {{coordinates.width}}, x: {{coordinate coordinates.x}}, y: {{coordinate coordinates.y}}),{{/each}});
 $url: "{{path}}";
 $className: "{{config.className}}";
 
+@function get-icon($icon-name) {
+    $result: null;
+    @if(map.has-key($_icons, $icon-name)) {
+        $result: map.get($_icons, $icon-name);
+        @if meta.variable-exists("cid") {
+            $save: use-icon($cid, $icon-name);
+        }
+    } @else {
+        @warn '#{$icon-name} icon not exist';
+    }
+    @return $result;
+}
+
+@mixin icon-rules {
+    display:inline-block;
+    vertical-align: middle;
+    text-decoration: none;
+    background-image:url("{{path}}");
+}
+
+@function exist() {@return true};
+
+@function get-icons-list() {
+    @return map.keys($_icons);
+}
+
+@function get-icons() {
+    @return $_icons;
+}
+
+@mixin icon($icon-name) {
+    $icon: get-icon($icon-name);
+    @if $icon {
+        width: map.get($icon, width) + px;
+        height: map.get($icon, height) + px;
+        background-image:url("#{$url}");
+        background-position: map.get($icon, x) map.get($icon, y);
+        display:inline-block;
+        vertical-align: middle;
+        text-decoration: none;
+        @if meta.variable-exists("cid") {
+            $save: use-icon($cid, $icon-name);
+        }
+    }
+}
+
+@mixin icon-label {
+    border: 0;
+    clip: rect(1px, 1px, 1px, 1px);
+    clip-path: inset(50%);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+    word-wrap: normal !important;
+}
+
+
 @mixin render {
     .{{config.className}}-label {
-        border: 0;
-        clip: rect(1px, 1px, 1px, 1px);
-        clip-path: inset(50%);
-        height: 1px;
-        margin: -1px;
-        overflow: hidden;
-        padding: 0;
-        position: absolute;
-        width: 1px;
-        word-wrap: normal !important;
+        @include icon-label();
     }
     {{#each icons}}
         .{{../config.className}} {
             &-{{id}} {
                 width: {{coordinates.width}}px;
                 height: {{coordinates.height}}px;
-                display:inline-block;
-                vertical-align: middle;
-                text-decoration: none;
-                background-image:url("{{../path}}");
                 background-position: {{coordinate coordinates.x}} {{coordinate coordinates.y}};
+                @include icon-rules;
             }
+        }
+        @if meta.variable-exists("cid") {
+            $save: use-icon($cid, "{{id}}");
         }
     {{/each}}
 }

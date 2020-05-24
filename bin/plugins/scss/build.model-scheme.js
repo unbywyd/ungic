@@ -57,11 +57,12 @@ module.exports = {
     },
     release: {
         properties: {
-            config: {
+            configs: {
                 type: 'object',
                 patternProperties: {
                     "^[A-z_]+\w*$": {
                         type: "object",
+                        required: ['autoprefixer', 'inverse', 'default_inverse', 'theme_mode', 'inverse_mode', 'direction', 'opposite_direction'],
                         properties: {
                             autoprefixer: {
                                 type: "boolean",
@@ -74,6 +75,10 @@ module.exports = {
                                 type: ["boolean"]
                             },
                             theme_mode: {
+                                type: ["string"],
+                                enum: ["combined", "external"]
+                            },
+                            inverse_mode: {
                                 type: ["string"],
                                 enum: ["combined", "external"]
                             },
@@ -102,9 +107,12 @@ module.exports = {
                 patternProperties: {
                     "^[A-z_]+\w*$": {
                         type: "object",
-                        required: ['components', 'default_theme'],
+                        required: ['components', 'default_theme', 'version', 'config_id'],
                         properties: {
-                            config: {
+                            name: {
+                                type: 'string'
+                            },
+                            config_id: {
                                 type: "string",
                                 default: "default"
                             },
@@ -135,9 +143,10 @@ module.exports = {
             }
         },
         default: {
-            config: {
+            configs: {
                 default: {
                     theme_mode: "external",
+                    inverse_mode: "combined",
                     inverse: true,
                     default_inverse: false,
                     autoprefixer: true,
@@ -147,7 +156,8 @@ module.exports = {
             },
             build: {
                 "main": {
-                    config: "default",
+                    name: 'main',
+                    config_id: "default",
                     components: "*",
                     default_theme: 'default',
                     version: '0.0.1'

@@ -1,7 +1,7 @@
 {
   "name": "ungic",
-  "version": "0.9.7",
-  "description": "",
+  "version": "0.10.0",
+  "description": "Web layout environment",
   "main": "index.js",
   "bin": {
     "ungic": "index.js"
@@ -13,16 +13,16 @@
   "author": "unbywyd",
   "license": "ISC",
   "devDependencies": {
-    "@babel/core": "^7.9.0",
-    "@babel/preset-env": "^7.9.5",
-    "babelify": "^10.0.0",
-    "browserify": "^16.5.1",
     "uglifyify": "^5.0.2"
   },
   "dependencies": {
+    "@babel/core": "^7.9.0",
+    "@babel/preset-env": "^7.9.6",
     "ajv": "^6.12.2",
     "amphtml-validator": "^1.0.30",
     "autoprefixer": "^9.7.6",
+    "babelify": "^10.0.0",
+    "browserify": "^16.5.1",
     "cheerio": "^1.0.0-rc.3",
     "chokidar": "^3.3.1",
     "clean-css": "^4.2.3",
@@ -61,6 +61,7 @@
     "svg2ttf": "^4.3.0",
     "svgicons2svgfont": "^9.1.1",
     "svgo": "^1.3.2",
+    "terser": "^4.7.0",
     "ttf2eot": "^2.0.0",
     "ttf2woff": "^2.0.1",
     "ttf2woff2": "^3.0.0",

@@ -54,7 +54,7 @@ module.exports = function(yargs, done) {
             }
         })();
     })
-    .command('release', 'Release icons', args => {
+    .command('release <release_name>', 'Release icons', args => {
         /*args.option('path', {
             alias: 'p',
             describe: 'Maybe path to the specific icon, multiple paths separated by commas, or glob',
@@ -67,7 +67,18 @@ module.exports = function(yargs, done) {
             name: 'type',
             message: `Release type`,
             validate: v => v.replace(/\s+/, '') !== '',
-            choices: ['Fonts', 'Image sprite', 'SVG sprite']
+            choices: [{
+                value: 'sprites',
+                name: 'Image sprite'
+            },
+            {
+                value: 'fonts',
+                name: 'Fonts'
+            },
+            {
+                value: 'svg_sprites',
+                name: 'Svg sprites'
+            }]
         },
         {
             type: 'list',
@@ -81,7 +92,7 @@ module.exports = function(yargs, done) {
             try {
                 this.rl.toClose();
                 let answers1 = await prompts.call(this, questions1, true);
-                let onlySvg = answers1.type != 'Image sprite';
+                let onlySvg = answers1.type != 'sprites';
                 let iconsType = answers1.type; // +
                 let icons = [];
                 if(answers1.selection_method == 'Choose icons') {
@@ -90,7 +101,7 @@ module.exports = function(yargs, done) {
                         let iconsList = _.pluck(allIcons, 'id');
                         if(!iconsList.length) {
                             this.rl.begin();
-                            done('No icons found');
+                            done('No icons found', 'warning');
                             return
                         }
                         let requestIcons = await prompts.call(this, [{
@@ -126,7 +137,7 @@ module.exports = function(yargs, done) {
                        });
                        if(!entries.length) {
                             this.rl.begin();
-                            done('No icons fount');
+                            done('No icons found', 'warning');
                             return
                        }
                        let pathes = _.map(entries, p => path.normalize(p));
@@ -152,13 +163,6 @@ module.exports = function(yargs, done) {
                 // icons
                 let questions = [{
                     type: 'input',
-                    name: 'name',
-                    default: 'main',
-                    message: `Release name`,
-                    validate: v => v.replace(/\s+/, '') !== ''
-                },
-                {
-                    type: 'input',
                     name: 'version',
                     default: '0.0.1',
                     message: `Release version`,
@@ -172,10 +176,11 @@ module.exports = function(yargs, done) {
                     return
                 }
                 answers.type = iconsType;
+                answers.name = args.release_name;
                 this.rl.begin();
                 this.rl.rl.pause();
                 await plugin.release(answers, icons);
-                done();
+                done('Done!', 'success');
             } catch(e) {
                 done(e);
             }

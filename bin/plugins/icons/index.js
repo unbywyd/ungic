@@ -12,8 +12,7 @@ const renderMaster = require('../../modules/render-master');
 const {extend: Collection} = require('../../modules/collectionSync');
 const {extend: Model} = require('../../modules/model');
 const SVGO = require('svgo');
-const jsdom = require("jsdom");
-const { JSDOM } = jsdom;
+const cheerio = require('cheerio');
 const svgicons = require('svgicons2svgfont');
 const svg2ttf = require('svg2ttf');
 const ttf2eot = require('ttf2eot');
@@ -130,7 +129,6 @@ class iconsPlugin extends plugin {
     }
     async render(events) {
         let config = this.config;
-        //console.log(events);
         for(let event of events) {
             if(event.type == 'fonts') {
                 await this.fontGeneration(_.sortBy(event.models, model => model.get('id')));
@@ -146,10 +144,13 @@ class iconsPlugin extends plugin {
                 }
             }
         }
+        if(!this.begined) {
+            this.begined = true;
+            this.emit('begined', this.iconsStorage);
+        }
         this.emit('rendered', true);
     }
     async fileChanged(events) {
-       // console.log(this.collection.size());
         let paths = [];
         for(let event in events) {
             for(let ev of events[event]) {
@@ -217,34 +218,29 @@ class iconsPlugin extends plugin {
             let svgSource = await fsp.readFile(fullPath, 'UTF-8');
             try {
                 svgSource = await this.svgo.optimize(svgSource);
-                let dom = new JSDOM(svgSource.data);
-                let svg = dom.window.document.querySelector('svg');
-                svg.setAttribute('id', entityData.id);
-                svg.removeAttribute('style');
-                let symbols = svg.querySelectorAll('symbol');
-                if(symbols.length) {
-                    for(let s of symbols) {
-                        while (s.firstChild) s.parentNode.insertBefore(s.firstChild, s);
-                        s.remove();
+                let $ = cheerio.load(svgSource.data);
+                let $svg = $('svg');
+                $svg.attr('id', entityData.id);
+                $svg.removeAttr('style');
+                $svg.find('symbol').each(function() {
+                    $(this).before($(this).html());
+                    $(this).remove();
+                });
+                $svg.find('g').each(function() {
+                    if($(this).html().trim() == '') {
+                        $(g).remove();
                     }
-                }
-                let groups = svg.querySelectorAll('g');
-                if(groups.length) {
-                    for(let g of groups) {
-                        if(g.innerHTML == '') {
-                            g.remove();
-                        }
-                    }
-                }
-                let title = svg.querySelector('title');
+                });
+                let title = $svg.find('title');
                 if(title) {
                     entityData.title = title.textContent;
                     title.remove();
                 }
-                entityData.svg = svg.outerHTML;
+                entityData.svg = cheerio.html($svg);
                 entityData.codepoint = this.getCodepoint();
                 entityData.unicode = String.fromCharCode(entityData.codepoint)
             } catch(e) {
+                console.log(e);
                 this.log(e);
             }
         } else {
@@ -269,11 +265,6 @@ class iconsPlugin extends plugin {
                 }
             }
         }
-        /*if(this.collection.has(entityData.id)) {
-            let suffix = this.collection.where(model => model.id == entityData.id).length + 1;
-            entityData.id = entityData.id + suffix;
-            entityData.name = entityData.name + suffix;
-        }*/
         await this.collection.add(entityData, options);
     }
     uniqid() {
@@ -286,10 +277,12 @@ class iconsPlugin extends plugin {
         }
         let fontConfig = this.fontConfiguration();
         let config = this.config;
-        let svgOrigin = new JSDOM(model.get('svg'));
-        svgOrigin = svgOrigin.window.document.querySelector('svg');
-        let dom = new JSDOM('<svg class="ungic-icon" role="img"></svg>');
-        let svg = dom.window.document.querySelector('svg.ungic-icon');
+        let $domSvgOrigin = cheerio.load(model.get('svg'));
+        let $svgOrigin = $domSvgOrigin('svg');
+
+
+        let $dom = cheerio.load('<svg class="ungic-icon" role="img"></svg>');
+        let $svg = $dom('svg');
         let title = model.get('name');
         if(options.title) {
             title = options.title;
@@ -297,16 +290,11 @@ class iconsPlugin extends plugin {
         let className = config.svg_sprites.className;
         let uniqid = this.uniqid();
         if(!options.presentation && title) {
-            let titleTag = dom.window.document.createElement("title");
-            titleTag.setAttribute('id', uniqid);
-            titleTag.innerHTML = title;
-            svg.setAttribute('aria-labelledby', uniqid);
-            svg.appendChild(titleTag);
+            $svg.attr('aria-labelledby', uniqid);
+            $svg.append(`<title id="${uniqid}">${title}</title>`);
         } else {
-            svg.setAttribute('aria-hidden', true);
+            $svg.attr('aria-hidden', true);
         }
-        let useTag = dom.window.document.createElement("use");
-
         let url = '#' + className + '-' + model.get('id');
         if(config.svg_sprites.external) {
             url = 'ungic-sprite.svg' + url;
@@ -314,18 +302,17 @@ class iconsPlugin extends plugin {
                 url = this.project.fastify.address + '/' + url;
             }
         }
-        useTag.setAttribute('xlink:href', url);
-        svg.appendChild(useTag);
+        $svg.append(`<use xlink:href="${url}" />`);
         if(config.svg_sprites.external) {
-            svg.setAttribute('viewBox', svgOrigin.getAttribute('viewBox'));
+            $svg.attr('viewBox', $svgOrigin.attr('viewBox'));
         }
         if(config.svg_sprites.width) {
-            svg.setAttribute('width', config.svg_sprites.width);
+            $svg.attr('width', config.svg_sprites.width);
         }
         if(config.svg_sprites.height) {
-            svg.setAttribute('height', config.svg_sprites.height);
+            $svg.attr('height', config.svg_sprites.height);
         }
-        svg = svg.outerHTML;
+        let svg = cheerio.html($svg);
 
         let label = '';
         if(options.label) {
@@ -387,28 +374,26 @@ class iconsPlugin extends plugin {
             return `<i aria-hidden="true" class="${config.sprites.className}-${model.get('id')}"></i>${title}`;
         }
     }
-    getSymbol(id, asHTML) {
+    getSymbol(id) {
         let model = id;
         if(typeof id != 'object') {
             model = this.collection.findByID(id);
         }
         let config = this.config;
         let svgSource = model.get('svg');
-        let dom = new JSDOM(svgSource);
-        let svg = dom.window.document.querySelector('svg');
-        let symbol = dom.window.document.createElement("symbol");
-        symbol.setAttribute('xmlns', svg.hasAttribute('xmlns') ? svg.getAttribute('xmlns') : 'http://www.w3.org/2000/svg');
-        symbol.setAttribute('viewBox', svg.getAttribute('viewBox'));
-        symbol.setAttribute('fill', 'currentcolor');
-        symbol.setAttribute('id', config.svg_sprites.className + '-' + svg.getAttribute('id'));
-        if(svg.hasAttribute('class')) {
-            symbol.setAttribute('class', svg.getAttribute('class'));
+        let $dom = cheerio.load(svgSource);
+        let $svg = $dom('svg');
+        let $domSymbol = cheerio.load('<symbol></symbol>');
+        let $symbol = $domSymbol('symbol');
+        $symbol.attr('xmlns', $svg.attr('xmlns') ? $svg.attr('xmlns') : 'http://www.w3.org/2000/svg');
+        $symbol.attr('viewBox', $svg.attr('viewBox'));
+        $symbol.attr('fill', 'currentcolor');
+        $symbol.attr('id', config.svg_sprites.className + '-' + $svg.attr('id'));
+        if($svg.attr('class')) {
+            $symbol.attr('class', $svg.attr('class'));
         }
-        symbol.innerHTML = svg.innerHTML;
-        if(asHTML) {
-            return symbol;
-        }
-        return symbol.outerHTML;
+        $symbol.html($svg.html());
+        return cheerio.html($symbol);
     }
     fontConfiguration() {
         let config = this.config;
@@ -432,6 +417,14 @@ class iconsPlugin extends plugin {
         if(path.extname(toPath) == '') {
             toPath = path.join(toPath, 'ungic-icons.json');
         }
+
+        if(await fsp.exists(toPath)) {
+            const stat = await fsp.lstat(toPath);
+            if(!stat.isFile()) {
+                toPath = path.join(toPath, 'ungic-icons.json');
+            }
+        }
+
         let models;
         if(ids.length) {
             models = this.collection.filter(model => ids.indexOf(model.id) != -1);
@@ -447,7 +440,7 @@ class iconsPlugin extends plugin {
         return toPath;
     }
     async release(releaseData, icons) {
-        let result = true;
+        let result = false;
         let {version, name, type} = releaseData;
         let dist = this.dist;
         let fontsDist = this.fontsDist;
@@ -456,24 +449,28 @@ class iconsPlugin extends plugin {
         this.dist =  path.join(this.dist, 'releases', name + '.' + version);
         this.fontsDist = path.join(this.dist, config.fs.dist.fonts);
         this.spritesDist = path.join(this.dist, config.fs.dist.img, 'sprites');
-
         this.skipIconsEvent = true;
 
         try {
-            if(type == 'Fonts') {
+            if(type == 'fonts') {
                 // Send icons to fonts
-                await this.fontGeneration(icons);
-            } else if (type == 'Image sprite') {
+                result = await this.fontGeneration(icons);
+            } else if (type == 'sprites') {
                 // Send sprite to release
-                await this.generateSprite(icons);
+                result = await this.generateSprite(icons);
             } else {
                 // Send to svg sprite
-                await this.generateSvgSprite(icons);
+                result = await this.generateSvgSprite(icons);
             }
         } catch(e) {
             console.log(e);
-            result = false;
         }
+        let toExport = _.filter(icons, i => i.has('svg'));
+        if(toExport.length) {
+            let ids = _.pluck(toExport, 'id');
+            await this.exportIcons(ids);
+        }
+        this.log(`Release ${releaseData.type} icons implemented successfully to ${this.dist} directory`, 'success');
         this.dist = dist;
         this.fontsDist = fontsDist;
         this.spritesDist = spritesDist;
@@ -546,7 +543,6 @@ class iconsPlugin extends plugin {
             path: toPath
         }
         template = await fsp.readFile(template, 'UTF-8');
-        //console.log(source);
         let content = hbs.compile(template)(source);
         return content;
     }
@@ -601,9 +597,13 @@ class iconsPlugin extends plugin {
         let sassSource = await this.generateSpriteSass(this.iconsStorage.sprite.data.icons, true);
         if(!this.lastSpritesCSSGeneratedDate || this.lastSpritesCSSGeneratedDate != this.iconsStorage.sprite.date) {
             this.lastSpritesCSSGeneratedDate = this.iconsStorage.sprite.date;
-            let result = sass.renderSync({data:`${sassSource} @include render();`});
-            this.lastSpriteCSS = result.css.toString();
-            return this.lastSpriteCSS;
+            try {
+                let result = sass.renderSync({data:`${sassSource} @include render();`});
+                this.lastSpriteCSS = result.css.toString();
+                return this.lastSpriteCSS;
+            } catch(e) {
+                console.log(e);
+            }
         } else {
             return this.lastSpriteCSS;
         }
@@ -620,16 +620,17 @@ class iconsPlugin extends plugin {
         let config = this.config;
         let sassSource = await this.getFontsSass(models);
         let fontConfig = this.fontConfiguration();
+        let callbackData = {
+            icons: _.map(models, m => _.omit(m.toJSON(), 'svg')),
+            config: fontConfig,
+            sass: sassSource
+        }
         if(!this.skipIconsEvent) {
             this.emit('icons', {
                 type: 'fonts',
                 models,
                 date: new Date,
-                data: {
-                    icons: _.map(models, m => _.omit(m.toJSON(), 'svg')),
-                    config: fontConfig,
-                    sass: sassSource
-                }
+                data: callbackData
             });
         } else {
             let renderConfig = {
@@ -648,7 +649,8 @@ class iconsPlugin extends plugin {
             if(!css) {
                 this.error('Icon sass generation error');
             }
-            await fse.outputFile(path.join(this.dist, config.fs.dist.css, config.fonts.name  + '.css'), css);
+            callbackData.css_url = path.join(config.fs.dist.css, 'fonts-' +  config.fonts.name  + '.css');
+            await fse.outputFile(path.join(this.dist, callbackData.css_url), css);
         }
 
         let svgStreams = [];
@@ -699,18 +701,17 @@ class iconsPlugin extends plugin {
                 unicode: [String.fromCharCode(model.get('codepoint'))],
                 name: model.id
             }
-            //console.log(model.get('unicode'));
             fontStream.write(iconStream);
         }
         fontStream.end();
         await Promise.all(Proccess).then(r => {
             if(r) {
-                this.log('Icon fonts successfully generated!');
+                this.log('Font icons successfully generated!', 'success');
             }
         }).catch(e => {
             console.log(e);
         })
-        return;
+        return callbackData;
     }
     getCodepoint() {
         let config = this.config;
@@ -818,17 +819,17 @@ class iconsPlugin extends plugin {
             this.warning('No icons');
             return
         }
-        let dom = new JSDOM('<svg class="ungic-svg-sprite" style="display:none"></svg>');
-        let svg = dom.window.document.querySelector('svg.ungic-svg-sprite');
+        let $dom = cheerio.load('<svg class="ungic-svg-sprite" style="display:none"></svg>');
+        let $svg = $dom('svg');
 
         for(let model of models) {
-            let symbol = this.getSymbol(model, true);
-            svg.appendChild(symbol);
+            $svg.append(this.getSymbol(model));
         }
+        let svgContent = cheerio.html($svg);
         if(config.svg_sprites.external || this.skipIconsEvent) {
-            fse.outputFileSync(path.join(this.dist, 'ungic-sprite.svg'), svg.outerHTML);
+            fse.outputFileSync(path.join(this.dist, 'ungic-sprite.svg'), svgContent);
         }
-        return svg.outerHTML;
+        return svgContent;
     }
     getIconForRender(id, options={}) {
         let model = this.collection.findByID(id);
@@ -854,8 +855,8 @@ class iconsPlugin extends plugin {
             return
         }
         let config = this.config;
-
-        let res = await new Promise((done, rej) => {
+        let callbackData;
+        await new Promise((done, rej) => {
 
             let sprites = _.map(models, model => model.get('finalPath'));
             /*
@@ -886,17 +887,18 @@ class iconsPlugin extends plugin {
 
                         let sassOut = await this.generateSpriteSass(storage);
 
+                        callbackData = {
+                            icons: storage,
+                            sass: sassOut,
+                            dist: distPath,
+                            dist_url: path.relative(path.join(this.dist, config.fs.dist.css), distPath).replace(/\\+/g, '/')
+                        }
                         if(!this.skipIconsEvent) {
                             this.emit('icons', {
                                 type: 'sprite',
                                 models,
                                 date: new Date,
-                                data: {
-                                    icons: storage,
-                                    sass: sassOut,
-                                    dist: distPath,
-                                    dist_url: path.relative(path.join(this.dist, config.fs.dist.css), distPath).replace(/\\+/g, '/')
-                                }
+                                data: callbackData
                             });
                         } else {
                             let renderConfig = {
@@ -916,12 +918,14 @@ class iconsPlugin extends plugin {
                                 if(!css) {
                                     this.error('Icon sass generation error');
                                 }
-                                await fse.outputFile(path.join(this.dist, config.fs.dist.css, config.sprites.className  + '.css'), css);
+                                let url = path.join(config.fs.dist.css, 'sprites-' + config.sprites.className  + '.css');
+                                callbackData.css_url = url;
+                                await fse.outputFile(path.join(this.dist, url), css);
                             } catch(e) {
                                 console.log(e);
                             }
                         }
-                        this.log('Sprites successfully generated!');
+                        this.log('Sprites successfully generated!', 'success');
                     }
                     done();
                 } catch(e) {
@@ -929,9 +933,7 @@ class iconsPlugin extends plugin {
                 }
             });
         });
-
-
-        return res;
+        return callbackData;
     }
     hasIcon(data) {
         return this.collection.findWhere(data);
@@ -942,24 +944,27 @@ class iconsPlugin extends plugin {
             return
         }
         let config = this.config;
+        let callbackData;
         try {
             let sprite = this.getSvgSprite(models);
+            callbackData = {
+                icons: _.map(models, m => _.omit(m.toJSON(), 'svg')),
+                sprite,
+                external: config.svg_sprites.external,
+            }
             if(!this.skipIconsEvent) {
                 this.emit('icons', {
                     type: 'svg_sprite',
                     models,
                     date: new Date,
-                    data: {
-                        icons: _.map(models, m => _.omit(m.toJSON(), 'svg')),
-                        sprite,
-                        external: config.svg_sprites.external,
-                    }
+                    data: callbackData
                 });
             }
-            this.log('Svg sprite successfully generated!');
+            this.log('Svg sprite successfully generated!', 'success');
         } catch(e) {
             console.log(e);
         }
+        return callbackData;
     }
     async begin() {
         try {
@@ -970,9 +975,11 @@ class iconsPlugin extends plugin {
         let status = this.renderMaster.status();
         if(status.clean) {
             this.emit('rendered', true);
+            if(!this.begined) {
+                this.begined = true;
+                this.emit('begined', this.iconsStorage);
+            }
         }
-        //console.log(this.collection.toJSON());
-        this.emit('begined', this.iconsStorage);
     }
 }
 

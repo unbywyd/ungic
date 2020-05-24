@@ -1,5 +1,7 @@
 @use "sass:map";
-$icons: (
+@use "sass:meta";
+
+$_icons: (
     {{#each icons}}{{id}}:(
         unicode: {{unicode}},
         name: "{{name}}",
@@ -18,6 +20,25 @@ $icons: (
 
     @else {
         @return #{"\"\\"}#{$character-code + "\""};
+    }
+}
+
+%core_icon {
+    font-family: {{config.font.name}} !important;
+    speak: none;
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    text-decoration: none;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-size: {{config.font.size}};
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    &::selection {
+        background-color: transparent;
     }
 }
 
@@ -40,24 +61,35 @@ $icons: (
     }
 }
 
-
 @function icon-exists($icon-name) {
-    @if(not map.has-key($icons, $icon-name)) {
+    @if(not map.has-key($_icons, $icon-name)) {
         @return false;
     }
     @return true;
 }
 
+@function exist() {@return true};
+
 @function get-icon($icon-name) {
     $result: null;
-    @if(map.has-key($icons, $icon-name)) {
-        $icon: map.get($icons, $icon-name);
+    @if(map.has-key($_icons, $icon-name)) {
+        $icon: map.get($_icons, $icon-name);
         $result:char(map.get($icon, unicode));
-        $save: ungic-save-font-icon($cid, $icon-name);
+        @if meta.variable-exists("cid") {
+            $save: use-icon($cid, $icon-name);
+        }
     } @else {
         @warn '#{$icon-name} icon not exist';
     }
     @return $result;
+}
+
+@function get-icons-list() {
+    @return map.keys($_icons);
+}
+
+@function get-icons() {
+    @return $_icons;
 }
 
 @mixin icon($icon-name, $before: true) {
@@ -73,7 +105,22 @@ $icons: (
             content: $unicode;
         }
     }
-    $save: ungic-save-font-icon($cid, $icon-name);
+    @if meta.variable-exists("cid") {
+        $save: use-icon($cid, $icon-name);
+    }
+}
+
+@mixin icon-label {
+    border: 0;
+    clip: rect(1px, 1px, 1px, 1px);
+    clip-path: inset(50%);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+    word-wrap: normal !important;
 }
 
 @mixin render {
@@ -87,24 +134,18 @@ $icons: (
     .{{config.font.class}} {
         @include core_icon();
         &-label {
-            border: 0;
-            clip: rect(1px, 1px, 1px, 1px);
-            clip-path: inset(50%);
-            height: 1px;
-            margin: -1px;
-            overflow: hidden;
-            padding: 0;
-            position: absolute;
-            width: 1px;
-            word-wrap: normal !important;
+            @include icon-label();
         }
     }
-    @if(length(map.keys($icons))) {
-        @each $icon-name, $icon in $icons {
+    @if(length(map.keys($_icons))) {
+        @each $icon-name, $icon in $_icons {
             .{{config.font.class}}-#{$icon-name} {
                 &:before {
                     content: char(map.get($icon, unicode));
                 }
+            }
+            @if meta.variable-exists("cid") {
+                $save: use-icon($cid, $icon-name);
             }
         }
     }

@@ -1,10 +1,8 @@
 
-| Note: Its works stably for nodejs 12+ |
+
+| Note: The project is still in the alpha stage. Ungic packer works for nodejs 12+ |
 | --- |
 
-|  Note: Dear friends, I must apologize to you, but I have problems with English, Try to understand my project, if you are interested, I will be glad to accept help from you, my spoken languages are Russian and Hebrew. Thank you for your understanding.
-
-| PS. My contacts are below.
 
 # About ungic packer
 Ungic layout's packer is a development environment for preparing web resources such as styles (css), icons and html documents. Ungic packer is based on its own modular [Dart Sass](https://sass-lang.com/dart-sass) framework.
@@ -34,7 +32,7 @@ Webpack it's a wonderful thing but ungic complements it. You can use them togeth
 * To provide live server
 * To provide the necessary tools for web coder
 
-### HTML preparation
+### HTML preparation (Features)
 * To provide the ability to partition pages to (**templates, html parts, markdown and text files**) for multiple inclusion in your project.
 * To provide full-fledged work with popular template engines such as: **Handlebars, Mustache, Underscore, Pug**
 * To provide work with dynamic data for templates (**JSON, YAML, QueryString, SCSS options - the possibility of a sass ungic framework**)
@@ -44,8 +42,13 @@ Webpack it's a wonderful thing but ungic complements it. You can use them togeth
 * To provide AMP page validation
 * To provide functionality of release implementation
 * To provide html minification and optimization
+* (New) to provide optimization internal scripts (Merging, processing with babeljs, compressing)
+* (New) to provide optimization internal styles (Merging, processing with postcss and cleancss, compressing)
+* (New) to provide including local external css (link[rel="stylesheet"]) to internal styles (style tag) with replacing url relative to host or relative path.
+* (New) to provide including local js files to internal scripts.
+* (New) to provide full release relative to html document (A release will be compiled only with those icons and styles that were used in a particular document).
 
-### Web icons preparation
+### Web icons preparation (Features)
 * To provide optimization SVG files
 * To provide functionality for packaging icons into web fonts
 * To provide functionality for packaging SVG icons into  SVG sprites
@@ -53,7 +56,7 @@ Webpack it's a wonderful thing but ungic complements it. You can use them togeth
 * To provide functionality to import and export icons
 * To provide release implementation functionality
 
-### CSS preparation / SASS framework
+### CSS preparation / SASS framework (Features)
 To work with css, i developed a sophisticated framework that allows you to write components quickly and use them in your projects, each component can interact with another component using its functionality, in addition to components, there are other features, the features of the framework will be listed below
 * Based on Dart Sass
 * Modularity concept and component implementation
@@ -65,6 +68,7 @@ To work with css, i developed a sophisticated framework that allows you to write
 * Export **scss options** to JSON and directly to html plugin for template generation
 * Integration with an icon plugin (There are two virtual components sprites and font-icons which can be included in sass components)
 * Release implementation
+* (New) now, with the build of the release, it is possible to take out not only additional themes in separate files, but also inversions styles for them!
 
 # Get started
 * First, install the global library using npm **npm install ungic -g**

@@ -3,13 +3,12 @@ const _ = require('underscore');
 module.exports = postcss.plugin('ungic-splitter', function (opts) {
   opts = opts || {};
   let themes = [];
-
   return function (root, result) {
 
     root.walkRules(function(rule) {
         let regex = /\.un-theme-([^.\s\n}{()#$]+)/;
         let m;
-        if ((m = regex.exec(rule.selector)) !== null) {
+        if (opts.theme && (m = regex.exec(rule.selector)) !== null) {
             let theme = m[1];
             let container = _.findWhere(themes, {theme});
             let isNew;
@@ -19,15 +18,27 @@ module.exports = postcss.plugin('ungic-splitter', function (opts) {
                     root: new postcss.root(),
                     theme
                 }
+                if(opts.inverse) {
+                    container.inverse_root = new postcss.root();
+                }
                 isNew = true;
             }
+
             if(rule.parent.type == 'atrule') {
                 let atrule = rule.parent.clone();
                 atrule.nodes = [];
                 atrule.append(rule);
-                container.root.append(atrule);
+                if(opts.inverse && /(?<!("|'|\())\.un-inverse/.test(rule.selector)) {
+                    container.inverse_root.append(atrule);
+                } else {
+                    container.root.append(atrule);
+                }
             } else {
-                container.root.append(rule);
+                if(opts.inverse && /(?<!("|'|\())\.un-inverse/.test(rule.selector)) {
+                    container.inverse_root.append(rule);
+                } else {
+                    container.root.append(rule);
+                }
             }
 
             if(!rule.parent.nodes.length) {
@@ -38,6 +49,34 @@ module.exports = postcss.plugin('ungic-splitter', function (opts) {
                 themes.push(container);
             }
 
+        } else if(opts.inverse && /(?<!("|'|\())\.un-inverse/.test(rule.selector)) {
+            let container = _.findWhere(themes, {theme: 'default'});
+            let isNew;
+
+            if(!container) {
+                container = {
+                    inverse_root: new postcss.root(),
+                    theme: 'default'
+                }
+                isNew = true;
+            }
+
+            if(rule.parent.type == 'atrule') {
+                let atrule = rule.parent.clone();
+                atrule.nodes = [];
+                atrule.append(rule);
+                container.inverse_root.append(atrule);
+            } else {
+                container.inverse_root.append(rule);
+            }
+
+            if(!rule.parent.nodes.length) {
+                rule.parent.remove();
+            }
+
+            if(isNew) {
+                themes.push(container);
+            }
         }
     });
     root.walkAtRules(rule => {
@@ -47,7 +86,12 @@ module.exports = postcss.plugin('ungic-splitter', function (opts) {
     });
     if(opts.callback) {
         themes = _.map(themes, t => {
-            t.root = t.root.toString();
+            if(t.root) {
+                t.root = t.root.toString();
+            }
+            if(t.inverse_root) {
+                t.inverse_root = t.inverse_root.toString();
+            }
             return t;
         });
         opts.callback(themes);

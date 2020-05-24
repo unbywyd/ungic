@@ -6,10 +6,6 @@ function ungicReadline(callback, prefix='', closeCallback) {
     if(prefix) {
         this.prefix = `ungic ${prefix}: `;
     }
-    this.log = (message, type) => {
-        this.app.log(message, type);
-        this.done();
-    }
     this.begin = (withOutLabel) => {
         let data = {
             input: process.stdin,
@@ -46,7 +42,6 @@ function ungicReadline(callback, prefix='', closeCallback) {
         }).on('close', () => {
             if(this._toClose || !this._toClose && !this.woExit) {
                 if(prefix == '') {
-                    console.log('exit');
                     process.exit(0);
                 } else if('function' == typeof closeCallback) {
                     closeCallback();

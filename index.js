@@ -79,7 +79,7 @@ class App extends skeleton {
             console.log(colors.cyan('Log output to console disabled. You can enable this option using the "--log true" command.'));
         }
         this.app.on('log', (type, message, args={}) => {
-            if(!config.log && type != 'error') {
+            if(!config.log && ['success', 'error'].indexOf(type) == -1) {
                 return;
             }
             if(type == 'error') {
@@ -87,6 +87,9 @@ class App extends skeleton {
             }
             if(type == 'warning') {
                 type = colors.yellow.bold(type);
+            }
+            if(type == 'success') {
+                type = colors.green.bold(type);
             }
             if(args.plugin_id) {
                 console.log(`${type}::[${args.plugin_id}]:${message}`);
@@ -101,7 +104,7 @@ class App extends skeleton {
             }
         });
         this.on('log', (type, message) => {
-            if(!config.log) {
+            if(!config.log && ['success', 'error'].indexOf(type) == -1) {
                 return;
             }
             if(type == 'error') {
@@ -109,6 +112,9 @@ class App extends skeleton {
             }
             if(type == 'warning') {
                 type = colors.yellow.bold(type);
+            }
+            if(type == 'success') {
+                type = colors.green.bold(type);
             }
             console.log(`${type}::${message}`);
             if(this.rl) {
@@ -165,7 +171,7 @@ class App extends skeleton {
             yargs
                 .argv;
         }
-        this.log('The project has been successfully launched and is ready to go.');
+        this.log('The project has been successfully launched and is ready to go.', 'success');
         this.rl = new readline(appMenu);
     }
 }

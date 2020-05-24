@@ -61,6 +61,7 @@ class renderMaster extends skeleton {
                 this.callback(events);
             }
         } catch(e) {
+            console.log(e);
             this.error(e);
         }
         return

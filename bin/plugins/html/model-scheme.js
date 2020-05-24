@@ -19,6 +19,9 @@ module.exports = {
             extname: '.hbs'
         }
     },
+    cheerio: {
+        type: 'object'
+    },
     supported_types: {
         type: 'object',
         properties: {
@@ -71,25 +74,12 @@ module.exports = {
         type: 'array',
         default: ['txt', 'hbs', 'html', 'md', 'mustache', 'pug', '_']
     },
-    pretty: {
-        type: ['object', 'boolean'],
-        default: true
-    },
-    minifier: {
-        type: ['object', 'boolean'],
-        default: false
+    cleancss: {
+        type: ['object']
     },
     relative_src: {
         type: 'boolean',
         default: false
-    },
-    dev_validation: {
-        type: 'boolean',
-        default: false
-    },
-    release_validation: {
-        type: 'boolean',
-        default: true
     },
     delete_from_dist: {
         type: 'boolean',

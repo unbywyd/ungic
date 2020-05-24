@@ -41,13 +41,29 @@ class app extends skeleton {
             config.author = packageData.author;
             if(typeof packageData.browserslist == 'object') {
                 if(packageData.browserslist[args.mode]) {
+                    process.env.BROWSERSLIST = packageData.browserslist[args.mode];
                     process.env.browserslist = packageData.browserslist[args.mode];
                 }
             }
-            if(typeof packageData.postcss_clean == 'object') {
-                process.env.postcss_clean = packageData.postcss_clean;
+            if(typeof packageData.cleancss == 'object') {
+                process.env.postcss_clean = packageData.cleancss;
             } else {
                 process.env.postcss_clean = {}
+            }
+            if(typeof packageData.minifier == 'object') {
+                process.env.minifier = packageData.minifier;
+            } else {
+                process.env.minifier = {}
+            }
+            if(typeof packageData.cheerio == 'object') {
+                process.env.cheerio = packageData.cheerio;
+            } else {
+                process.env.cheerio = {}
+            }
+            if(typeof packageData.beautify == 'object') {
+                process.env.beautify = packageData.beautify;
+            } else {
+                process.env.beautify = {}
             }
         }
         if(configPath) {
