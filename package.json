@@ -10,6 +10,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": ["web layout", "template engines", "html", "scss", "sass", "svg", "web icons", "sprites", "image sprites", "font icons", "dart sass", "sass framework", "sass compponents", "inversion", "theming", "rtl", "packer", "templates"],
   "author": "unbywyd",
   "license": "ISC",
   "devDependencies": {
