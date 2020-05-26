@@ -188,8 +188,15 @@ module.exports = function(yargs, done) {
 
             release = _.extend(release, config);
 
-
-            let questions = [], questionsNews = [];
+            let questions = [
+                {
+                    type: 'input',
+                    name: 'version',
+                    default: release.version ? release.version : '0.0.1',
+                    message: `Release version`,
+                    validate: v => v.replace(/\s+/, '') !== ''
+                }
+            ], questionsNews = [];
 
 
             let pages = plugin.collection.findAllWhere({type: 'page'});
@@ -328,17 +335,6 @@ module.exports = function(yargs, done) {
                 }], true);
                 toConfig = toConfig.reconfig;
 
-
-                if((!hasBuildName || (hasBuildName && toConfig)) && !args.version) {
-                    questionsNews.unshift({
-                        type: 'input',
-                        name: 'version',
-                        default: release.version ? release.version : '0.0.1',
-                        message: `Release version`,
-                        validate: v => v.replace(/\s+/, '') !== ''
-                    });
-                }
-
                 if(toConfig) {
                     questions = questions.concat(questionsNews);
                 }
@@ -365,6 +361,7 @@ module.exports = function(yargs, done) {
                             if(allIcons.length) {
                                 params.icons_ids = _.pluck(allIcons, 'icon_id');
                             }
+                            console.log('pipes', data.pipes);
                             if(data.pipes && data.pipes.length) {
                                 // Get icons from sass
                                 params.pipes = data.pipes;

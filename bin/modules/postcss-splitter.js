@@ -1,10 +1,11 @@
 const postcss = require('postcss');
+const CleanCSS = require('clean-css');
 const _ = require('underscore');
 module.exports = postcss.plugin('ungic-splitter', function (opts) {
   opts = opts || {};
   let themes = [];
   return function (root, result) {
-
+    root.walkComments(c => c.remove());
     root.walkRules(function(rule) {
         let regex = /\.un-theme-([^.\s\n}{()#$]+)/;
         let m;
@@ -23,7 +24,6 @@ module.exports = postcss.plugin('ungic-splitter', function (opts) {
                 }
                 isNew = true;
             }
-
             if(rule.parent.type == 'atrule') {
                 let atrule = rule.parent.clone();
                 atrule.nodes = [];
@@ -88,9 +88,25 @@ module.exports = postcss.plugin('ungic-splitter', function (opts) {
         themes = _.map(themes, t => {
             if(t.root) {
                 t.root = t.root.toString();
+                if(opts.cleancss) {
+                    try {
+                        let result = new CleanCSS(opts.cleancss).minify(t.root);
+                        t.root = result.styles;
+                    } catch(e) {
+                        console.log(e);
+                    }
+                }
             }
             if(t.inverse_root) {
                 t.inverse_root = t.inverse_root.toString();
+                if(opts.cleancss) {
+                    try {
+                        let result = new CleanCSS(opts.cleancss).minify(t.inverse_root);
+                        t.inverse_root = result.styles;
+                    } catch(e) {
+                        console.log(e);
+                    }
+                }
             }
             return t;
         });

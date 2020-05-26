@@ -34,6 +34,8 @@ const Stream = require('stream');
 const terser = require('terser');
 const babelify = require('babelify');
 const browserify = require('browserify');
+const sass = require('sass');
+
 
 class builder extends skeleton {
     constructor(scheme, config={}) {
@@ -205,8 +207,8 @@ class htmlPlugin extends plugin {
             if(event == 'updated' || event == 'added' || event == 'removed') {
                 this.sassUsed.clean(m => m.page_id == model.id);
                 this.iconsUsed.clean(m => m.page_id == model.id);
-                this.pipes.clean(m => m.page_id == model.id);
                 this.iconsDataUsed.clean(m => m.page_id == model.id);
+
                 if(event == 'removed') {
                     if(model.get('type') == 'page') {
                         if(config.delete_from_dist) {
@@ -661,6 +663,10 @@ class htmlPlugin extends plugin {
             this.log(e);
         }
         entityData.body = body;
+        let model = this.collection.find(model=>model.get('path') == path.normalize(ph));
+        if(model) {
+            this.pipes.clean(m => m.page_id == model.id);
+        }
         await this.collection.add(entityData, options);
     }
     toRelease(args) {
@@ -868,6 +874,7 @@ class htmlPlugin extends plugin {
         }
         for(let event of events) {
             for(let model of event.models) {
+                let scssPlugin = this.project.plugins.get('scss');
                 let attrs = model.get();
                 source = _.extend(source, {
                     page: {
@@ -915,9 +922,64 @@ class htmlPlugin extends plugin {
                     }
                 }
                 let configCheerio = typeof config.cheerio == 'object' ? config.cheerio : {};
-                    configCheerio = _.extend(process.env.cheerio, configCheerio);
+                configCheerio = _.extend(process.env.cheerio, configCheerio);
                 const $ = cheerio.load(output, configCheerio);
                 let $body = $('body'), $head =  $('head');
+                scssPlugin.cleanHtmlInternalSass(model.id);
+                let sassInternalRules = [];
+                let scssProms = [];
+                let self = this;
+                $('style[scss], style[sass]').each(function() {
+                    let attr = $(this).attr('sass') ? 'sass' : 'scss';
+                    let cid = $(this).attr(attr);
+                    scssProms.push(new Promise(async(res, rej) => {
+                        try {
+                            if('string' == typeof cid && cid.trim() != '') {
+                                let cids = await scssPlugin.getComponents();
+                                if(cids.indexOf(cid) != -1) {
+                                    let lid = $(this).attr('lid');
+                                    if(!lid || (lid && lid.trim() == '')) {
+                                        self.log(`To transfer sass internal styles to sass component you need specify Load ID in "lid" attribute, example: lid="part1"`, 'warning');
+                                        return res();
+                                    }
+                                    sassInternalRules.push({
+                                        htmlModelId: model.id,
+                                        cid,
+                                        lid: $(this).attr('lid') ? $(this).attr('lid') : false,
+                                        rules: $(this).html()
+                                    });
+                                    $(this).remove();
+                                    return res();
+                                } else {
+                                    self.log(`${cid} sass components not exist, styles will be generated as internal styles`, 'warning');
+                                }
+                            }
+                            try {
+                                var result = sass.renderSync({data: $(this).html()});
+                                $(this).html(result.css.toString());
+                                $(this).removeAttr(attr).removeAttr('lid');
+                            } catch(e) {
+                                self.log('Compilation error of internal sass styles', 'error');
+                                self.log(e);
+                            }
+                        } catch(e) {
+                            console.log(e);
+                        }
+                        res();
+                    }));
+                });
+
+                if(scssProms.length) {
+                    await Promise.all(scssProms);
+                    if(sassInternalRules.length) {
+                        let mixCssLink = await scssPlugin.setHtmlInternalSass(sassInternalRules);
+
+                        if('string' == typeof mixCssLink && !this.release) {
+                            $head.append(`<link rel="stylesheet" href="${this.project.fastify.address}/${mixCssLink}">`);
+                        }
+                    }
+                }
+
                 try {
                     if(!this.release) {
                         let script = `<script src="${this.project.fastify.address + '/ungic/js/dist/pipe.min.js'}" data-connect="${this.project.fastify.address}" data-src="${path.relative(this.dist, path.join(this.dist, attrs.path)).replace(/\\+/g, '/')}"></script>`;
@@ -932,6 +994,7 @@ class htmlPlugin extends plugin {
                         if(this.iconsStorage.svg_sprite  && this.iconsStorage.svg_sprite.data.icons.length && !this.iconsStorage.svg_sprite.data.external) {
                             $body.append(this.iconsStorage.svg_sprite.data.sprite);
                         }
+
                     } else {
                         let styles = [];
                         let distPath = path.join(this.dist, 'releases', this.release.name + '.' + this.release.version);
@@ -982,7 +1045,7 @@ class htmlPlugin extends plugin {
                             if(this.release.scssURLS) {
                                 for(let url of this.release.scssURLS) {
                                     let cssRules = await fsp.readFile(path.join(distPath, url), 'UTF-8');
-                                    styles.push({
+                                    styles.unshift({
                                         path: path.join(distPath, url),
                                         url,
                                         cssRules
@@ -993,7 +1056,7 @@ class htmlPlugin extends plugin {
                                 for(let el of this.release.iconsReleases) {
                                     if(el.release.css_url) {
                                         let cssRules = await fsp.readFile(path.join(distPath, el.release.css_url), 'UTF-8');
-                                        styles.push({
+                                        styles.unshift({
                                             path: path.join(distPath, el.release.css_url),
                                             url: el.release.css_url,
                                             cssRules
@@ -1015,7 +1078,7 @@ class htmlPlugin extends plugin {
                                                 await fse.copy(ph, path.join(distPath, href));
                                             } else {
                                                 let cssRules = await fsp.readFile(ph, 'UTF-8');
-                                                styles.push({
+                                                styles.unshift({
                                                     path: ph,
                                                     url: href,
                                                     cssRules
@@ -1042,7 +1105,7 @@ class htmlPlugin extends plugin {
                         let proms = [];
                         $('style').each(function() {
                             if(self.release.merge_internal_styles) {
-                                styles.push({
+                                styles.unshift({
                                     cssRules: $(this).html(),
                                     url: null,
                                     path: null
@@ -1088,7 +1151,7 @@ class htmlPlugin extends plugin {
                             cssResult = cssResult.toString();
                         }
 
-                        if(this.release.styles_in_footer) {
+                        if(this.release.styles_in_footer && 'string' == typeof cssResult && cssResult.length) {
                             $body.append('<style>' + cssResult +'</style>');
                         } else {
                             $head.append('<style>' + cssResult +'</style>');
@@ -1112,7 +1175,7 @@ class htmlPlugin extends plugin {
                                                     let pathToSource = path.join(self.dist, src);
                                                     if(await fsp.exists(pathToSource)) {
                                                         let content = await fsp.readFile(pathToSource, 'UTF-8');
-                                                        scripts.push(content);
+                                                        scripts.unshift(content);
                                                         $(this).remove();
                                                     }
                                                 }
@@ -1123,7 +1186,7 @@ class htmlPlugin extends plugin {
                                         res();
                                     } else {
                                         if(self.release.merge_internal_scripts) {
-                                            scripts.push($(this).html());
+                                            scripts.unshift($(this).html());
                                             $(this).remove();
                                         } else {
                                             if(self.release.optimize_internal_scripts) {
@@ -1152,10 +1215,12 @@ class htmlPlugin extends plugin {
                             if(this.release.optimize_internal_scripts) {
                                 try {
                                     let res = await jsOptimaze(scripts);
-                                    if(self.release.internal_scripts_in_footer) {
-                                        $body.append('<script>'+res+'</script>');
-                                    } else {
-                                        $head.append('<script>'+res+'</script>');
+                                    if(res.length) {
+                                        if(self.release.internal_scripts_in_footer) {
+                                            $body.append('<script>'+res+'</script>');
+                                        } else {
+                                            $head.append('<script>'+res+'</script>');
+                                        }
                                     }
                                 } catch(e) {
                                     this.log('An error occurred while optimizing the script', 'error');
@@ -1214,6 +1279,9 @@ class htmlPlugin extends plugin {
                 }
 
                 output = $.html();
+                if(config.replace_amp_to_symbol) {
+                    output = output.replace(/\&amp\;/gm, '&');
+                }
 
                 if(build.beautify === true || typeof build.beautify == 'object') {
                     let configBeautify = typeof build.beautify == 'object' ? build.beautify : {};

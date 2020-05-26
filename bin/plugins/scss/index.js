@@ -50,6 +50,8 @@ class scssPlugin extends plugin {
             this.fileChanged(events);
         });
         this.depends = {};
+        this.internalSassRules = new Storage;
+        this.internalSassRulesRequired = new Storage;
         this.iconsSaveStorage = new Storage;
         let model = Model({
             oid: {
@@ -104,6 +106,33 @@ class scssPlugin extends plugin {
                             file: path.join(this[to.root], to.path)
                         });
                     } else {
+                        if(/^ungic\.from-html/.test(url)) {
+                            let lid = url.split('.')[2];
+                            let cid = 'stdin';
+                            if(prev != 'stdin') {
+                                cid = this.cidByPath(prev);
+                            }
+                            if(url.split('.').length == 3) {
+                                let allRulesByCID = _.filter(this.internalSassRules.storage, el => el.cid == cid);
+                                this.internalSassRulesRequired.set({
+                                    cid, lid
+                                });
+                                let rulesByLID = _.filter(allRulesByCID, el => el.lid == lid);
+                                if(!rulesByLID) {
+                                    this.log(`${cid} component expects internal sass styles from html plugin with ${lid} LID identifier. Please note that styles will be included only after processing of html plugin!`, 'warning');
+                                } else {
+                                    let rules = _.pluck(rulesByLID, 'rules').join(' ');
+                                    return done({
+                                        contents: rules
+                                    });
+                                }
+                            } else {
+                                this.log(`To include sass styles for scss components from HTML plugin you need specify Load ID, example: sass.from-html.part1`, 'warning');
+                            }
+                            return done({
+                                contents: ''
+                            });
+                        }
                         if(/^ungic\.sprites/.test(url)) {
                             if(this.iconsStorage.sprite) {
                                 let cid = 'stdin';
@@ -309,21 +338,16 @@ class scssPlugin extends plugin {
             }
         }
 
+        let cleanscssMerging;
         if(config.cleancss) {
             let configCleanCss = typeof config.cleancss == 'object' ? config.cleancss : {};
-            let cleanscssMerging = _.extend({level: 2}, process.env.postcss_clean, configCleanCss);
-            if(release) {
-                plugins.push(clean(cleanscssMerging));
-            } else {
-                plugins.push(clean({
-                    level: 1
-                }));
-            }
+            cleanscssMerging = _.extend({level: 2}, process.env.postcss_clean, configCleanCss);
         }
 
         if((buildConfig.theme_mode == 'external' || buildConfig.inverse_mode == 'external') && release) {
            events.push(new Promise(res => {
                 plugins.push(postcssSplitter({
+                    cleancss: cleanscssMerging,
                     inverse: buildConfig.inverse_mode === 'external',
                     theme: buildConfig.theme_mode === 'external',
                     callback: function(themes) {
@@ -331,6 +355,17 @@ class scssPlugin extends plugin {
                     }
                 }));
             }))
+        }
+
+
+        if(cleanscssMerging) {
+            if(release) {
+                plugins.push(clean(cleanscssMerging));
+            } else {
+                plugins.push(clean({
+                    level: 1
+                }));
+            }
         }
 
         events.push(new Promise(done => {
@@ -350,6 +385,7 @@ class scssPlugin extends plugin {
         let config = this.config;
         let source = {components: await this.getComponents(), render: components, advanced_export: config.advanced_export};
 
+        this.internalSassRulesRequired.clean(e => components.indexOf(e.cid) != -1);
         this.iconsSaveStorage.clean(e => components.indexOf(e.cid) != -1);
         let toRemove = this.exports.filter(exp => ['project'].concat(components).indexOf(exp.get('cid')) != -1);
         this.exports.remove(toRemove, {silent: true});
@@ -666,6 +702,40 @@ class scssPlugin extends plugin {
             return path.basename(path.relative(this.components, ph)).split(path.sep).shift();
         }
         return cid;
+    }
+    cleanHtmlInternalSass(htmlModelId) {
+        this.internalSassRules.clean(e => e.htmlModelId == htmlModelId);
+    }
+    setHtmlInternalSass(data) {
+        for (let d of data) {
+            this.internalSassRules.set(d);
+        }
+        // Group by CID
+        let cidsToRebuild = _.uniq(_.pluck(data, 'cid'));
+
+        // Получить все требуемые части для одного из компонентов
+        let lidsWithCids = _.filter(this.internalSassRulesRequired.storage, el => cidsToRebuild.indexOf(el.cid) != -1);
+
+
+
+        if(lidsWithCids.length) {
+            // Отфильтровать до используемых лидов
+            let cids = _.uniq(_.pluck(_.filter(lidsWithCids, c => _.find(data, d => d.lid == c.lid && d.cid == c.cid)), 'cid'));
+
+            this.renderMaster.add({
+                description: `${cids.join(', ')} components`,
+                components: cids
+            });
+            if(lidsWithCids.length > 1) {
+                let config = this.config;
+                let buildConfig = this.builder.config.dev.config;
+                let dir = '';
+                if(!buildConfig.opposite_direction) {
+                    dir = '.' + buildConfig.direction;
+                }
+                return path.join(config.fs.dist.css, cids.join('-')  + dir + '.css').replace(/\\+/g, '/');
+            }
+        }
     }
     getComponents() {
         return fg('**', {dot: false, onlyDirectories: true, cwd: this.components, deep: 1});

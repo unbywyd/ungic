@@ -22,6 +22,10 @@ module.exports = {
     cheerio: {
         type: 'object'
     },
+    replace_amp_to_symbol: {
+        type: 'boolean',
+        default: true
+    },
     supported_types: {
         type: 'object',
         properties: {

@@ -9,6 +9,7 @@ Ungic layout's packer is a development environment for preparing web resources s
 
 The purpose of ungic packer is to facilitate the preparation of materials to front-end, but rather, helps to solve the following tasks:
 
+
 # Ungic and Webpack!
 Ungic packer is very suitable for working with **webpack** or rather, it closes the part that is not quite suitable for the webpack.
 
@@ -47,6 +48,8 @@ Webpack it's a wonderful thing but ungic complements it. You can use them togeth
 * (New) to provide including local external css (link[rel="stylesheet"]) to internal styles (style tag) with replacing url relative to host or relative path.
 * (New) to provide including local js files to internal scripts.
 * (New) to provide full release relative to html document (A release will be compiled only with those icons and styles that were used in a particular document).
+* (New) [Internal sass styles](https://packer.ungic.com/#sass_internal_styles) in style tags with sass/scss attr.
+* (New) [Integration with sass components](https://packer.ungic.com/#from_html_to_sass) (Now the rules for the sass components can be written directly in html!)
 
 ### Web icons preparation (Features)
 * To provide optimization SVG files
