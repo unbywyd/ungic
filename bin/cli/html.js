@@ -361,9 +361,7 @@ module.exports = function(yargs, done) {
                             if(allIcons.length) {
                                 params.icons_ids = _.pluck(allIcons, 'icon_id');
                             }
-                            console.log('pipes', data.pipes);
                             if(data.pipes && data.pipes.length) {
-                                // Get icons from sass
                                 params.pipes = data.pipes;
                                 let iconsSassUsed = scssPlugin.iconsSaveStorage.storage;
                                 let icons = [];
