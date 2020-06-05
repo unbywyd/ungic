@@ -13,7 +13,13 @@ class Timer {
             this._events.emit('finish');
         }.bind(this), this.time);
     }
+    pause() {
+        this._pause = true;
+    }
     _end() {
+        if(this._pause) {
+            return
+        }
         this._events.emit('finish');
     }
     on() {
@@ -29,6 +35,7 @@ class Timer {
         this.time = time;
     }
     update() {
+        this._pause = false;
         if(this.timer) {
             clearTimeout(this.timer);
         }

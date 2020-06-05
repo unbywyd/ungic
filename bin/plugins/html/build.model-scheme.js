@@ -45,9 +45,6 @@ module.exports = {
                             include_external_styles: {
                                 type: 'boolean'
                             },
-                            styles_in_footer: {
-                                type: 'boolean'
-                            },
                             merge_internal_styles: {
                                 type: 'boolean'
                             },

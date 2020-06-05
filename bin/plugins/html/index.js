@@ -856,6 +856,7 @@ class htmlPlugin extends plugin {
         return fse.outputFile(rootPath, Handlebars.compile(template)(args));
     }
     async _render(events) {
+        this.emit('render');
         let config = this.config;
         let builder = this.builder.config;
 
@@ -1151,11 +1152,7 @@ class htmlPlugin extends plugin {
                             cssResult = cssResult.toString();
                         }
 
-                        if(this.release.styles_in_footer && 'string' == typeof cssResult && cssResult.length) {
-                            $body.append('<style>' + cssResult +'</style>');
-                        } else {
-                            $head.append('<style>' + cssResult +'</style>');
-                        }
+                        $head.append('<style>' + cssResult +'</style>');
 
                         let scripts = [];
                         let promsScripts = [];

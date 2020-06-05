@@ -14,7 +14,33 @@ fsp.exists = promisify(fs.exists);
 const skeleton = require('./modules/skeleton');
 const appPaths = require('./modules/app-paths')();
 const open = require('open');
+const Collector = require('./modules/collector.js');
 
+class finishController extends skeleton {
+    constructor(config={}) {
+        super({}, {objectMerge: true}, config);
+        this.collector = new Collector({timeout: 100});
+        this.collector.on('finish', events => {
+            if(this.parent.fastify.io) {
+                this.parent.fastify.io.emit('change', events);
+            }
+        });
+        this.tasks = new Set;
+    }
+    push(event) {
+        this.collector.add(event);
+    }
+    task(id) {
+        this.collector.pause();
+        this.tasks.add(id);
+    }
+    releaseTask(id) {
+        this.tasks.delete(id);
+        if(!this.tasks.size) {
+            this.collector.run();
+        }
+    }
+}
 class app extends skeleton {
     constructor(args={}) {
         let config_cmd = {
@@ -78,6 +104,8 @@ class app extends skeleton {
         this.sockets = new Map;
         this.project = {};
         this.socketsArgs = [];
+        this.finishController = new finishController;
+        this.finishController.parent = this;
     }
     async initialize() {
         //
@@ -145,6 +173,7 @@ class app extends skeleton {
         this.fastify = fastify({ logger: false, ignoreTrailingSlash: false});
         let io = ioSockets(this.fastify.server);
         this.fastify.decorate('io', io);
+        this.fastify.decorate('uid', () => '_' + Math.random().toString(36).substr(2, 9));
         this.fastify.decorate('app', this);
         this.fastify.register(require('fastify-static'), {
             root:  path.join(__dirname, 'client'),
@@ -221,8 +250,20 @@ class app extends skeleton {
 
         this.project.on('watcher:' + config.fs.dirs.dist, (event, ph) => {
             let relative = path.relative(this.project.dist, ph).replace(/\\+/g, '/');
-            io.emit('change', event, this.fastify.address + '/' + path.relative(this.project.dist, ph).replace(/\\+/g, '/'), relative);
+            this.finishController.push({
+                event,
+                url: this.fastify.address + '/' + path.relative(this.project.dist, ph).replace(/\\+/g, '/'),
+                relative
+            });
         });
+
+        this.project.on('plug_render', id => {
+            this.finishController.task(id);
+        });
+        this.project.on('plug_rendered', id => {
+            this.finishController.releaseTask(id);
+        });
+
 
         try {
             await this.project.begin({fastify: this.fastify});

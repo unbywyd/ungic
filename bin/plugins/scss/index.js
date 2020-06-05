@@ -559,6 +559,7 @@ class scssPlugin extends plugin {
         return urls
     }
     async _render(events) {
+        this.emit('render');
         let config = this.config;
         let prjConfig = this.project.config;
         for(let event of events) {
@@ -569,7 +570,7 @@ class scssPlugin extends plugin {
             }
             this.log(`Styles for ${event.components.join(',')} components were successfully generated!`);
         }
-        this.emit('rendered', true);
+        this.emit('rendered');
     }
     async initialize() {
         let config = this.config;
@@ -726,7 +727,7 @@ class scssPlugin extends plugin {
                 description: `${cids.join(', ')} components`,
                 components: cids
             });
-            if(lidsWithCids.length > 1) {
+            if(cids.length > 1) {
                 let config = this.config;
                 let buildConfig = this.builder.config.dev.config;
                 let dir = '';

@@ -128,6 +128,7 @@ class iconsPlugin extends plugin {
         });
     }
     async render(events) {
+        this.emit('render');
         let config = this.config;
         for(let event of events) {
             if(event.type == 'fonts') {
@@ -148,7 +149,7 @@ class iconsPlugin extends plugin {
             this.begined = true;
             this.emit('begined', this.iconsStorage);
         }
-        this.emit('rendered', true);
+        this.emit('rendered');
     }
     async fileChanged(events) {
         let paths = [];

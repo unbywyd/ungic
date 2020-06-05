@@ -50,6 +50,20 @@ class ungicProject extends skeleton {
             this.log(message, type, args);
         });
 
+        let self = this;
+        let renderInterceptor = function(plugin) {
+            let uid = self.fastify.uid();
+            self.emit('plug_render', uid);
+            let destroy = function() {
+                self.emit('plug_rendered', uid);
+                plugin.off('rendered', destroy);
+            }
+            plugin.on('rendered', destroy);
+        }
+        htmlPlugin.on('render', () => {
+            renderInterceptor(htmlPlugin);
+        });
+
         this.plugins.set(htmlPlugin.id, htmlPlugin);
 
         scssPlugin = new scssPlugin(Object.assign(config.plugins.scss || {}, {
@@ -60,10 +74,23 @@ class ungicProject extends skeleton {
             this.log(message, type, args);
         });
 
+        let uid = this.fastify.uid();
+        scssPlugin.on('render', () => {
+            renderInterceptor(scssPlugin);
+        });
+
         this.plugins.set(scssPlugin.id, scssPlugin);
         iconsPlugin = new iconsPlugin(Object.assign(config.plugins.icons || {}, {
             fs: config.fs
         }), {project: this});
+
+        uid = this.fastify.uid();
+        iconsPlugin.on('render', () => {
+            renderInterceptor(iconsPlugin);
+        });
+        /*scssPlugin.on('render', ()=>{
+            this.emit('render');
+        })*/
 
         iconsPlugin.on('log', (type, message, args) => {
             this.log(message, type, args);

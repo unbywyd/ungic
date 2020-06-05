@@ -254,12 +254,6 @@ module.exports = function(yargs, done) {
             });
             questionsNews.push({
                 type: 'confirm',
-                name: 'styles_in_footer',
-                message: `Do you want to append style tags to the end of the body tag? (with html 5.2 It is allowed)`,
-                default: release.styles_in_footer != undefined ? release.styles_in_footer : false
-            });
-            questionsNews.push({
-                type: 'confirm',
                 name: 'merge_internal_styles',
                 message: `Merge all internal stylesheets?`,
                 default: release.merge_internal_styles != undefined ? release.merge_internal_styles : false

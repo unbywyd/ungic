@@ -11,9 +11,6 @@ class Collector extends skeleton {
             }
         }, {}, options);
         let config = this.config;
-
-        //console.log(config);
-
         this.timer = new Timer(config.timeout);
         this.timer.on('finish', () => {
             this._finish();
@@ -22,12 +19,26 @@ class Collector extends skeleton {
     }
     add(item, skipTimer) {
         this.storage.push(item);
+        if(this._pause) {
+            return
+        }
         if(skipTimer) {
             this.timer.setTime(0);
         }
         this.timer.update();
     }
+    pause() {
+        this._pause = true;
+        this.timer.pause();
+    }
+    run() {
+        this._pause = false;
+        this.timer.update();
+    }
     _finish() {
+        if(this._pause) {
+            return
+        }
         this.storage = _.uniq(this.storage);
         if(this.storage.length) {
             let storage = _.clone(this.storage);
