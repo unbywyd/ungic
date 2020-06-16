@@ -12,7 +12,6 @@ const ungicProject = require('./project');
 const fsp = fs.promises;
 fsp.exists = promisify(fs.exists);
 const skeleton = require('./modules/skeleton');
-const appPaths = require('./modules/app-paths')();
 const open = require('open');
 const Collector = require('./modules/collector.js');
 
@@ -41,6 +40,7 @@ class finishController extends skeleton {
         }
     }
 }
+let appPaths;
 class app extends skeleton {
     constructor(args={}) {
         let config_cmd = {
@@ -58,6 +58,7 @@ class app extends skeleton {
                 "icons": {}
             }
         }
+        appPaths = require('./modules/app-paths')(args.command == 'init');
         let configPath = appPaths.config;
         let packagePath = appPaths.package;
         if(packagePath) {
@@ -107,10 +108,12 @@ class app extends skeleton {
         this.finishController = new finishController;
         this.finishController.parent = this;
     }
-    async initialize() {
-        //
-        let dirs = await fsp.readdir(appPaths.root);
+    async initialize() {  
+        
+        /*let dirs = await fsp.readdir(appPaths.root);
+        // Question not exit!
         if(dirs.length) {
+ 
             for(let dir of dirs) {
                 let stat = await fsp.lstat(path.join(appPaths.root, dir));
                 if(stat.isDirectory()) {
@@ -118,8 +121,11 @@ class app extends skeleton {
                     return process.exit();
                 }
             }
+        }*/
+        if(appPaths.config) {
+            this.log('Project successfully initialized. Use "ungic run" command for starting', 'success');
+            return process.exit();
         }
-
         if(!appPaths.config && !appPaths.package) {
             this.log('Note! Recommended to create package.json using npm init command.', 'warning');
             let response = await prompts({
@@ -153,6 +159,7 @@ class app extends skeleton {
             this.setConfig(response);
         }
         await fse.outputFile(path.join(appPaths.root, 'ungic.config.json'), JSON.stringify(this.config, null, 4));
+        console.log('created');
 
         let prj = new ungicProject(this.config);
         try {
@@ -161,7 +168,7 @@ class app extends skeleton {
             this.log(e);
             return
         }
-        this.log('Project successfully initialized. Use "ungic run" command for starting', 'Note');
+        this.log('Project successfully initialized. Use "ungic run" command for starting', 'success');
         process.exit();
     }
     async begin() {

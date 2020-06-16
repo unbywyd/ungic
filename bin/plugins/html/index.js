@@ -390,7 +390,6 @@ class htmlPlugin extends plugin {
                this.error(`Icon plugin did not generate any icons`);
             }
             let iconsPlugin = this.project.plugins.get('icons');
-
             if(!iconsPlugin.hasIcon({id})) {
                 this.error(id + ' icon does not exist or it was not generated');
                 this.iconsUsed.set({icon_id: id, page_id: rootData.page.id, rendered: false});

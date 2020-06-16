@@ -10,10 +10,11 @@ let scssPlugin = require('../plugins/scss');
 let htmlPlugin = require('../plugins/html');
 let iconsPlugin = require('../plugins/icons');
 let skeleton = require('../modules/skeleton');
-const appPaths = require('../modules/app-paths')();
+let appPaths;
 class ungicProject extends skeleton {
     constructor(config) {
         super({}, {}, config);
+        appPaths = require('../modules/app-paths')();
         this.root = appPaths.root;
         config = this.config;
         this.dist = path.join(this.root, config.fs.dirs.dist);

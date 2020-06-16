@@ -70,7 +70,7 @@ class App extends skeleton {
             require('yargs').showHelp();
             return;
         }
-
+   
         this.app = new ungic(config);
 
         if(config.log) {
