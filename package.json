@@ -1,6 +1,6 @@
 {
   "name": "ungic",
-  "version": "0.11.4",
+  "version": "0.12.0",
   "description": "Web layout environment",
   "main": "index.js",
   "bin": {
@@ -10,7 +10,26 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["web layout", "template engines", "html", "scss", "sass", "svg", "web icons", "sprites", "image sprites", "font icons", "dart sass", "sass framework", "sass compponents", "inversion", "theming", "rtl", "packer", "templates"],
+  "keywords": [
+    "web layout",
+    "template engines",
+    "html",
+    "scss",
+    "sass",
+    "svg",
+    "web icons",
+    "sprites",
+    "image sprites",
+    "font icons",
+    "dart sass",
+    "sass framework",
+    "sass compponents",
+    "inversion",
+    "theming",
+    "rtl",
+    "packer",
+    "templates"
+  ],
   "author": "unbywyd",
   "homepage": "https://packer.ungic.com/",
   "license": "ISC",
@@ -32,7 +51,7 @@
     "colors": "^1.4.0",
     "css-color-extractor": "0.0.5",
     "fast-glob": "^3.2.2",
-    "fastify": "^2.13.1",
+    "fastify": "^2.15.0",
     "fastify-static": "^2.6.0",
     "fibers": "^4.0.2",
     "find-nearest-file": "^1.1.0",

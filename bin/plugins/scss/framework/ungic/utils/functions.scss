@@ -33,6 +33,10 @@
     @return $result;
 }
 
+@function px($num) {
+  @return strip-unit($num) + 0px;
+}
+
 @function em($px, $def) {
     @return (strip-unit($px) / strip-unit($def)) + 0em;
 }

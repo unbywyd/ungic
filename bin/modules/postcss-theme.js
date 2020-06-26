@@ -11,10 +11,10 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
         let props = {
             'background': 'background-color',
             'border': 'border-color',
-            'border-top': 'border-top-color',
-            'border-right': 'border-right-color',
-            'border-bottom': 'border-bottom-color',
-            'border-left': 'border-left-color',
+            //'border-top': 'border-top-color',
+            //'border-right': 'border-right-color',
+            //'border-bottom': 'border-bottom-color',
+            //'border-left': 'border-left-color',
             'outline': 'outline-color'
         };
 
@@ -122,10 +122,10 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
                         }
                         selectors.set(originSelector + '-' + decl.prop, decl.value);
 
-                        if(props[prop] && colors.length === 1) {
+                        /*if(props[prop] && colors.length === 1) {
                             decl.prop = props[prop];
                             decl.value = colors[0];
-                        }
+                        }*/
                     }
                 }
                 if(!rule.nodes.length) {

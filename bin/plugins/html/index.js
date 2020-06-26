@@ -426,13 +426,13 @@ class htmlPlugin extends plugin {
                 if(options.data == 'icons') {
                     this.iconsDataUsed.set({page_id: source.ungic.page.id});
                     let iconsData = {};
-                    if(this.iconsStorage.fonts) {
+                    if('object' == typeof this.iconsStorage.fonts && this.iconsStorage.fonts.data) {
                         iconsData.fonts = _.map(this.iconsStorage.fonts.data.icons, i => _.omit(i, 'svg'));
                     }
-                    if(this.iconsStorage.svg_sprite) {
+                    if('object' == typeof this.iconsStorage.svg_sprite && this.iconsStorage.svg_sprite.data) {
                         iconsData.svg_sprites = _.map(this.iconsStorage.svg_sprite.data.icons, i => _.omit(i, 'svg'));
                     }
-                    if(this.iconsStorage.sprite) {
+                    if('object' == typeof this.iconsStorage.sprite && this.iconsStorage.sprite.data) {
                         iconsData.sprites = this.iconsStorage.sprite.data.icons;
                     }
                     source.icons = iconsData;
@@ -588,7 +588,7 @@ class htmlPlugin extends plugin {
                         content = Handlebars.compile(content)(s);
                     }
                     if(model.get('type') == 'page') {
-                        this.log(`${model.get('path')} page cannot be included in the ${rootData.ungic.page.path} page! The page cannot be included in the page!`);
+                        this.log(`${model.get('path')} page cannot be included in the ${rootData.ungic.page.path} page! Any page cannot be included in another page!`, 'error');
                         content = '';
                     }
                 } else {
@@ -888,7 +888,7 @@ class htmlPlugin extends plugin {
                         ungic: source
                     });
                 } catch(e) {
-                    console.log(e);
+                    this.log(e);
                     this.log(`An error occurred while rendering the ${attrs.path} page. Origin: ${e.message}`, 'error');
                 }
                 let distPath = this.dist;
@@ -1320,7 +1320,7 @@ class htmlPlugin extends plugin {
                               "useShortDoctype": true
                             }, params));
                         } catch(e) {
-                            console.log(e);
+                            this.log(e);
                             this.log(`An error occurred while rendering the ${attrs.path} page. Origin (minify): ${e.message}`, 'error');
                         }
                 }

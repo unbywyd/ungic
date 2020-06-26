@@ -11,6 +11,8 @@
 @use "sass:math";
 @use "sass:list";
 $theme: this.$theme;
+$project_props: map.get(this.$project, properties);
+
 @function border($param: false) {
     $border: (
         width: default-props.$border-width,
@@ -97,29 +99,54 @@ $theme: this.$theme;
     @return $output;
 }
 
+@function _pm-parse($props, $prop) {
+  $storage: (top:0, right:0, bottom:0, left:0);
+  
+  @if map.has-key($props, $prop) {
+      @if type-of(map.get($props, $prop)) == map {
+        $storage: map.merge($storage, map.get($props, $prop));
+      } @else {
+        $storage: un-meta.parse-pm(map.get($props, $prop));           
+      }
+  }
+  @return $storage;
+}
+
+@function _pm-inv-replace($props, $storage, $prop) {
+  $top: #{$prop}-top;
+  $right: #{$prop}-right;
+  $bottom: #{$prop}-bottom;
+  $left: #{$prop}-left;
+
+  @if map.has-key($props, $top) {
+    $storage: map.merge($storage, (top: map.get($props, $top)));
+  }
+  @if map.has-key($props, $right) {
+    $storage: map.merge($storage, (right: map.get($props, $right)));
+  }
+  @if map.has-key($props, $bottom) {
+    $storage: map.merge($storage, (bottom: map.get($props, $bottom)));
+  }
+  @if map.has-key($props, $left) {
+    $storage: map.merge($storage, (left: map.get($props, $left)));
+  }
+  @return $storage;
+}
+
 @function padding($param: false) {
-    $padding: (top:0, right:0, bottom:0, left:0);
+    // Parse common property of project
+    $padding: _pm-parse($project_props, padding);
 
-    @if map.has-key(this.$properties, "padding") {
-        @if type-of(map.get(this.$properties, padding)) == map {
-            $padding: map.merge($padding, map.get(this.$properties, padding));
-        } @else {
-            $padding: un-meta.parse-pm(map.get(this.$properties, "padding"));
-        }
+    // Replace individual props of project
+    $padding: _pm-inv-replace($project_props, $padding, padding);
+
+    // Replace common property of project to component props
+    @if map.has-key(this.$properties, padding) {
+      $padding: _pm-parse(this.$properties, padding);
     }
 
-    @if map.has-key(this.$properties, padding-top) {
-        $padding: map.merge($padding, (top: map.get(this.$properties, padding-top)));
-    }
-    @if map.has-key(this.$properties, padding-right) {
-        $padding: map.merge($padding, (right: map.get(this.$properties, padding-right)));
-    }
-    @if map.has-key(this.$properties, padding-bottom) {
-        $padding: map.merge($padding, (bottom: map.get(this.$properties, padding-bottom)));
-    }
-    @if map.has-key(this.$properties, padding-left) {
-        $padding: map.merge($padding, (left: map.get(this.$properties, padding-left)));
-    }
+    // Replace individual props of component
+    $padding: _pm-inv-replace(this.$private_properties, $padding, padding);
 
 
     @if type-of($param) == bool and $param {
@@ -154,28 +181,19 @@ $theme: this.$theme;
 }
 
 @function margin($param: false) {
-    $margin: (top:0, right:0, bottom:0, left:0);
+    // Parse common property of project
+    $margin: _pm-parse($project_props, margin);
 
-    @if map.has-key(this.$properties, "margin") {
-        @if type-of(map.get(this.$properties, margin)) == map {
-            $margin: map.merge($margin, map.get(this.$properties, margin));
-        } @else {
-            $margin: un-meta.parse-pm(map.get(this.$properties, "margin"));
-        }
-    }
-    @if map.has-key(this.$properties, margin-top) {
-        $margin: map.merge($margin, (top: map.get(this.$properties, margin-top)));
-    }
-    @if map.has-key(this.$properties, margin-right) {
-        $margin: map.merge($margin, (right: map.get(this.$properties, margin-right)));
-    }
-    @if map.has-key(this.$properties, margin-bottom) {
-        $margin: map.merge($margin, (bottom: map.get(this.$properties, margin-bottom)));
-    }
-    @if map.has-key(this.$properties, margin-left) {
-        $margin: map.merge($margin, (left: map.get(this.$properties, margin-left)));
+    // Replace individual props of project
+    $margin: _pm-inv-replace($project_props, $margin, margin);
+
+    // Replace common property of project to component props
+    @if map.has-key(this.$properties, margin) {
+      $margin: _pm-parse(this.$properties, margin);
     }
 
+    // Replace individual props of component
+    $margin: _pm-inv-replace(this.$private_properties, $margin, margin);
 
     @if type-of($param) == bool and $param {
         @return $margin;

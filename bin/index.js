@@ -109,19 +109,6 @@ class app extends skeleton {
         this.finishController.parent = this;
     }
     async initialize() {  
-        
-        /*let dirs = await fsp.readdir(appPaths.root);
-        // Question not exit!
-        if(dirs.length) {
- 
-            for(let dir of dirs) {
-                let stat = await fsp.lstat(path.join(appPaths.root, dir));
-                if(stat.isDirectory()) {
-                    this.log('Directory is not empty', 'error');
-                    return process.exit();
-                }
-            }
-        }*/
         if(appPaths.config) {
             this.log('Project successfully initialized. Use "ungic run" command for starting', 'success');
             return process.exit();
@@ -159,7 +146,6 @@ class app extends skeleton {
             this.setConfig(response);
         }
         await fse.outputFile(path.join(appPaths.root, 'ungic.config.json'), JSON.stringify(this.config, null, 4));
-        console.log('created');
 
         let prj = new ungicProject(this.config);
         try {

@@ -1,0 +1,212 @@
+@use ".core" as this;
+@use ".core/theme" as *;
+@use "functions" as *;
+@use "mixins" as *;
+@use "ungic.meta" as un-meta;
+@use "ungic.utils" as *;
+@use "ungic.components" as components;
+
+@use "sass:meta" as meta;
+@use "sass:map" as map;
+@use "sass:list" as list;
+@use "sass:math" as math;
+
+.gray {
+  padding: 10px;
+  background-color: gray();
+}
+
+// Tools
+$breakpoints: breakpoints(keys);
+
+.#{this.config(class-names, container)} {
+  width: 100%;
+  padding: 0 this.prop(padding);
+  margin: 0 auto;
+  @for $i from 1 through list.length($breakpoints) {
+    $max: "";
+    @if $i + 1 <= list.length($breakpoints) {
+      $max: "and" media("max-#{list.nth($breakpoints, $i + 1)}");
+    }
+    @include media(screen "and" media("min-#{list.nth($breakpoints, $i)}") $max) {
+      max-width: container-size(list.nth($breakpoints, $i));
+    }
+  }
+}
+
+@include this.component {
+  @each $grid, $columns in this.config(columns-number-group) {
+    &-#{$grid} {
+      $has_rules: false;
+      @for $i from 1 through list.length($columns) {
+        $col-num: list.nth($columns, $i);
+        > .row > .#{this.config(class-names, column)} {
+          $type: type-of($col-num);
+          @if ($type == map and not $has_rules) {
+            $has_rules: true;
+          }
+          @if ($i == 1) {
+            @include generate-custom-grid($col-num);
+          } @else {
+            $max: "";
+            @if ($i <= list.length($breakpoints)) {
+              $max: "and" media(max-#{nth($breakpoints, $i)});
+            }
+            @include media(screen "and" media(min-#{nth($breakpoints, $i - 1)}) $max) {
+              @if ($has_rules and $type != map) {
+                &:nth-child(1n) {
+                  @include generate-custom-grid($col-num);
+                }
+              } @else {
+                @include generate-custom-grid($col-num);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  &-gap {
+    &,
+    .#{this.config(class-names, nest)} {
+      > .row {
+        margin: 0 negative(this.prop(padding));
+        > .#{this.config(class-names, column)} {
+          padding: this.prop(padding);
+          > .#{this.config(class-names, nest)} {
+            margin: negative(this.prop(padding)) 0;
+          }
+        }
+      }
+    }
+    @for $i from 1 through this.config(gap-step) {
+      &-#{$i} {
+        $margin: strip-unit(this.prop(padding)) - ($i * 10) * strip-unit(this.prop(padding)) / 100;
+        &,
+        .#{this.config(class-names, nest)} {
+          > .row {
+            margin: 0 px(negative($margin));
+            > .#{this.config(class-names, column)} {
+              padding: px($margin);
+              > .#{this.config(class-names, nest)} {
+                margin: px(negative($margin)) 0;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  .#{this.config(class-names, column)} {
+    &-stetch {
+      flex-grow: 1;
+    }
+  }
+}
+.row {
+  flex-wrap: wrap;
+  display: flex;
+  &-nowrap {
+    flex-wrap: nowrap;
+  }
+  &-stretch {
+    > .#{this.config(class-names, column)} {
+      flex-grow: 1;
+    }
+  }
+  flex-direction: row;
+  &-reverse {
+    flex-direction: row-reverse;
+  }
+  @include grid-columns();
+  @for $i from 1 through list.length($breakpoints) {
+    @include media(screen "and" media("min-#{list.nth($breakpoints, $i)}")) {
+      @include grid-columns("-f#{list.nth($breakpoints, $i)}");
+    }
+    @include media(screen "and" media("max-#{list.nth($breakpoints, $i)}")) {
+      @include grid-columns("-t#{list.nth($breakpoints, $i)}");
+    }
+  }
+}
+.ai {
+  &-start {
+    align-items: flex-start;
+  }
+  &-end {
+    align-items: flex-end;
+  }
+  &-center {
+    align-items: center;
+  }
+  &-stretch {
+    align-items: stretch;
+  }
+  &-baseline {
+    align-items: baseline;
+  }
+}
+
+.ac {
+  &-center {
+    align-content: center;
+  }
+  &-end {
+    align-content: flex-end;
+  }
+  &-start {
+    align-content: flex-start;
+  }
+  &-between {
+    align-content: space-between;
+  }
+  &-around {
+    align-content: space-around;
+  }
+  &-stretch {
+    align-content: stretch;
+  }
+}
+
+.jc {
+  &-center {
+    justify-content: center;
+  }
+  &-end {
+    justify-content: flex-end;
+  }
+  &-start {
+    justify-content: flex-start;
+  }
+  &-between {
+    justify-content: space-between;
+  }
+  &-around {
+    justify-content: space-around;
+  }
+  &-evenly {
+    justify-content: space-evenly;
+  }
+}
+
+.as {
+  &-stretch {
+    align-self: stretch;
+  }
+  &-start {
+    align-self: flex-start;
+  }
+  &-end {
+    align-self: flex-end;
+  }
+  &-center {
+    align-self: center;
+  }
+  &-baseline {
+    align-self: baseline;
+  }
+}
+
+
+@include responsive-tool(hide, true) {
+  display: none;
+}

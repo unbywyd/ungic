@@ -7,10 +7,13 @@ module.exports = postcss.plugin('ungic-splitter', function (opts) {
   return function (root, result) {
     root.walkComments(c => c.remove());
     root.walkRules(function(rule) {
-        let regex = /\.un-theme-([^.\s\n}{()#$]+)/;
-        let m;
+        let regex = /\.un-theme-([^.\s\n}:{()#$]+)/;
+        let m;     
         if (opts.theme && (m = regex.exec(rule.selector)) !== null) {
+
+
             let theme = m[1];
+            //console.log(rule.selector, theme);
             let container = _.findWhere(themes, {theme});
             let isNew;
 

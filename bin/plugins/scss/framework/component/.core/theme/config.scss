@@ -41,9 +41,26 @@ $darkest: dark;
 *   Generate a missing third (extra) color
 */
 @if not map.has-key($colors, extra) and map.has-key($colors, primary) and map.has-key($colors, secondary) {
-    $colors: map.merge($colors, (extra: color.mix(map.get($colors, primary), map.get($colors, secondary))));
-}
+  $primary: map.get($colors, primary);
 
+  @if(type-of($primary) == list) {
+    @if($inverse) {
+      $primary: nth($primary, 2);
+    } @else {
+      $primary: nth($primary, 1);
+    }
+  }
+  $secondary: map.get($colors, secondary);
+  @if(type-of($secondary) == list) {
+    @if($inverse) {
+      $secondary: nth($secondary, 2);
+    } @else {      
+      $secondary: nth($secondary, 1);
+    }
+  }
+
+  $colors: map.merge($colors, (extra: color.mix($primary, $secondary)));
+}
 /*
 *   Checking theme colors
 */

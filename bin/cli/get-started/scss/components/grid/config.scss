@@ -1,0 +1,70 @@
+
+$columns-counts: 12;
+
+$class-names: (
+  column: 'cell', 
+  container: 'container',
+  nest: 'nest'
+);
+$gap-step: 10;
+$breakpoints: (
+  xs: 576px, 
+  sm: 768px, 
+  md: 992px,
+  lg: 1400px 
+);
+$container-as-breakpoints: false;
+
+$columns-number-group: (
+'2': (2,2,3,4,6),
+'3': (
+  1,  
+  2,
+  (
+    '2n': 50%,
+    '2n+1': 25%  
+  ),
+  4,
+  6
+),
+icons: (
+  1,
+  (
+    1: 50%
+  ),
+));
+
+$media-rules: (  
+	(
+		'rules': ('xs', 'max-xs', '<xs'),
+		'media': (max-width, xs)	
+	),
+	(
+		'rules': ('sm', '<sm', 'max-sm'),
+		'media': (max-width, sm)
+	), 
+	(
+		'rules': ('md', '<md', 'max-md'),
+		'media': (max-width, md)
+	),
+	(
+		'rules': ('<lg', 'max-lg'),
+		'media': (max-width, lg)
+	),
+	(
+		'rules': ('>xs', 'min-xs'),
+		'media': (min-width, xs)
+	),
+	(
+		'rules': ('>sm', 'min-sm'),
+		'media': (min-width, sm)
+	),
+	(
+		'rules': ('>md', 'min-md'),
+		'media': (min-width, md)
+	),
+	(
+		'rules': ('>lg', 'min-lg'),
+		'media': (min-width, lg)
+	)
+);

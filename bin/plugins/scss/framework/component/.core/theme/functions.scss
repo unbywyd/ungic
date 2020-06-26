@@ -282,8 +282,9 @@ $theme: meta.module-variables(theme);
     $color: color.adjust(lighten($color, $percent), $hue: $offset);
     $hsl: un-meta.hsl($color);
 
-    $s: ((100 - list.nth($hsl, 2)) * strip-unit($percent) / 100) + list.nth($hsl, 2);
-    $result: hsl(list.nth($hsl, 1), $s, list.nth($hsl, 3));
+    //$s: ((100 - list.nth($hsl, 2)) * strip-unit($percent) / 100) + list.nth($hsl, 2);
+    //$result: hsl(list.nth($hsl, 1), $s, list.nth($hsl, 3));
+    $result: hsl(list.nth($hsl, 1), list.nth($hsl, 2), list.nth($hsl, 3));
 
     $change-saturation: $saturation;
     @if $change-saturation == 0 {
@@ -444,9 +445,9 @@ $theme: meta.module-variables(theme);
             @if type-of($saturation) == list {
                 $type: get(theme-type);
                 @if($type == light) {
-                    $saturation: list.nth($saturation, 1);
+                  $saturation: list.nth($saturation, 1);
                 } @else {
-                    $saturation: list.nth($saturation, 2);
+                  $saturation: list.nth($saturation, 2);
                 }
             }
         }

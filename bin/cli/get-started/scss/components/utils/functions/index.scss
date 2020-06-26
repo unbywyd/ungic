@@ -1,0 +1,10 @@
+/*
+*   Any custom functions
+*/
+@use "../.core" as *;
+@use "ungic.utils" as *;
+
+
+@function u($px, $base: prop('font-size')) {
+  @return em($px, $base);
+}

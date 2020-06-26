@@ -160,12 +160,9 @@ class ungicProject extends skeleton {
             },
         }).on('all', (event, ph, stat) => {
             let paths = [...this.skipWatch.values()];
-            //console.log('ignore', paths);
-            //console.log('active ph', ph);
             if(paths.length) {
                 for(let p of paths) {
                     if(path.normalize(ph).split(path.normalize(p)).length > 1) {
-                        console.log('Ignored');
                         return
                     }
                 }

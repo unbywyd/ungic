@@ -240,8 +240,7 @@ class iconsPlugin extends plugin {
                 entityData.svg = cheerio.html($svg);
                 entityData.codepoint = this.getCodepoint();
                 entityData.unicode = String.fromCharCode(entityData.codepoint)
-            } catch(e) {
-                console.log(e);
+            } catch(e) {                
                 this.log(e);
             }
         } else {
@@ -682,10 +681,11 @@ class iconsPlugin extends plugin {
                     await fse.outputFile(path.join(this.fontsDist, config.fonts.name + '.eot'), Buffer.from(ttf2eot(ttf.buffer).buffer));
                     await fse.outputFile(path.join(this.fontsDist, config.fonts.name + '.ttf'), Buffer.from(ttf.buffer));
                 } catch(e) {
-                    this.log(e);
+                  this.log(e);
                 }
                 done(true);
             }).on('error', (err) => {
+                this.log(err);
                 this.log(`Font generation error`, err);
                 done(false);
             });
