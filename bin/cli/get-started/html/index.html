@@ -3,10 +3,20 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Page title</title>
-	<un-pipe css=""></un-pipe>
+	<un-pipe css="app"></un-pipe>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body>
-
+	<style sass="app" lid="inline">
+		@use "ungic.components.app" as *;
+    @use "ungic.components.app.theme" as *;
+		h2 {
+			color: color(success);
+		}
+	</style>
+	<div class="app">
+		<h1>Get started</h1>
+		<h2>Lorem ipsum dolor sit.</h2>
+	</div>
 </body>
 </html>

@@ -23,6 +23,9 @@
 .fg-stretch {
   flex-grow: 1;
 }
+[hidden] {
+  display: none !important;
+}
 .highlight {
   position: relative;
   display: inline-block;
@@ -504,11 +507,7 @@
 }
 
 .size {
-  @for $i from 1 through 16 {
-    &-#{$i} {
-      font-size: (1 + (0.25 * $i)) + 0em;
-    }
-  }
+  @include tool-step(this.config(sizes), (font-size));
 }
 
 .sr-fix {
@@ -554,8 +553,8 @@
     }
   }
 
-  > div,
-  > span {
+  > *,
+  > * {
     display: block;
     &.row,
     &.column {
@@ -567,8 +566,8 @@
   &[data-ratio="16:9"] {
     padding-top: 56.25%;
 
-    > div,
-    > span {
+    > *,
+    > * {
       margin-top: -56.25%;
     }
   }
@@ -576,8 +575,8 @@
   &[data-ratio="9:4"] {
     padding-top: 44.4%;
 
-    > div,
-    > span {
+    > *,
+    > * {
       margin-top: -44.4%;
     }
   }
@@ -585,8 +584,8 @@
   &[data-ratio="20:11"] {
     padding-top: 55%;
 
-    > div,
-    > span {
+    > *,
+    > * {
       margin-top: -55%;
     }
   }
@@ -594,8 +593,8 @@
   &[data-ratio="4:3"] {
     padding-top: 50%;
 
-    > div,
-    > span {
+    > *,
+    > * {
       margin-top: -50%;
     }
   }
@@ -603,8 +602,8 @@
   &[data-ratio="3:2"] {
     padding-top: 66.66%;
 
-    > div,
-    > span {
+    > *,
+    > * {
       margin-top: -66.66%;
     }
   }
@@ -612,8 +611,8 @@
   &[data-ratio="8:5"] {
     padding-top: 62.5%;
 
-    > div,
-    > span {
+    > *,
+    > * {
       margin-top: -62.5%;
     }
   }
@@ -686,7 +685,7 @@
 
 .no {
   &-pos {
-    position: static;
+    position: static !important;
   }
 
   &-aratio {
@@ -702,70 +701,70 @@
   }
 
   &-pointer {
-    pointer-events: none;
+    pointer-events: none !important;
   }
 
   &-fs {
-    font-style: normal;
+    font-style: normal !important;
   }
 
   &-mg {
-    margin: 0;
+    margin: 0 !important;
 
     &-x {
-      margin-left: 0;
-      margin-right: 0;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
     }
 
     &-y {
-      margin-top: 0;
-      margin-bottom: 0;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
     }
 
     &-xa {
-      margin-left: 0;
+      margin-left: 0 !important;
     }
 
     &-xb {
-      margin-right: 0;
+      margin-right: 0 !important;
     }
 
     &-ya {
-      margin-top: 0;
+      margin-top: 0 !important;
     }
 
     &-yb {
-      margin-bottom: 0;
+      margin-bottom: 0 !important;
     }
   }
 
   &-pd {
-    padding: 0;
+    padding: 0 !important;
 
     &-x {
-      padding-left: 0;
-      padding-right: 0;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
     }
 
     &-y {
-      padding-top: 0;
-      padding-bottom: 0;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
     }
 
     &-xa {
-      padding-left: 0;
+      padding-left: 0 !important;
     }
 
     &-xb {
-      padding-right: 0;
+      padding-right: 0 !important;
     }
 
     &-ya {
-      padding-top: 0;
+      padding-top: 0 !important;
     }
 
     &-yb {
-      padding-bottom: 0;
+      padding-bottom: 0 !important;
     }
   }
   &-td {

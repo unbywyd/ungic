@@ -21,7 +21,7 @@ $breakpoints: breakpoints(keys);
 
 .#{this.config(class-names, container)} {
   width: 100%;
-  padding: 0 this.prop(padding);
+  padding: 0 u(this.prop(padding));
   margin: 0 auto;
   @for $i from 1 through list.length($breakpoints) {
     $max: "";
@@ -70,11 +70,11 @@ $breakpoints: breakpoints(keys);
     &,
     .#{this.config(class-names, nest)} {
       > .row {
-        margin: 0 negative(this.prop(padding));
+        margin: 0 negative(u(this.prop(padding)));
         > .#{this.config(class-names, column)} {
-          padding: this.prop(padding);
+          padding: u(this.prop(padding));
           > .#{this.config(class-names, nest)} {
-            margin: negative(this.prop(padding)) 0;
+            margin: negative(u(this.prop(padding))) 0;
           }
         }
       }
@@ -85,11 +85,11 @@ $breakpoints: breakpoints(keys);
         &,
         .#{this.config(class-names, nest)} {
           > .row {
-            margin: 0 px(negative($margin));
+            margin: 0 u(negative($margin));
             > .#{this.config(class-names, column)} {
-              padding: px($margin);
+              padding: u($margin);
               > .#{this.config(class-names, nest)} {
-                margin: px(negative($margin)) 0;
+                margin: u(negative($margin)) 0;
               }
             }
           }
@@ -106,6 +106,7 @@ $breakpoints: breakpoints(keys);
 .row {
   flex-wrap: wrap;
   display: flex;
+  align-items: center;
   &-nowrap {
     flex-wrap: nowrap;
   }
@@ -123,10 +124,13 @@ $breakpoints: breakpoints(keys);
     @include media(screen "and" media("min-#{list.nth($breakpoints, $i)}")) {
       @include grid-columns("-f#{list.nth($breakpoints, $i)}");
     }
-    @include media(screen "and" media("max-#{list.nth($breakpoints, $i)}")) {
-      @include grid-columns("-t#{list.nth($breakpoints, $i)}");
+    $reverse: (list.length($breakpoints) - $i) + 1;
+    // Reverse
+    @include media(screen "and" media("max-#{list.nth($breakpoints, $reverse)}")) {
+      @include grid-columns("-t#{list.nth($breakpoints, $reverse)}");
     }
   }
+
 }
 .ai {
   &-start {

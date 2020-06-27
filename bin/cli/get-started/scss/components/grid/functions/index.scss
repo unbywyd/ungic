@@ -10,6 +10,10 @@
 @use "sass:string" as str;
 @use "sass:selector" as selector;
 
+@function u($px, $base: this.prop('font-size')) {
+  @return em(strip-unit($px), strip-unit($base));
+}
+
 @function breakpoint($size, $container-as-breakpoints: true) {
   $result: null;
   $grid-breakpoints: this.config(breakpoints);
@@ -74,7 +78,7 @@
   }
 }
 
-@function media($rule) {
+@function media($rule, $parentheses: true) {
   @if type-of($rule) != string {
     @return false;
   }
@@ -83,7 +87,11 @@
     @if list.index($rules, $rule) {
       $media: map.get($item, media);
       $result: list.nth($media, 1) + ':' + breakpoint(list.nth($media, 2));
-      @return '(' + $result + ')';      
+      @if $parentheses {
+        @return '(' + $result + ')';
+      } @else {
+        @return $result;
+      }
     }
   }
   @return false;

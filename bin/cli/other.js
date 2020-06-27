@@ -85,6 +85,7 @@ module.exports = function (yargs, done) {
           try {
             await scssPlugin.createComponent('ungic_icons');
             await scssPlugin.createComponent('grid');
+            await scssPlugin.createComponent('app');
             await scssPlugin.createComponent('normalize');
             await scssPlugin.createComponent('utils');
           } catch (e) {

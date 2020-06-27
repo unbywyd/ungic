@@ -85,7 +85,7 @@ acronym {
 label {
 	color: color(text-color);
 }
-
+/*
 h1 {
 	font-size: 3em;
 }
@@ -109,7 +109,7 @@ h5 {
 h6 {
 	font-size: 1.2em;
 }
-
+*/
 h1,
 h2,
 h3,
@@ -118,7 +118,7 @@ h5,
 h6 {
 	margin-top: u(this.prop(font-size)) / 2;
 	margin-bottom: u(this.prop(font-size)) / 2;
-	line-height: 1.2;
+	line-height: 1.4;
 
 	&:first-child {
 		margin-top: 0;
