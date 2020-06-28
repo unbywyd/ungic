@@ -313,15 +313,13 @@ module.exports = function (yargs, done) {
         if (toConfig) {
           questions = questions.concat(questionsNews);
         }
+
         if (questions.length) {
           try {
             let answers = await prompts.call(this, questions);
             if (!answers) {
               return this.logger.warning('Action canceled', 'CLI');
             } else {
-              if (params.output_style) {
-                params[params.output_style] = true;
-              }
               if (!params.page) {
                 page = path.basename(answers.page_path, path.extname(answers.page_path));
                 params.page = _.find(pages, p => p.path == answers.page_path);
@@ -360,8 +358,6 @@ module.exports = function (yargs, done) {
                   default: release.scss_release != undefined ? release.scss_release : true
                 });
               }
-
-
               if (params.icons_ids && params.icons_ids.length) {
                 questionsStepSecondary.unshift({
                   type: 'confirm',
@@ -661,6 +657,11 @@ module.exports = function (yargs, done) {
         }
         try {
           params.name = args.release_name;
+          if (params.output_style) {
+            params['beautify'] = false;
+            params['minifier'] = false;
+            params[params.output_style] = true;
+          }
           await plugin.toRelease(params);
           return this.logger.success('Release generated to ' + path.join(plugin.dist, 'releases', params.name + '.' + params.version));
         } catch (e) {

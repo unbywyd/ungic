@@ -1151,7 +1151,9 @@ class htmlPlugin extends plugin {
                             cssResult = cssResult.toString();
                         }
 
-                        $head.append('<style>' + cssResult +'</style>');
+                        if(typeof cssResult == 'string' && cssResult.trim() != '') {
+                            $head.append('<style>' + cssResult +'</style>');
+                        }
 
                         let scripts = [];
                         let promsScripts = [];

@@ -5,7 +5,7 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
   opts = opts || {}
   return function (root, result) {
     let regexp = /^\.un-inverse|^\.un-theme/;
-    let selectors = new Map();
+    //let selectors = new Map();
 
     root.walkRules(function(rule) {
         let props = {
@@ -18,8 +18,9 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
             'outline': 'outline-color'
         };
 
-        let allPropsWithColors = [
+        let propertiesToSave = [
             'background',
+            'background-image',
             'background-color',
             'border',
             'border-color',
@@ -109,24 +110,24 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
                     let prop = decl.prop;
                     let colors = extractor.fromDecl(decl);
                     if(!colors.length) {
-                        if(allPropsWithColors.indexOf(prop) == -1 && prop.indexOf('color') == -1) {
+                        if(propertiesToSave.indexOf(prop) == -1 && prop.indexOf('color') == -1) {
                             decl.remove();
                         }
-                    } else {
-                        if(selectors.has(originSelector + '-' + decl.prop)) {
+                    } //else {
+                        /*if(selectors.has(originSelector + '-' + decl.prop)) {
                             let originValue = selectors.get(originSelector + '-' + decl.prop);
                             if(originValue == decl.value) {
                                 //decl.remove();
                                 return
                             }
-                        }
-                        selectors.set(originSelector + '-' + decl.prop, decl.value);
+                        }*/
+                        //selectors.set(originSelector + '-' + decl.prop, decl.value);
 
                         /*if(props[prop] && colors.length === 1) {
                             decl.prop = props[prop];
                             decl.value = colors[0];
                         }*/
-                    }
+                    //}
                 }
                 if(!rule.nodes.length) {
                     rule.remove();
@@ -146,12 +147,12 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
 
                 rule.selector = rule.selector.replace(regexp, search[1]);
             }
-            rule.walkDecls(decl => {
-                if(decl.prop && allPropsWithColors.indexOf(decl.prop) != -1) {
+            /*rule.walkDecls(decl => {
+                if(decl.prop && propertiesToSave.indexOf(decl.prop) != -1) {
                     let originSelector = rule.selector.replace(/^[^:]+:not\(.un-inverse\)\s+/gm, '').trim();
                     selectors.set(originSelector + '-' + decl.prop, decl.value);
                 }
-            });
+            });*/
         }
     });
     root.walkAtRules(function(rule) {
