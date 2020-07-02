@@ -20,7 +20,10 @@ module.exports = {
         }
     },
     cheerio: {
-        type: 'object'
+        type: 'object',
+        default: {
+            decodeEntities: false
+        }
     },
     replace_amp_to_symbol: {
         type: 'boolean',

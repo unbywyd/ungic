@@ -922,7 +922,7 @@ class htmlPlugin extends plugin {
                     }
                 }
                 let configCheerio = typeof config.cheerio == 'object' ? config.cheerio : {};
-                configCheerio = _.extend(process.env.cheerio, configCheerio);
+                configCheerio = _.extend({decodeEntities: false}, process.env.cheerio, configCheerio);
                 const $ = cheerio.load(output, configCheerio);
                 let $body = $('body'), $head =  $('head');
                 scssPlugin.cleanHtmlInternalSass(model.id);
