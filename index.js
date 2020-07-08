@@ -27,8 +27,8 @@ logger.prototype.decorate = function (message, label, color) {
   if(this.storage.has(output)) {
     return
   }
-  this.storage.set(output, label); 
-  this.publish(output, label); 
+  this.storage.set(output, label);
+  this.publish(output, label);
 
   setTimeout(function() {
     this.storage.delete(output);
@@ -80,7 +80,7 @@ class App extends skeleton {
           this.createReadline(this.appMenu, {
             context: this
           });
-        }     
+        }
       }
     });
     let yargs = require('yargs')
@@ -164,7 +164,8 @@ class App extends skeleton {
         this.logger.warning(message, args.plugin_id ? args.plugin_id : false);
       } else if (type == 'success') {
         this.logger.success(message, args.plugin_id ? args.plugin_id : false);
-      } else if (args.exit) {
+      }
+      if(args.exit) {
         process.exit(0);
       }
     });
@@ -189,7 +190,7 @@ class App extends skeleton {
       await this.app.begin();
     }
     let self = this;
-    this.appMenu = async function(yargs) {   
+    this.appMenu = async function(yargs) {
       yargs
         .command('log <status>', 'Log output to the console', args => {
           args.positional('status', {
@@ -210,10 +211,10 @@ class App extends skeleton {
 
 
         let cliModes = fg.sync('./bin/cli/*.js', { cwd: __dirname });
-    
+
         if (cliModes.length) {
           for (let handler of cliModes) {
-            let name = path.basename(handler, path.extname(handler));           
+            let name = path.basename(handler, path.extname(handler));
             yargs
               .command(name, `switch to ${name} menu`, {}, () => {
                 this.close().then(() => {
@@ -223,7 +224,7 @@ class App extends skeleton {
                           await this.close();
                         try {
                           await callback();
-                        } catch (e) {                        
+                        } catch (e) {
                           self.logger.error(e, 'CLI');
                         }
                         this.open();
@@ -244,7 +245,7 @@ class App extends skeleton {
               });
             }
           }
-        
+
         yargs.argv;
     }
     this.logger.success('The project has been successfully launched and is ready to go.', 'Project ready');

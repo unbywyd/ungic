@@ -1,6 +1,6 @@
 
 
-| Note: The project is still in the alpha stage. Ungic packer works for nodejs 12+ |
+| Note: Ungic packer works for nodejs 12+ |
 | --- |
 
 

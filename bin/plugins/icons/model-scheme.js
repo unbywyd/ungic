@@ -14,7 +14,7 @@ module.exports = {
         default: {
             className: 'sprite',
             enabled: true,
-            maxWidth: 100
+            maxWidth: 70
         },
         properties: {
             className: {
