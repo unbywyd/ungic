@@ -19,7 +19,10 @@ class finishController extends skeleton {
     constructor(config={}) {
         super({}, {objectMerge: true}, config);
         this.collector = new Collector({timeout: 100});
+        //console.log('Create collector!');
+        //console.log('On finish collector!');
         this.collector.on('finish', events => {
+            ///console.log('On finished!');
             if(this.parent.fastify.io) {
                 this.parent.fastify.io.emit('change', events);
             }
@@ -27,6 +30,7 @@ class finishController extends skeleton {
         this.tasks = new Set;
     }
     push(event) {
+        //console.log('EVENT', event);
         this.collector.add(event);
     }
     task(id) {
@@ -108,7 +112,7 @@ class app extends skeleton {
         this.finishController = new finishController;
         this.finishController.parent = this;
     }
-    async initialize() {  
+    async initialize() {
         if(appPaths.config) {
             this.log('Project successfully initialized. Use "ungic run" command for starting', 'success');
             return process.exit();
@@ -241,6 +245,7 @@ class app extends skeleton {
             this.log(message, type, args);
         });
 
+        //console.log(config.fs.dirs.dist);
         this.project.on('watcher:' + config.fs.dirs.dist, (event, ph) => {
             let relative = path.relative(this.project.dist, ph).replace(/\\+/g, '/');
             this.finishController.push({

@@ -159,6 +159,18 @@ class ungicProject extends skeleton {
                 stabilityThreshold: 50
             },
         }).on('all', (event, ph, stat) => {
+            let findDir = (fs, name) => {
+                if(fs.dirs) {
+                    for(let dir in fs.dirs) {
+                        let dirLabel = fs.dirs[dir];
+                        if(dirLabel == name) {
+                            return config.fs[dir];
+                        }
+                    }
+                } else {
+                   return fs[name];
+                }
+            }
             let paths = [...this.skipWatch.values()];
             if(paths.length) {
                 for(let p of paths) {
@@ -168,13 +180,15 @@ class ungicProject extends skeleton {
                 }
             }
             let ph_splitter = _.filter(ph.split(this.root)[1].split(path.sep), ph => ph != "");
+
             let watchEvent = (storage, dir, prev="", prevdir="") => {
-                if(storage[dir]) {
+                let _dir = findDir(storage, dir);
+                if(_dir) {
                     this._events.emit('watcher:' + prev + dir, event, ph, stat);
                     if(this.plugins.size) {
                         this.plugins.forEach(plugin=>plugin.emit('watcher:' + prev + dir, event, ph, stat));
                     }
-                    watchEvent(storage[dir], ph_splitter.shift(), prev + dir + ':', dir);
+                    watchEvent(_dir, ph_splitter.shift(), prev + dir + ':', dir);
                 }
             }
             if(ph_splitter.length > 1) {

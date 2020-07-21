@@ -41,9 +41,6 @@ class ungicStructure {
     off() {
         this._events.off(...arguments);
     }
-    emit() {
-        this._events.emit(...arguments);
-    }
     log(message, type="log", args={}) {
         if(message instanceof Error) {
             type = 'error';
