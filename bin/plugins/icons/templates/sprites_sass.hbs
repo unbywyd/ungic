@@ -1,5 +1,10 @@
 @use "sass:map";
 @use "sass:meta";
+
+@function rtli($val) {
+    @return #{$val + '/*rtl:ignore*/'};
+}
+
 $_icons: ({{#each icons}}{{id}}: (name: {{name}}, height: {{coordinates.height}}, width: {{coordinates.width}}, x: {{coordinate coordinates.x}}, y: {{coordinate coordinates.y}}),{{/each}});
 $url: "{{path}}";
 $className: "{{config.className}}";
@@ -40,7 +45,7 @@ $className: "{{config.className}}";
         width: map.get($icon, width) + px;
         height: map.get($icon, height) + px;
         background-image:url("#{$url}");
-        background-position: map.get($icon, x) map.get($icon, y);
+        background-position: rtli(#{map.get($icon, x) map.get($icon, y)});
         display:inline-block;
         vertical-align: middle;
         text-decoration: none;
@@ -73,7 +78,7 @@ $className: "{{config.className}}";
             &-{{id}} {
                 width: {{coordinates.width}}px;
                 height: {{coordinates.height}}px;
-                background-position: {{coordinate coordinates.x}} {{coordinate coordinates.y}};
+                background-position: rtli(#{ {{coordinate coordinates.x}} {{coordinate coordinates.y}} });
                 @include icon-rules;
             }
         }
