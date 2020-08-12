@@ -198,6 +198,10 @@ class app extends skeleton {
                             "value" : "no-store, no-cache, must-revalidate, proxy-revalidate"
                           },
                           {
+                            "key" : "Access-Control-Allow-Origin",
+                            "value": "*"
+                          },
+                          {
                             "key" : "Surrogate-Control",
                             "value" : "no-store",
                           },

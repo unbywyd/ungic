@@ -28,6 +28,75 @@ var sizeOf = require('image-size');
 hbs.registerHelper("coordinate", function(val) {
     return !val ? val : val * -1 + 'px';
 });
+
+let codepointManager = function(parent) {
+    this.storage = [];
+    this.codepoints = [];
+    this.parent = parent;
+    this.cacheFile = path.join(parent.project.root, parent.config.fs.dirs.temp, 'cache.codepoints');
+    this.tempDir = path.join(parent.project.root, parent.config.fs.dirs.temp);
+}
+codepointManager.prototype.init = async function() {
+    if(await fsp.exists(this.cacheFile)) {
+       try {
+            let icons = await fsp.readFile(this.cacheFile, 'UTF-8');
+            icons = JSON.parse(icons);
+            let saveIcons = [];
+            for(let icon of icons) {
+                let iconPath = path.join(this.parent.root, icon.path);
+                if(await fsp.exists(iconPath)) {
+                    saveIcons.push(icon);
+                }
+            }
+            this.storage = saveIcons;
+            this.codepoints = _.uniq(_.pluck(saveIcons, 'codepoint'));
+            await fsp.writeFile(this.cacheFile, JSON.stringify(saveIcons));
+       } catch(e) {
+            console.log(e);
+            this.parent.error('Icon cache file is corrupted!');
+       }
+    }
+    // Функция для инициализации, считывает кеш файл и добавляет в сторож
+    // Нужно прогнать и проверить удаленные иконки, удалить из кеша, сохранить актуальный кеш.
+}
+codepointManager.prototype.save = async function(collection) {
+    let icons = collection.map(model => _.pick(model.toJSON(), 'id', 'codepoint', 'path'));
+    if(!await fsp.exists(this.tempDir)) {
+        await fse.ensureDir(this.tempDir);
+    }
+    this.storage = icons;
+    this.codepoints = _.uniq(_.pluck(icons, 'codepoint'));
+    await fsp.writeFile(this.cacheFile, JSON.stringify(icons));
+}
+codepointManager.prototype.saveCodepoint = function(codepoint) {
+    if(this.codepoints.indexOf(codepoint) == -1) {
+        this.codepoints.push(codepoint);
+    }
+}
+codepointManager.prototype.get = function(iconData) {
+    let collection = this.parent.collection;
+    if(iconData.codepoint) {
+        // Если в проекте существует или не существует вообще  вернуть его собственный код
+        let inProject = collection.findByID(iconData.id);
+        if((inProject && inProject.codepoint == iconData.codepoint) || !inProject) {
+            this.saveCodepoint(iconData.codepoint);
+            return iconData.codepoint;
+        }
+    }
+    let prev = this.storage.find(e => e.id == iconData.id);
+    if(prev && !collection.find(model => model.get('codepoint') == prev.codepoint)) {
+        return prev.codepoint;
+    }
+    let config = this.parent.config;
+    let codepoint = config.start_codepoint;
+    if(this.codepoints.length) {
+        codepoint = Math.max(...this.codepoints);
+        codepoint += 1;
+    }
+    this.saveCodepoint(codepoint);
+    return codepoint;
+}
+
 class iconsPlugin extends plugin {
     constructor(config={}, sysconfig={}) {
         config.id = 'icons';
@@ -89,7 +158,10 @@ class iconsPlugin extends plugin {
         let collection = Collection(model);
 
         this.collection = new collection();
+        this.cpManager = new codepointManager(this);
+
         this.collection.on('all', (event, model) => {
+            //console.log('event', event, model);
             if(event == 'updated' || event == 'added' || event == 'removed') {
                 if(model.has('svg')) {
                     if(config.icons_mode == 'fonts') {
@@ -149,6 +221,8 @@ class iconsPlugin extends plugin {
             this.begined = true;
             this.emit('begined', this.iconsStorage);
         }
+
+        await this.cpManager.save(this.collection);
         this.emit('rendered');
     }
     async fileChanged(events) {
@@ -238,9 +312,9 @@ class iconsPlugin extends plugin {
                     title.remove();
                 }
                 entityData.svg = cheerio.html($svg);
-                entityData.codepoint = this.getCodepoint();
+                entityData.codepoint = this.getCodepoint(entityData);
                 entityData.unicode = String.fromCharCode(entityData.codepoint)
-            } catch(e) {                
+            } catch(e) {
                 this.log(e);
             }
         } else {
@@ -514,7 +588,7 @@ class iconsPlugin extends plugin {
                 await fse.outputFile(toExt, icon.svg);
             }
             if(active && active.get('svg') != icon.svg || !active) {
-                icon.codepoint = this.getCodepoint();
+                icon.codepoint = this.getCodepoint(icon);
                 icon.unicode = String.fromCharCode(icon.codepoint);
                 items.push(icon);
             }
@@ -714,15 +788,16 @@ class iconsPlugin extends plugin {
         })
         return callbackData;
     }
-    getCodepoint() {
-        let config = this.config;
+    getCodepoint(data) {
+        return this.cpManager.get(data);
+        /*let config = this.config;
         let codepoint = config.start_codepoint;
         if(this.codepoints.length) {
             codepoint = Math.max(...this.codepoints);
             codepoint += 1;
         }
         this.codepoints.push(codepoint);
-        return codepoint;
+        return codepoint;*/
     }
     allFontsToRender() {
         let config = this.config;
@@ -788,6 +863,7 @@ class iconsPlugin extends plugin {
         }
     }
     async initialize() {
+        await this.cpManager.init();
         let files = await fg('**/*.{svg,png,jpeg,jpg}', {dot: false, cwd: this.root, deep: 10});
         if(files.length) {
             for(let svg of files) {
@@ -795,7 +871,6 @@ class iconsPlugin extends plugin {
             }
         }
         let config = this.config;
-
         try {
             if(config.icons_mode == 'fonts') {
                 this.allFontsToRender();
@@ -807,7 +882,6 @@ class iconsPlugin extends plugin {
             console.log(e);
         }
         this.on('watcher:'+ config.fs.dirs.source + ':' +config.fs[config.fs.dirs.source].icons, (event, ph, stat) => {
-
             let supports = ['.png', '.svg', '.jpeg', '.jpg'];
             if(supports.indexOf(path.extname(ph)) != -1) {
                 this.watchController.emit('bind', event, ph);

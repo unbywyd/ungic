@@ -11,9 +11,14 @@ class Collection {
     #config = {
         eventForEvery: true
     }
-    #change = (event, data) => {
+    #change = (event, data, silent) => {
+        if(silent) {
+            event = event + '_silent';
+        }
         this.#events.emit(event, data);
-        this.#events.emit('all', event, data);
+        if(!silent) {
+            this.#events.emit('all', event, data);
+        }
     }
     constructor(config={}) {
         this.collection = [];
@@ -38,6 +43,8 @@ class Collection {
         this.collection.splice(at, 0, model);
         if(!options.silent) {
             this.#change('added', model);
+        } else {
+            this.#change('added', model, true);
         }
         return model;
     }
@@ -52,6 +59,8 @@ class Collection {
         model.set(attributes, options);
         if(!options.silent && _.keys(model.changed).length) {
             this.#change('updated', model);
+        } else if(options.silent) {
+            this.#change('updated', model, true);
         }
         return model;
     }
@@ -84,6 +93,7 @@ class Collection {
             try {
                 model = new this._model(attributes);
             } catch(e) {
+                //console.log(e);
                 model = this._setError({
                     message: "Object does not meet model requirements",
                     origin: e.message,
@@ -188,6 +198,8 @@ class Collection {
         let changed = this._set(models, options);
         if(!options.silent && changed.length) {
             this.#change('add', changed);
+        } else if(options.silent) {
+            this.#change('add', changed, true);
         }
         if(options.lastEvent && Array.isArray(models)) {
             this.#change('add', changed);
@@ -201,6 +213,8 @@ class Collection {
         let changed = this._set(models, options);
         if(!options.silent && changed.length) {
             this.#change('set', changed);
+        } else if(options.silent) {
+            this.#change('set', changed, true);
         }
     }
     sort() {
@@ -268,8 +282,8 @@ class Collection {
             }
         }
     }
-    pluck(attribute, options={}) {
-        return _.pluck(this.toJSON(options), attribute);
+    pluck(attr, options={}) {
+        return _.pluck(this.toJSON(options), attr);
     }
     findByID(id) {
         return this.find(model=>model.id == id);

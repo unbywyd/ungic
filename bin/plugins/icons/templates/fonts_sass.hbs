@@ -130,6 +130,7 @@ $_icons: (
         src: url('{{fonts_path}}{{config.font.name}}.eot?#iefix') format('embedded-opentype'){{#each config.font.supports}}, url('{{../fonts_path}}{{../config.font.name}}.{{type}}') format('{{format}}'){{/each}};
         font-weight: normal;
         font-style: normal;
+        font-display: swap;
     }
     .{{config.font.class}} {
         @include core_icon();

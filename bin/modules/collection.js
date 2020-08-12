@@ -266,8 +266,8 @@ class Collection {
             }
         }
     }
-    pluck(attribute, options={}) {
-        return _.pluck(this.toJSON(options), attribute);
+    pluck(attr, options={}) {
+        return _.pluck(this.toJSON(options), attr);
     }
     findByID(id) {
         return this.find(model=>model.id == id);
