@@ -65,10 +65,11 @@ codepointManager.prototype.save = async function(collection) {
         await fse.ensureDir(this.tempDir);
     }
     this.storage = icons;
-    this.codepoints = _.uniq(_.pluck(icons, 'codepoint'));
+    this.codepoints = _.uniq(_.pluck(_.filter(icons, i => i.codepoint), 'codepoint'));
     await fsp.writeFile(this.cacheFile, JSON.stringify(icons));
 }
 codepointManager.prototype.saveCodepoint = function(codepoint) {
+    console.log('saveCodepoint', typeof codepoint);
     if(this.codepoints.indexOf(codepoint) == -1) {
         this.codepoints.push(codepoint);
     }

@@ -1,6 +1,6 @@
 {
   "name": "ungic",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Web layout environment",
   "main": "index.js",
   "bin": {
