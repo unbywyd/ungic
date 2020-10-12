@@ -672,7 +672,9 @@ class scssPlugin extends plugin {
 
         if(!await fsp.exists(path.join(this.root, 'project'))) {
             await fse.copy(path.join(this.framework, 'project'), path.join(this.root, 'project'));
+            await fse.outputFile(path.join(this.root, 'README.txt'), 'If you are just starting to work with Ungic then to get started, you should open the following files:\n * project/config.scss\n * project/properties.scss\n * project/reassignment.scss \n and read the comments at the beginning of the files.\n\nNote! In order to start writing your own styles, you need to create components!\nYou need to run the ungic project (> ungic run) and go to the scss plugin menu (> scss), use the "create <cid>" command to create a new component!\nAfter that, study the files that will appear in the components directory! Good luck!');
         }
+
 
         if(this.project.config.build.plugins[this.id]) {
             try {

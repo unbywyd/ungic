@@ -35,6 +35,20 @@ $className: "{{config.className}}";
     @return map.keys($_icons);
 }
 
+@function icon-exist($icon-name) {
+    @if(not map.has-key($_icons, $icon-name)) {
+        @return false;
+    }
+    @return true;
+}
+
+@function has-icon($icon-name) {
+    @if(not map.has-key($_icons, $icon-name)) {
+        @return false;
+    }
+    @return true;
+}
+
 @function get-icons() {
     @return $_icons;
 }

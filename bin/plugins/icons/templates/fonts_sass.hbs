@@ -1,6 +1,10 @@
 @use "sass:map";
 @use "sass:meta";
 
+$fontFamily: {{config.font.name}};
+$url: {{fonts_path}};
+$className: {{config.font.class}};
+
 $_icons: (
     {{#each icons}}{{id}}:(
         unicode: {{unicode}},
@@ -23,7 +27,7 @@ $_icons: (
     }
 }
 
-%core_icon {
+@mixin icon-core {
     font-family: {{config.font.name}} !important;
     speak: none;
     font-style: normal;
@@ -42,31 +46,20 @@ $_icons: (
     }
 }
 
-@mixin core_icon {
-    font-family: {{config.font.name}} !important;
-    speak: none;
-    font-style: normal;
-    font-weight: normal;
-    font-variant: normal;
-    text-transform: none;
-    text-decoration: none;
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    font-size: {{config.font.size}};
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    &::selection {
-        background-color: transparent;
-    }
-}
-
-@function icon-exists($icon-name) {
+@function icon-exist($icon-name) {
     @if(not map.has-key($_icons, $icon-name)) {
         @return false;
     }
     @return true;
 }
+
+@function has-icon($icon-name) {
+    @if(not map.has-key($_icons, $icon-name)) {
+        @return false;
+    }
+    @return true;
+}
+
 
 @function exist() {@return true};
 
@@ -96,12 +89,12 @@ $_icons: (
     $unicode: get-icon($icon-name);
     @if($unicode != null) {
         @if($before) {
-            @include core_icon();
+            @include icon-core();
             &:before {
                 content: $unicode;
             }
         } @else {
-            @include core_icon();
+            @include icon-core();
             content: $unicode;
         }
     }
@@ -133,7 +126,7 @@ $_icons: (
         font-display: swap;
     }
     .{{config.font.class}} {
-        @include core_icon();
+        @include icon-core();
         &-label {
             @include icon-label();
         }

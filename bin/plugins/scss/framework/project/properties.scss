@@ -1,6 +1,13 @@
 /*
 *   Various default properties
 *   These properties are available for use when creating components, each component can override specific properties.
+*		Usage in components:
+*			@use ".core" as this;
+*			this.prop($prop, $args...)		// 	Get final property value (the default value is overwritten by the project value and then by the value of component itself)
+*			this.is-prop-changed($prop)		//  Checks if the property value is different from the default (default properties are exclusively in the core of the framework)
+*			this.default-prop($prop)			//	Returns the default property value (From core of framework)
+*			this.project-prop($prop)			//	Get project property value
+*			this.project-config($key:'')	//	Get project config
 */
 @use "ungic.utils" as utils;
 $font-size: 16px;
