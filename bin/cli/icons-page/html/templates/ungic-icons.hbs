@@ -1,9 +1,9 @@
 <div class="ungic_icons-page">
-    {{#if icons.svg_sprites}}
-        <h2>Svg sprites</h2>
+    {{#if icons.svgSprite}}
+        <h2>SVG sprite</h2>
         <div class="ungic_icons-items">
-            {{#each icons.svg_sprites}}
-                <div role="button" class="ungic_icons-item" data-id="{{id}}">
+            {{#each icons.svgSprite}}
+                <div role="button" title="{{id}}" class="ungic_icons-item" data-id="{{id}}">
                     {{{icon id}}}
                 </div>
             {{/each}}
@@ -11,10 +11,10 @@
     {{/if}}
 
     {{#if icons.sprites}}
-        <h2>Sprites</h2>
+        <h2>Image sprite</h2>
         <div class="ungic_icons-items">
             {{#each icons.sprites}}
-                <div role="button" class="ungic_icons-item" data-id="{{id}}">
+                <div role="button" title="{{id}}" class="ungic_icons-item" data-id="{{id}}">
                     {{{icon id}}}
                 </div>
             {{/each}}
@@ -25,7 +25,7 @@
         <h2>Font icons</h2>
         <div class="ungic_icons-items">
             {{#each icons.fonts}}
-                <div role="button" class="ungic_icons-item" data-id="{{id}}">
+                <div role="button" title="{{id}}" class="ungic_icons-item" data-id="{{id}}">
                     {{{icon id}}}
                 </div>
             {{/each}}

@@ -22,7 +22,7 @@ $className: "{{config.className}}";
     @return $result;
 }
 
-@mixin icon-rules {
+@mixin icon-core {
     display:inline-block;
     vertical-align: middle;
     text-decoration: none;
@@ -44,11 +44,8 @@ $className: "{{config.className}}";
     @if $icon {
         width: map.get($icon, width) + px;
         height: map.get($icon, height) + px;
-        background-image:url("#{$url}");
+        @include icon-core;
         background-position: rtli(#{map.get($icon, x) map.get($icon, y)});
-        display:inline-block;
-        vertical-align: middle;
-        text-decoration: none;
         @if meta.variable-exists("cid") {
             $save: use-icon($cid, $icon-name);
         }
@@ -79,7 +76,7 @@ $className: "{{config.className}}";
                 width: {{coordinates.width}}px;
                 height: {{coordinates.height}}px;
                 background-position: rtli(#{ {{coordinate coordinates.x}} {{coordinate coordinates.y}} });
-                @include icon-rules;
+                @include icon-core;
             }
         }
         @if meta.variable-exists("cid") {

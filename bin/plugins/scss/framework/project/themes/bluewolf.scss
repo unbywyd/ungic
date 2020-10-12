@@ -1,0 +1,37 @@
+$colors: ( // List type possible for all colors (is_light_theme, is_dark_theme)
+    primary: #4279f6,
+    secondary: #15181e,
+    success: #1BC167,
+    danger: #FF5252,
+    info: #2196F3,
+    warning: #FFC94B,
+    system:(#4880FF, #44a9ff),
+    text-color: (#090b0f, #FFF),
+    background-color: (#FFF, #17171b)
+);
+
+$config: (
+    inverse: false,
+    brightness: (
+        offset-brighten: 20,            // List type possible (is_light_theme, is_dark_theme)
+        offset-dim: 20,                 // List type possible (is_light_theme, is_dark_theme)
+        saturation-brighten: (0, 10%),    // List type possible (is_light_theme, is_dark_theme)
+        saturation-dim: (0, 0)          // List type possible (is_light_theme, is_dark_theme)
+    ),
+    relative-light-limit : true,
+    gray: (
+        saturation: (20%, 5%),     // List type possible (is_light_theme, is_dark_theme)
+        hue: blue           // List type possible (is_light_theme, is_dark_theme)
+    )
+);
+
+$palettes: (
+    primary: (
+        lighten: #c6d7fe,
+        darken: #1242ae
+    ),
+    secondary: (
+        lighten: #484b52,
+        darken: #101319
+    )
+);

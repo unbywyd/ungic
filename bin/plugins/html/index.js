@@ -184,7 +184,7 @@ class htmlPlugin extends plugin {
         });
 
         config = this.config;
-        let enums = _.uniq(_.values(config.supported_types));
+        let enums = _.uniq(_.values(config.supportedTypes));
         enums.push('page');
         let model = Model({
             type: {
@@ -211,7 +211,7 @@ class htmlPlugin extends plugin {
 
                 if(event == 'removed') {
                     if(model.get('type') == 'page') {
-                        if(config.delete_from_dist) {
+                        if(config.deleteFromDist) {
                             fse.remove(path.join(this.dist, model.get('path')));
                         }
                         return;
@@ -276,11 +276,11 @@ class htmlPlugin extends plugin {
                         }
                         let pathToCSS = path.join(this.dist, config.fs.dist.css, css + (['ltr', 'rtl'].indexOf(attrs.dir) == -1 ? '' : '.' + attrs.dir) + '.css');
                         let href = '/' + path.relative(this.dist, pathToCSS).replace(/\\+/g, '/');
-                        if(!config.relative_src) {
+                        if(!config.relativeSrc) {
                             href = this.project.fastify.address + href.replace(/\\+/g, '/');
                         }
                         if(!this.release) {
-                            output += `<link rel="stylesheet" data-component="${css}" href="${href}" />`;
+                            output += `<link rel="stylesheet" data-component="${css}" href="${href}?v=${Date.now()}" />`;
                         }
                     }
                 }
@@ -290,8 +290,8 @@ class htmlPlugin extends plugin {
             }
         });
 
-        this.on('watcher:'+ config.fs.dirs.source + ':' +config.fs[config.fs.dirs.source].html, (event, ph, stat) => {
-            let availableTypes = _.keys(config.supported_types).map(type => '.' + type);
+        this.on('watcher:'+ config.fs.dirs.source + ':' +config.fs.source.html, (event, ph, stat) => {
+            let availableTypes = _.keys(config.supportedTypes).map(type => '.' + type);
             if(availableTypes.indexOf(path.extname(ph)) != -1) {
                 this.setEntityByPath(event, path.relative(this.root, ph));
             }
@@ -349,7 +349,7 @@ class htmlPlugin extends plugin {
             let options = context.hash ? context.hash: {};
             let cwd = options.cwd ? path.join(this.dist, options.cwd) : this.dist;
             let pathToSRC = path.join(cwd, src);
-            let relative_src = options.relative_src ? options.relative_src : config.relative_src;
+            let relativeSrc = options.relativeSrc ? options.relativeSrc : config.relativeSrc;
             let page_ids = [];
             if(this.resources.has(pathToSRC)) {
                 page_ids = this.resources.get(pathToSRC);
@@ -357,14 +357,13 @@ class htmlPlugin extends plugin {
             page_ids.push(rootData.page.id);
             this.resources.set(path.relative(this.dist, pathToSRC), page_ids);
             if(!fs.existsSync(pathToSRC)) {
-                this.log(`Resource by path ${pathToSRC} not exist`, 'warning');
+                this.log(`Resource by path ${pathToSRC} not exist. Required for ${rootData.page.path} page`, 'warning');
             }
-            // url.resolve('https://ara.com', '../img/ara.png')
             if(this.release) {
                 let host = this.release.host;
 
                 let distRelative = path.relative(this.dist, pathToSRC);
-                let distPath = path.join(this.dist, 'releases', this.release.name + '.' + this.release.version);
+                let distPath = path.join(this.dist, 'releases', this.release.releaseName + '-v' + this.release.version);
                 let pathToRelease = path.join(distPath, distRelative);
                 if(!fs.existsSync(pathToRelease) && fs.existsSync(pathToSRC)) {
                     fse.copySync(pathToSRC, pathToRelease);
@@ -376,7 +375,7 @@ class htmlPlugin extends plugin {
                     return '/' + path.relative(this.dist, pathToSRC).replace(/\\+/g, '/');
                 }
             }
-            if(!relative_src) {
+            if(!relativeSrc) {
                 return this.project.fastify.address + '/' + path.relative(this.dist, pathToSRC).replace(/\\+/g, '/');
             } else {
                 return '/' + path.relative(this.dist, pathToSRC).replace(/\\+/g, '/');
@@ -396,7 +395,7 @@ class htmlPlugin extends plugin {
                 return '';
             }
 
-            options.relative_src = config.relative_src;
+            options.relativeSrc = config.relativeSrc;
             let iconRendered = iconsPlugin.getIconForRender(id, options);
             if(iconRendered) {
                 this.iconsUsed.set({icon_id: id, page_id: rootData.page.id, rendered: true});
@@ -429,8 +428,8 @@ class htmlPlugin extends plugin {
                     if('object' == typeof this.iconsStorage.fonts && this.iconsStorage.fonts.data) {
                         iconsData.fonts = _.map(this.iconsStorage.fonts.data.icons, i => _.omit(i, 'svg'));
                     }
-                    if('object' == typeof this.iconsStorage.svg_sprite && this.iconsStorage.svg_sprite.data) {
-                        iconsData.svg_sprites = _.map(this.iconsStorage.svg_sprite.data.icons, i => _.omit(i, 'svg'));
+                    if('object' == typeof this.iconsStorage.svgSprite && this.iconsStorage.svgSprite.data) {
+                        iconsData.svgSprite = _.map(this.iconsStorage.svgSprite.data.icons, i => _.omit(i, 'svg'));
                     }
                     if('object' == typeof this.iconsStorage.sprite && this.iconsStorage.sprite.data) {
                         iconsData.sprites = this.iconsStorage.sprite.data.icons;
@@ -470,10 +469,10 @@ class htmlPlugin extends plugin {
                     if(activeModel.get('type') == 'template' && model.get('type') != 'template') {
                         return this.log(`Templates can include only templates. Error building ${rootData.ungic.page.path} page in ${activeModel.get('path')} entity`, 'error');
                     }
-                    let supported_types = config.supported_types;
-                    let supported_include_types = config.supported_include_types;
-                    supported_include_types = supported_include_types.map(type => supported_types[type]);
-                    if(supported_include_types.indexOf(model.get('type')) == -1) {
+                    let supportedTypes = config.supportedTypes;
+                    let supportedIncludeTypes = config.supportedIncludeTypes;
+                    supportedIncludeTypes = supportedIncludeTypes.map(type => supportedTypes[type]);
+                    if(supportedIncludeTypes.indexOf(model.get('type')) == -1) {
                         return this.log(`${model.get('type')} type not supported for including. Error building ${rootData.ungic.page.path} page in ${activeModel.get('path')} entity`, 'error');
                     }
                     //source.ungic.dirname = path.dirname(path.relative(this.root, templatePath));
@@ -611,11 +610,11 @@ class htmlPlugin extends plugin {
             return
         }
         handlerID = handlerID.replace('.', '');
-        let availableTypes = _.keys(config.supported_types);
+        let availableTypes = _.keys(config.supportedTypes);
         if(availableTypes.indexOf(handlerID) == -1) {
             return
         }
-        attrs.type = config.supported_types[handlerID];
+        attrs.type = config.supportedTypes[handlerID];
         if(this.typeHandlers.has(handlerID)) {
             try {
                 attrs = await this.typeHandlers.get(handlerID).call(this, attrs);
@@ -629,7 +628,6 @@ class htmlPlugin extends plugin {
         return attrs;
     }
     async getReleaseInfo(pageData) {
-        let body = pageData.body;
         let pipes = _.findWhere(this.pipes.storage, {page_id: pageData.id});
         let result = {};
         if(pipes && pipes.css && pipes.css.length) {
@@ -671,20 +669,9 @@ class htmlPlugin extends plugin {
     toRelease(args) {
         return new Promise(async(done, rej) => {
             try {
-                if(await fsp.exists(path.join(this.root, 'build_schemes.json'))) {
-                    let build = await fsp.readFile(path.join(this.root, 'build_schemes.json'), 'UTF-8');
-                    try {
-                        build = JSON.parse(build);
-                        this.builder.setConfig(build);
-                    } catch(e) {
-                        this.error('build_schemes.json file has invalid json format. Origin: ' + e.message, {exit: true});
-                    }
-                }
                 this.release = args;
                 let watched = this.unwatched;
                 this.unwatch();
-
-                // Чтобы вызвать обработчиков, добавляем в стораж
                 let model = this.collection.findByID(args.page.id);
                 let prevPath = model.get('path');
                 this.collection.remove(model, {silent: true});
@@ -734,7 +721,7 @@ class htmlPlugin extends plugin {
             }
             return name+ ' document is valid according to the specified schema';
         } catch(e) {
-            this.log(e);
+            this.system(e);
         }
     }
     async ampValidate(content, name) {
@@ -755,7 +742,7 @@ class htmlPlugin extends plugin {
                 return res;
             }
         } catch(e) {
-            this.log(e);
+            this.system(e);
         }
     }
     async distPretty(ph) {
@@ -763,7 +750,16 @@ class htmlPlugin extends plugin {
         if(!await fsp.exists(pathDist)) {
             throw new Error(`File by path ${pathDist} not exist`);
         } else {
-            let content = beautify.html(await fsp.readFile(pathDist, 'UTF-8'), _.extend({"indent_size": 4}, process.env.beautify));
+            let config = this.config;
+            let beautifyConfig;
+
+            if(typeof this.project.app.PLUGINS_SETTINGS.beautify == 'object') {
+                beautifyConfig = this.project.app.PLUGINS_SETTINGS.beautify;
+            }
+            if(typeof config.beautify == 'object' && Object.keys(config.beautify).length) {
+                beautifyConfig = config.beautify;
+            }
+            let content = beautify.html(await fsp.readFile(pathDist, 'UTF-8'), _.extend({"indent_size": 4}, beautifyConfig));
             return fse.outputFile(pathDist, content);
         }
     }
@@ -843,7 +839,7 @@ class htmlPlugin extends plugin {
     }
     async createPage(args) {
         let name = args.name;
-        let template = path.join(__dirname, 'page.hbs');
+        let template = path.join(__dirname, 'templates/page.hbs');
         template = await fsp.readFile(template, 'UTF-8');
         if(path.extname(name) != '') {
             name = path.basename(name, path.extname(name));
@@ -855,11 +851,12 @@ class htmlPlugin extends plugin {
         return fse.outputFile(rootPath, Handlebars.compile(template)(args));
     }
     async _render(events) {
+        //console.log(events);
         this.emit('render');
         let config = this.config;
         let builder = this.builder.config;
 
-        let build = builder.dev.config;
+        let build = builder.dev;
         if(this.release) {
            build = this.release;
         }
@@ -893,7 +890,7 @@ class htmlPlugin extends plugin {
                 }
                 let distPath = this.dist;
                 if(this.release) {
-                    distPath = path.join(this.dist, 'releases', this.release.name + '.' + this.release.version);
+                    distPath = path.join(this.dist, 'releases', this.release.releaseName + '-v' + this.release.version);
                     if(build.validation) {
                         if(attrs.amp) {
                             let resultValidation = await this.ampValidate(output, attrs.path);
@@ -908,7 +905,7 @@ class htmlPlugin extends plugin {
                         for(let template of templatesModels) {
                             let output = template.get('body');
                             let folderName = template.get('type') + 's';
-                            let templatePath = path.join(distPath, folderName, template.get('path'));
+                            let templatePath = path.join(distPath, 'exports', folderName, template.get('path'));
                             await fse.outputFile(templatePath, output);
                         }
                     }
@@ -922,7 +919,7 @@ class htmlPlugin extends plugin {
                     }
                 }
                 let configCheerio = typeof config.cheerio == 'object' ? config.cheerio : {};
-                configCheerio = _.extend({decodeEntities: false}, process.env.cheerio, configCheerio);
+                configCheerio = _.extend({decodeEntities: false}, this.project.app.PLUGINS_SETTINGS.cheerio, configCheerio);
                 const $ = cheerio.load(output, configCheerio);
                 let $body = $('body'), $head =  $('head');
                 scssPlugin.cleanHtmlInternalSass(model.id);
@@ -985,44 +982,44 @@ class htmlPlugin extends plugin {
                         let script = `<script src="${this.project.fastify.address + '/ungic/js/dist/pipe.min.js'}" data-connect="${this.project.fastify.address}" data-src="${path.relative(this.dist, path.join(this.dist, attrs.path)).replace(/\\+/g, '/')}"></script>`;
                         $body.append(script);
                         $head.append(`<link rel="stylesheet" href="${this.project.fastify.address + '/ungic/css/devtools.css'}">`);
-                        if(this.iconsStorage.fonts && this.iconsStorage.fonts.data.icons.length) {
+                        if(this.iconsStorage.fonts && this.iconsStorage.fonts.data && this.iconsStorage.fonts.data.icons.length) {
                             $head.append(`<link rel="stylesheet" href="${this.project.fastify.address + '/ungic/font-icons'}">`);
                         }
-                        if(this.iconsStorage.sprite && this.iconsStorage.sprite.data.icons.length) {
+                        if(this.iconsStorage.sprite && this.iconsStorage.sprite.data && this.iconsStorage.sprite.data.icons.length) {
                             $head.append(`<link rel="stylesheet" href="${this.project.fastify.address + '/ungic/sprites'}">`);
                         }
-                        if(this.iconsStorage.svg_sprite  && this.iconsStorage.svg_sprite.data.icons.length && !this.iconsStorage.svg_sprite.data.external) {
-                            $body.append(this.iconsStorage.svg_sprite.data.sprite);
+                        if(this.iconsStorage.svgSprite  && this.iconsStorage.svgSprite.data && this.iconsStorage.svgSprite.data.icons.length && !this.iconsStorage.svgSprite.data.external) {
+                            $body.append(this.iconsStorage.svgSprite.data.sprite);
                         }
 
                     } else {
                         let styles = [];
-                        let distPath = path.join(this.dist, 'releases', this.release.name + '.' + this.release.version);
+                        let distPath = path.join(this.dist, 'releases', this.release.releaseName + '-v' + this.release.version);
                         let self = this;
 
 
                         let cleancssConfig = typeof config.cleancss == 'object' ? config.cleancss : {};
-                            cleancssConfig = _.extend({level: 2}, process.env.postcss_clean, cleancssConfig);
+                            cleancssConfig = _.extend({level: 2}, this.project.app.PLUGINS_SETTINGS.cleancss, cleancssConfig);
 
                         let postcssPlugins = [];
 
                         if(this.release.iconsReleases && this.release.iconsReleases.length) {
-                            let svg_sprites = _.find(this.release.iconsReleases, {type: 'svg_sprites'});
-                            if(svg_sprites) {
-                                $body.append(svg_sprites.release.sprite);
+                            let svgSprite = _.find(this.release.iconsReleases, {type: 'svgSprite'});
+                            if(svgSprite) {
+                                $body.append(svgSprite.sprite);
                             }
                         }
                         postcssPlugins.push(srcReplacer({
                             release: this.release,
-                            dist: this.dist,
+                            dist: path.join(this.dist, config.fs.dist.css),
                             distPath
                         }));
 
-                        if(this.release.optimize_internal_styles) {
+                        if(this.release.optimizeInternalStyles) {
                             postcssPlugins.push(clean(cleancssConfig));
                         }
 
-                        if(!this.release.include_external_styles) {
+                        if(!this.release.includeExternalStyles) {
                             /*
                             *   Подключили все стили из сасс фремворка и иконки
                             */
@@ -1033,8 +1030,8 @@ class htmlPlugin extends plugin {
                             }
                             if(this.release.iconsReleases && this.release.iconsReleases.length) {
                                 for(let el of this.release.iconsReleases) {
-                                    if(el.release.css_url) {
-                                        $head.append(`<link rel="stylesheet" data-type="${el.type}" href="${el.release.css_url.replace(/\\+/g, '/')}">`);
+                                    if(el.css_url) {
+                                        $head.append(`<link rel="stylesheet" href="${el.css_url}">`); // .replace(/\\+/g, '/')
                                     }
                                 }
                             }
@@ -1054,11 +1051,11 @@ class htmlPlugin extends plugin {
                             }
                             if(this.release.iconsReleases && this.release.iconsReleases.length) {
                                 for(let el of this.release.iconsReleases) {
-                                    if(el.release.css_url) {
-                                        let cssRules = await fsp.readFile(path.join(distPath, el.release.css_url), 'UTF-8');
+                                    if(el.css_url) {
+                                        let cssRules = await fsp.readFile(path.join(distPath, el.css_url), 'UTF-8');
                                         styles.unshift({
-                                            path: path.join(distPath, el.release.css_url),
-                                            url: el.release.css_url,
+                                            path: path.join(distPath, el.css_url),
+                                            url: el.css_url,
                                             cssRules
                                         });
                                     }
@@ -1074,7 +1071,7 @@ class htmlPlugin extends plugin {
                                    if(isRelative(href)) {
                                         let ph = path.join(self.dist, href);
                                         if(await fsp.exists(ph)) {
-                                            if(!self.release.include_external_styles) {
+                                            if(!self.release.includeExternalStyles) {
                                                 await fse.copy(ph, path.join(distPath, href));
                                             } else {
                                                 let cssRules = await fsp.readFile(ph, 'UTF-8');
@@ -1087,7 +1084,7 @@ class htmlPlugin extends plugin {
                                             }
                                         }
                                    }
-                                   if(!self.release.include_external_styles && isRelative(href) && !isRelative(self.release.host)) {
+                                   if(!self.release.includeExternalStyles && isRelative(href) && !isRelative(self.release.host)) {
                                         $(this).attr('href', url.resolve(self.release.host, href));
                                    }
                                 } catch(e) {
@@ -1104,7 +1101,7 @@ class htmlPlugin extends plugin {
 
                         let proms = [];
                         $('style').each(function() {
-                            if(self.release.merge_internal_styles) {
+                            if(self.release.mergeInternalStyles) {
                                 styles.unshift({
                                     cssRules: $(this).html(),
                                     url: null,
@@ -1166,7 +1163,7 @@ class htmlPlugin extends plugin {
                             promsScripts.push(new Promise(async(res, rej) => {
                                 try {
                                     if($(this).attr('src')) {
-                                        if(self.release.include_local_scripts) {
+                                        if(self.release.includeLocalScripts) {
                                             let src = $(this).attr('src');
                                             try {
                                                 if(isRelative(src)) {
@@ -1183,11 +1180,11 @@ class htmlPlugin extends plugin {
                                         }
                                         res();
                                     } else {
-                                        if(self.release.merge_internal_scripts) {
+                                        if(self.release.mergeInternalScripts) {
                                             scripts.unshift($(this).html());
                                             $(this).remove();
                                         } else {
-                                            if(self.release.optimize_internal_scripts) {
+                                            if(self.release.optimizeInternalScripts) {
                                                 try {
                                                     let result = await jsOptimaze($(this).html());
                                                     $(this).html(result);
@@ -1210,11 +1207,11 @@ class htmlPlugin extends plugin {
                         }
 
                         if(scripts.length) {
-                            if(this.release.optimize_internal_scripts) {
+                            if(this.release.optimizeInternalScripts) {
                                 try {
                                     let res = await jsOptimaze(scripts);
                                     if(res.length) {
-                                        if(self.release.internal_scripts_in_footer) {
+                                        if(self.release.internalScriptsInFooter) {
                                             $body.append('<script>'+res+'</script>');
                                         } else {
                                             $head.append('<script>'+res+'</script>');
@@ -1228,7 +1225,7 @@ class htmlPlugin extends plugin {
                         }
 
                         let promsScriptsToFooter = [];
-                        if(this.release.external_scripts_in_footer) {
+                        if(this.release.externalScriptsInFooter) {
                             $('script').each(function() {
                                 promsScriptsToFooter.push(new Promise(async(res, rej) => {
                                     try {
@@ -1251,7 +1248,7 @@ class htmlPlugin extends plugin {
                         $('[src], [href]').each(function() {
                             let attr = $(this).attr('href') ? 'href' : 'src';
                             let urlEl = $(this).attr(attr);
-                            if(isRelative(urlEl)) {
+                            if(isRelative(urlEl) && !/^\#/.test(urlEl)) {
                                 let pathToDist = path.join(self.dist, urlEl), pathToRelease = path.join(distPath, urlEl);
                                 promsSrcReplacer.push(new Promise(async(res, rej) => {
                                     try {
@@ -1277,19 +1274,19 @@ class htmlPlugin extends plugin {
                 }
 
                 output = $.html();
-                if(config.replace_amp_to_symbol) {
+                if(config.replaceAmpToSymbol) {
                     output = output.replace(/\&amp\;/gm, '&');
                 }
 
-                if(build.beautify === true || typeof build.beautify == 'object') {
-                    let configBeautify = typeof build.beautify == 'object' ? build.beautify : {};
-                        configBeautify = _.extend(process.env.beautify, configBeautify);
+                if(build.formatting === 'beautify') {
+                    let configBeautify = typeof config.beautify == 'object' ? config.beautify : {};
+                        configBeautify = _.extend(this.project.app.PLUGINS_SETTINGS.beautify, configBeautify);
 
                     output = beautify.html(output, _.extend({"indent_size": 4}, configBeautify));
                 }
-                if(build.minifier === true || typeof build.minifier == 'object') {
-                    let params = typeof build.minifier == 'object' ? build.minifier : {};
-                        params = _.extend(process.env.minifier, params);
+                if(build.formatting === 'minifier') {
+                    let params = typeof config.minifier == 'object' ? config.minifier : {};
+                        params = _.extend(this.project.app.PLUGINS_SETTINGS.minifier, params);
                         try {
                             output = minify(output, _.extend({
                               "caseSensitive": false,
@@ -1302,7 +1299,7 @@ class htmlPlugin extends plugin {
                               "includeAutoGeneratedTags": false,
                               "keepClosingSlash": false,
                               "maxLineLength": 0,
-                              "minifyCSS": !(this.release && this.release.optimize_internal_styles),
+                              "minifyCSS": !(this.release && this.release.optimizeInternalStyles),
                               "minifyJS": true,
                               "preserveLineBreaks": true,
                               "preventAttributesEscaping": false,
@@ -1354,32 +1351,20 @@ class htmlPlugin extends plugin {
         }
     }
     async initialize() {
-        if(!await fsp.exists(path.join(this.root, 'build_schemes.json'))) {
-            this.builder = new builder(require('./build.model-scheme'));
-            await fse.outputFile(path.join(this.root, 'build_schemes.json'), JSON.stringify(this.builder.config, null, 4));
-        } else {
-            let build = await fsp.readFile(path.join(this.root, 'build_schemes.json'), 'UTF-8');
+        if(this.project.config.build.plugins[this.id]) {
             try {
-                build = JSON.parse(build);
+                this.builder = new builder(require('./build.model-scheme'), this.project.config.build.plugins[this.id]);
             } catch(e) {
-                this.error('build_schemes.json file has invalid json format. Origin: ' + e.message, {exit: true});
-            }
-
-            try {
-                this.builder = new builder(require('./build.model-scheme'), build);
-            } catch(e) {
-                console.log(e);
-                return this.error('build_schemes.json file has incorrect data. Origin: ' + e.message, {exit: true});
+                return this.system('HTML build scheme incorrect. Origin: \n' + e.message, 'error', {exit: true});
             }
         }
-        return
     }
     async begin(options) {
         if(options.icons) {
             this.iconsStorage = options.icons;
         }
         let config = this.config;
-        let types = _.keys(config.supported_types).join('|');
+        let types = _.keys(config.supportedTypes).join('|');
         let files = await fg('**/*.('+types+')', {dot: false, cwd: this.root, deep: 10});
         for(let file of files) {
             await this.setEntityByPath('add', file, {silent: true});
@@ -1412,8 +1397,10 @@ class htmlPlugin extends plugin {
                 if(this.iconsDataUsed.storage.length) {
                     for(let data of this.iconsDataUsed.storage) {
                         let page = this.collection.findByID(data.page_id);
-                        this.collection.remove(page.id, {silent: true});
-                        await this.setEntityByPath('add', page.get('path')); // , {merge: true}
+                        if(page) {
+                            this.collection.remove(page.id, {silent: true});
+                            await this.setEntityByPath('add', page.get('path'));
+                        }
                     }
                 }
             } catch(e) {

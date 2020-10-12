@@ -8,17 +8,20 @@ const fse = require('fs-extra');
 const _ = require('underscore');
 const { promisify } = require("util");
 fsp.exists = promisify(fs.exists);
+const appPaths = require('../../modules/app-paths')();
 const path = require('path');
 const skeleton = require('../../modules/skeleton');
 const renderMaster = require('../../modules/render-master');
 const watchGrouping = require('../../modules/watch-grouping');
-const {extend: Collection} = require('../../modules/collectionSync');
+const {extend: Collection} = require('../../modules/collection-sync');
 const {extend: Model} = require('../../modules/model');
 const sass = require("sass");
 const Fiber = require("fibers");
 const encodeFunction = require('../../modules/sass-json');
 const postcss = require('postcss');
 const clean = require('../../modules/postcss-clean');
+const srcReplacer = require('../../modules/postcss-src-replacer');
+
 const rtl = require('postcss-rtl');
 const autoprefixer = require('autoprefixer');
 const Storage = require('../../modules/storage');
@@ -71,7 +74,9 @@ class scssPlugin extends plugin {
         this.exports = new collection();
         this.exports.on('all', (event, model) => {
             if(event == 'updated' || event == 'add' || event == 'removed') {
-                this.emit('exports', event, model);
+                if(!this.activeRelease) {
+                  this.emit('exports', event, model);
+                }
             }
         });
 
@@ -118,7 +123,7 @@ class scssPlugin extends plugin {
                               });
                               let rulesByLID = _.filter(allRulesByCID, el => el.lid == lid);
                               if(!rulesByLID) {
-                                  this.log(`Warning while processing ${url} module in ${prev} file. ${cid} component expects internal sass styles from html plugin with ${lid} LID identifier. Please note that styles will be included only after processing of html plugin!.`, 'warning');
+                                  this.log(`Attention! ${cid} component expects sass rules from html by ${lid} LID. Please note that styles will be included only after processing of html plugin!.`, 'warning');
                               } else {
                                   let rules = _.pluck(rulesByLID, 'rules').join(' ');
                                   return done({
@@ -143,7 +148,7 @@ class scssPlugin extends plugin {
                               });
 
                           } else {
-                              this.warning(`Warning while processing ${url} module in ${prev} file. To include sprite sass module, you need to activate "sprites" mode in the icons plugin`);
+                            this.warning(`Warning while processing ${url} module in ${prev} file. To include sprite sass module, you need to activate "sprites" mode in the icons plugin.`);
                           }
                           return done({
                               contents: '@function exist() {@return false}'
@@ -227,10 +232,40 @@ class scssPlugin extends plugin {
                       }
                   }
               } else {
+                if(/^\@/.test(url)) {
+                  if(!appPaths.node_modules) {
+                    this.error('node_modules directory not found in current project');
+                    this.system(`Are you trying to include ${url} from node_modules directory of current project, but this directory was not found in your project. You should install the required package into your project, please use npm install command.`, 'warning');
+                    done({
+                      contents: ''
+                    });
+                  } else {
+                    let phToFile = path.join(appPaths.node_modules, url.replace('@', ''));
+                    if(path.extname(phToFile) == '') {
+                      phToFile = phToFile + '.scss';
+                    }
+                    let origin = phToFile;
+                    if(!await fsp.exists(phToFile)) {
+                      phToFile = path.join(path.dirname(phToFile), '_' + path.basename(phToFile));
+                    }
+                    if(await fsp.exists(phToFile)) {
+                      done({
+                        file: phToFile
+                      });
+                    } else {
+                      this.error(origin + ' package not found in your project');
+                      this.system(`Are you trying to include ${url} from node_modules directory of current project, but this package was not found in your project. You should install the required package into your project, please use npm install command.`, 'warning');
+                      done({
+                        contents: ''
+                      });
+                    }
+                  }
+                } else {
                   done();
+                }
               }
-          } catch(e) {     
-            let message = e.stack; // e.name +':' + e.message +'\n'+
+          } catch(e) {
+            let message = e.stack;
             this.error('Error while processing ${url} module in ${prev} file. Sass compilation error: ' + message);
             if(message.indexOf("NoSuchMethodError: method not found: 'call'") != -1) {
               this.error('Attempt to use an unknown "'+url+'" component. Error in '+ prev);
@@ -260,7 +295,7 @@ class scssPlugin extends plugin {
                     exportsStorage.push({
                         oid, cid, data, id: cid + '.' + oid
                     });
-                } catch {
+                } catch(e) {
                     this.log(`${oid} exported option of ${cid} component has invalid json format.`, 'error');
                 }
                 return sass.types.Boolean.TRUE
@@ -288,6 +323,11 @@ class scssPlugin extends plugin {
         if(process.env.NODE_ENV == 'development') {
             renderConfig.fiber = Fiber
         }
+        if(this.activeRelease) {
+          renderConfig.sourceMap = "string";
+          renderConfig.sourceMapContents = true;
+        }
+
 
         return new Promise(done => {
             sass.render(renderConfig, (err, result) => {
@@ -296,7 +336,7 @@ class scssPlugin extends plugin {
                     return done(false);
                 }
                 this.exports.add(exportsStorage);
-                done(result.css);
+                done(result);
             });
         });
     }
@@ -312,12 +352,12 @@ class scssPlugin extends plugin {
         let build = this.builder.config;
         let rtlOptions;
         if(buildConfig.direction) {
-            if(buildConfig.direction == 'rtl' || buildConfig.opposite_direction) {
+            if(buildConfig.direction == 'rtl' || buildConfig.oppositeDirection) {
                 rtlOptions = {}
-                if(buildConfig.direction == 'rtl' && buildConfig.opposite_direction) {
+                if(buildConfig.direction == 'rtl' && buildConfig.oppositeDirection) {
                     rtlOptions.fromRTL = true;
                 }
-                if(!buildConfig.opposite_direction) {
+                if(!buildConfig.oppositeDirection) {
                     rtlOptions.onlyDirection = buildConfig.direction;
                 }
             }
@@ -325,35 +365,45 @@ class scssPlugin extends plugin {
 
         plugins.push(postcssTheme());
 
+        if(release) {
+          let releasePath = path.join(this.dist, 'releases', release.releaseName + '-v' + release.version, config.fs.dist.css);
+          plugins.push(srcReplacer({
+              release,
+              dist: path.join(this.dist, config.fs.dist.css),
+              distPath: releasePath
+          }));
+        }
+
         let events = [];
 
         if(rtlOptions) {
-            if(build.rtl_prefix.prefixType) {
-                rtlOptions.prefixType = build.rtl_prefix.prefixType;
+            if(config.rtlPrefix.prefixType) {
+                rtlOptions.prefixType = config.rtlPrefix.prefixType;
             }
-            if('string' == typeof build.rtl_prefix.prefix && build.rtl_prefix.prefix.length) {
-                rtlOptions.prefix = build.rtl_prefix.prefix;
+            if('string' == typeof config.rtlPrefix.prefix && config.rtlPrefix.prefix.length) {
+                rtlOptions.prefix = config.rtlPrefix.prefix;
             }
-            if(!(buildConfig.direction == 'ltr' && !buildConfig.opposite_direction)) {
+            if(!(buildConfig.direction == 'ltr' && !buildConfig.oppositeDirection)) {
                 plugins.push(rtl(rtlOptions));
             }
-            if(build.top_selector == 'html') {
+            if(config.topSelector == 'html') {
                 plugins.push(postcssThemeAfter());
             }
         }
 
         let cleanscssMerging;
+
         if(config.cleancss) {
             let configCleanCss = typeof config.cleancss == 'object' ? config.cleancss : {};
-            cleanscssMerging = _.extend({level: 2}, process.env.postcss_clean, configCleanCss);
+            cleanscssMerging = _.extend({level: 2}, this.project.app.PLUGINS_SETTINGS.cleancss, configCleanCss);
         }
 
-        if((buildConfig.theme_mode == 'external' || buildConfig.inverse_mode == 'external') && release) {
+        if((buildConfig.themeMode == 'external' || buildConfig.inverseMode == 'external') && release) {
            events.push(new Promise(res => {
                 plugins.push(postcssSplitter({
                     cleancss: cleanscssMerging,
-                    inverse: buildConfig.inverse_mode === 'external',
-                    theme: buildConfig.theme_mode === 'external',
+                    inverse: buildConfig.inverseMode === 'external',
+                    theme: buildConfig.themeMode === 'external',
                     callback: function(themes) {
                         res(themes);
                     }
@@ -387,31 +437,32 @@ class scssPlugin extends plugin {
         let renderTemplate = path.join(this.framework, 'render.hbs.scss');
         renderTemplate = await fsp.readFile(renderTemplate, 'UTF-8');
         let config = this.config;
-        let source = {components: await this.getComponents(), render: components, advanced_export: config.advanced_export};
+        let source = {components: await this.getComponents(), render: components, advancedExport: config.advancedExport};
 
         this.internalSassRulesRequired.clean(e => components.indexOf(e.cid) != -1);
         this.iconsSaveStorage.clean(e => components.indexOf(e.cid) != -1);
         let toRemove = this.exports.filter(exp => ['project'].concat(components).indexOf(exp.get('cid')) != -1);
         this.exports.remove(toRemove, {silent: true});
-        // dev
         let build = this.builder.config;
-        let buildConfig = build.dev.config;
+        let buildConfig = build.dev;
         if(!await fsp.exists(this.root, 'project', 'themes', source.theme) && !await fsp.exists(this.root, 'project', 'themes', source.theme + '.scss')) {
             this.error(`${source.theme} theme in the project does not exist`, {exit: true});
         }
-        source.top_selector = build.top_selector;
+        source.topSelector = config.topSelector;
 
         if(!release) {
-            source.theme = build.dev.default_theme;
+            source.theme = buildConfig.theme;
             let data = [];
-            source.theme_prefix = false;
-            source.default_theme = true;
+            source.themePrefix = false;
+            source.defaultTheme = true;
+            source.defaultInverse = buildConfig.defaultInverse;
             let res = await this._sassRender(hbs.compile(renderTemplate)(source), components);
-            if(res) {
-                data.push(res);
+            if(res && res.css) {
+                data.push(res.css);
                 source.inverse = buildConfig.inverse;
                 if(source.inverse) {
-                    data.push(await this._sassRender(hbs.compile(renderTemplate)(source), components));
+                  let response = await this._sassRender(hbs.compile(renderTemplate)(source), components);
+                  data.push(response.css);
                 }
             }
             if(data.length) {
@@ -420,7 +471,7 @@ class scssPlugin extends plugin {
                     result = result.shift();
                 }
                 let dir = '';
-                if(!buildConfig.opposite_direction) {
+                if(!buildConfig.oppositeDirection) {
                     dir = '.' + buildConfig.direction;
                 }
                 await fse.outputFile(path.join(this.dist, config.fs.dist.css, components.join('-') + dir + '.css'), result);
@@ -429,50 +480,74 @@ class scssPlugin extends plugin {
             }
         } else {
             let data = [];
-            let releaseData = release.release;
-            buildConfig = release.config;
-            source.theme = releaseData.default_theme;
+            let releaseData = release;
+            source.theme = releaseData.defaultTheme || "default";
             let themes = releaseData.themes ? releaseData.themes : [];
-            source.theme_prefix = false;
-            source.default_theme = true;
+            source.themePrefix = false;
+            source.defaultTheme = true;
             source.release = true;
-            source.default_inverse = buildConfig.default_inverse;
+            source.defaultInverse = releaseData.defaultInverse;
             if(!this.releaseResults) {
                 this.releaseResults = [];
             }
+            let dir = '';
+            if(!releaseData.oppositeDirection) {
+                dir = (releaseData.direction ? '.' + releaseData.direction : '');
+            }
+
             let res = await this._sassRender(hbs.compile(renderTemplate)(source), components, {release}); //  {main: true}
-            if(res) {
-                data.push(res);
-                source.inverse = buildConfig.inverse;
+            if(res && res.css) {
+                data.push(res.css);
+                source.inverse = releaseData.inverse;
+
+                let sourceURL = path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName)  + dir + '.scss.map');
+                await fse.outputFile(sourceURL, res.map.toString());
+
                 if(source.inverse) {
-                    data.push(await this._sassRender(hbs.compile(renderTemplate)(source), components, {release}));
+                    try {
+                      let response = await this._sassRender(hbs.compile(renderTemplate)(source), components, {release});
+                      data.push(response.css);
+                      sourceURL = path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName)  + dir + '-inverse.scss.map');
+                      await fse.outputFile(sourceURL, response.map.toString());
+                    } catch(e) {
+                      console.log(e);
+                    }
                 }
 
                 if(themes.length) {
                     for(let theme of themes) {
-                        source.default_theme = false;
-                        source.theme_prefix = (theme  == 'default') ? false : true;
+                        source.defaultTheme = false;
+                        source.themePrefix = (theme  == 'default') ? false : true;
                         source.inverse = false;
                         source.theme = theme;
-                        data.push(await this._sassRender(hbs.compile(renderTemplate)(source), components, {release})); // {main: true}
-                        source.inverse = buildConfig.inverse;
+                        try {
+                          let response = await this._sassRender(hbs.compile(renderTemplate)(source), components, {release});
+                          data.push(response.css);
+                          sourceURL = path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName)  + dir + '-theme-'+theme+'.scss.map');
+                          await fse.outputFile(sourceURL, response.map.toString());
+                        } catch(e) {
+                          console.log(e);
+                        }
+                        source.inverse = releaseData.inverse;
                         if(source.inverse) {
-                            data.push(await this._sassRender(hbs.compile(renderTemplate)(source), components, {release}));
+                           try {
+                            let response = await this._sassRender(hbs.compile(renderTemplate)(source), components, {release});
+                            data.push(response.css);
+                            sourceURL = path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName)  + dir + '-theme-'+theme+'-inverse.scss.map');
+                            await fse.outputFile(sourceURL, response.map.toString());
+                          } catch(e) {
+                            console.log(e);
+                          }
                         }
                     }
                 }
-                let result = await this._postcss(Buffer.concat(data), buildConfig, release);
-                let dir = '';
-                if(!buildConfig.opposite_direction) {
-                    dir = (buildConfig.direction ? '.' + buildConfig.direction : '');
-                }
-                //await fse.remove(path.join(this.dist, 'releases', releaseData.name + '.' + releaseData.version, config.fs.dist.css));
+                let result = await this._postcss(Buffer.concat(data), releaseData, release);
                 for(let r of result) {
                     if(typeof r == 'string') {
                         let output = await this.getReleseLabel(releaseData, r);
-                        let url = path.join(config.fs.dist.css, releaseData.name  + dir + '.css');
-    
-                        await fse.outputFile(path.join(this.dist, 'releases', releaseData.name + '.' + releaseData.version, url), output);
+                        let url = path.join(config.fs.dist.css, (releaseData.filename ? releaseData.filename : releaseData.releaseName)  + dir + '.css');
+
+                        await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
                         this.releaseResults.push(url);
                     } else {
                         for(let e of r) {
@@ -480,8 +555,8 @@ class scssPlugin extends plugin {
                                 let output = await this.getReleseLabel(releaseData, e.root);
                                 let theme = e.theme ? e.theme : '';
                                 try {
-                                    let url = path.join(config.fs.dist.css, releaseData.name + '.theme-' + theme + dir + '.css');
-                                    await fse.outputFile(path.join(this.dist, 'releases', releaseData.name + '.' + releaseData.version, url), output);
+                                    let url = path.join(config.fs.dist.css, (releaseData.filename ? releaseData.filename : releaseData.releaseName) + '.theme-' + theme + dir + '.css');
+                                    await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
                                     this.releaseResults.push(url);
                                 } catch(e) {
                                     this.log(e, 'error');
@@ -492,9 +567,8 @@ class scssPlugin extends plugin {
                                 let theme = e.theme;
                                 try {
                                     let label = (theme == 'default') ? '' : '.theme-' + theme;
-                                    let url = path.join(config.fs.dist.css, releaseData.name + label + '-inverse' + dir + '.css');
-                   
-                                    await fse.outputFile(path.join(this.dist, 'releases', releaseData.name + '.' + releaseData.version, url), output);
+                                    let url = path.join(config.fs.dist.css, (releaseData.filename ? releaseData.filename : releaseData.releaseName) + label + '-inverse' + dir + '.css');
+                                    await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
                                     this.releaseResults.push(url);
                                 } catch(e) {
                                   this.log(e, 'error');
@@ -509,59 +583,40 @@ class scssPlugin extends plugin {
         }
     }
     async getReleseLabel(release, raw) {
-        let template = await fsp.readFile(path.join(__dirname, 'release-label.hbs'), 'UTF-8');
-        if(release.themes) {
-            if(release.themes.indexOf(release.default_theme) == -1) {
-                release.themes.push(release.default_theme);
-            }
-        } else {
-            release.themes = [release.default_theme];
-        }
-        release = _.clone(release);
-        for(let r in release) {
-            if(Array.isArray(release[r])) {
-                release[r] = release[r].join(', ');
-            }
-        }
-        release.date = moment().format('DD.MM.YYYY, h:mm');
-        let config = this.project.config;
-        release.author = config.author;
-        return hbs.compile(template)(release) + '\n' + raw;
+      let template = await fsp.readFile(path.join(__dirname, 'release-label.hbs'), 'UTF-8');
+      release = _.clone(release);
+      for(let r in release) {
+          if(Array.isArray(release[r])) {
+              release[r] = release[r].join(', ');
+          }
+      }
+      release.date = moment().format('DD.MM.YYYY, h:mm');
+      let config = this.project.config;
+      release.author = config.author;
+      return hbs.compile(template)(release) + '\n' + raw;
     }
     async getThemes() {
-        let themes = await fg('*.scss', {onlyFiles: true, cwd: path.join(this.root, 'project', 'themes')});
-        return _.map(themes, t => path.basename(t, path.extname(t)));
+      let themes = await fg('*.scss', {onlyFiles: true, cwd: path.join(this.root, 'project', 'themes')});
+      return _.map(themes, t => path.basename(t, path.extname(t)));
     }
-    async release(release, config) {
-        if(await fsp.exists(path.join(this.root, 'build_schemes.json'))) {
-            let build = await fsp.readFile(path.join(this.root, 'build_schemes.json'), 'UTF-8');
-            try {
-                build = JSON.parse(build);
-                this.builder.setConfig(build);
-            } catch(e) {
-                this.error('build_schemes.json file has invalid json format. Origin: ' + e.message, {exit: true});
-            }
-        }
-        let components = release.components;
-        this.activeRelease = [release, config];
-        if(!components.length) {
-            return this.error('At least one component is required to implement the release.', {exit: true});
-        }
-        try {
-            await this._renderComponents(components, {
-                release,
-                config
-            });
-            let releasePath = path.join(this.dist, 'releases', release.name + '.' + release.version);
-            this.log(`${release.name} release successfully generated to ${releasePath}!`, 'success');
-        } catch(e) {
-            this.log(`${release.name} release not generated.`, 'error');
-            this.log(e, 'error');
-        }
-        let urls = this.releaseResults;
-        delete this.releaseResults;
-        delete this.activeRelease;
-        return urls
+    async release(release) {
+      let components = release.components;
+      this.activeRelease = release;
+      if(!components.length) {
+          return this.error('At least one component is required to implement the release.', {exit: true});
+      }
+      let releasePath = path.join(this.dist, 'releases', release.releaseName + '-v' + release.version);
+      try {
+          await this._renderComponents(components, release);
+          this.system(`${release.releaseName} release successfully generated to ${releasePath}`, true);
+      } catch(e) {
+          this.system(`${release.releaseName} release not generated.`, false);
+          this.system(e, 'error');
+      }
+      let urls = this.releaseResults;
+      delete this.releaseResults;
+      delete this.activeRelease;
+      return urls
     }
     async _render(events) {
         this.emit('render');
@@ -572,8 +627,8 @@ class scssPlugin extends plugin {
                 await this._renderComponents(event.components);
             } catch(e) {
                 console.log(e);
-            }            
-            this.log(`Styles for ${event.components.join(',')} components were successfully generated!`, 'success');
+            }
+            this.log(`Styles for ${event.components.join(',')} component(s) were successfully generated!`, 'success');
         }
         this.emit('rendered');
     }
@@ -588,18 +643,17 @@ class scssPlugin extends plugin {
                 this.log(message, type);
             }
         });
-        this.on('watcher:'+ config.fs.dirs.source + ':' +config.fs[config.fs.dirs.source].scss, (event, ph, stat) => {
+        this.on('watcher:'+ config.fs.dirs.source + ':' +config.fs.source.scss, (event, ph, stat) => {
             if(path.extname(ph) == '.scss') {
                 this.watchController.emit('bind', event, ph);
             }
         });
 
         this.on('ready', async() => {
-            let toPath = path.join(this.dist, 'sass-options.json');
+            let toPath = path.join(this.dist, 'exports', 'sass-options.json');
 
             if(this.activeRelease) {
-                let [release, config] = this.activeRelease;
-                toPath = path.join(this.dist, 'releases', release.name + '.' + release.version, 'sass-options.json');
+                toPath = path.join(this.dist, 'releases', this.activeRelease.releaseName + '-v' + this.activeRelease.version, 'exports', 'sass-options.json');
                 delete this.activeRelease;
             }
 
@@ -620,24 +674,13 @@ class scssPlugin extends plugin {
             await fse.copy(path.join(this.framework, 'project'), path.join(this.root, 'project'));
         }
 
-        if(!await fsp.exists(path.join(this.root, 'build_schemes.json'))) {
-            this.builder = new builder(require('./build.model-scheme'));
-            await fse.outputFile(path.join(this.root, 'build_schemes.json'), JSON.stringify(this.builder.config, null, 4));
-        } else {
-            let build = await fsp.readFile(path.join(this.root, 'build_schemes.json'), 'UTF-8');
+        if(this.project.config.build.plugins[this.id]) {
             try {
-                build = JSON.parse(build);
+                this.builder = new builder(require('./build.model-scheme'), this.project.config.build.plugins[this.id]);
             } catch(e) {
-                this.error('build_schemes.json file has invalid json format. Origin: ' + e.message, {exit: true});
-            }
-
-            try {
-                this.builder = new builder(require('./build.model-scheme'), build);
-            } catch(e) {
-                return this.error('build_schemes.json file has incorrect data. Origin: ' + e.message, {exit: true});
+                return this.system('SCSS build scheme incorrect. Origin: \n' + e.message, 'error', {exit: true});
             }
         }
-
     }
     async fileChanged(events) {
         let components = [];
@@ -723,7 +766,6 @@ class scssPlugin extends plugin {
         let lidsWithCids = _.filter(this.internalSassRulesRequired.storage, el => cidsToRebuild.indexOf(el.cid) != -1);
 
 
-
         if(lidsWithCids.length) {
             // Отфильтровать до используемых лидов
             let cids = _.uniq(_.pluck(_.filter(lidsWithCids, c => _.find(data, d => d.lid == c.lid && d.cid == c.cid)), 'cid'));
@@ -736,7 +778,7 @@ class scssPlugin extends plugin {
                 let config = this.config;
                 let buildConfig = this.builder.config.dev.config;
                 let dir = '';
-                if(!buildConfig.opposite_direction) {
+                if(!buildConfig.oppositeDirection) {
                     dir = '.' + buildConfig.direction;
                 }
                 return path.join(config.fs.dist.css, cids.join('-')  + dir + '.css').replace(/\\+/g, '/');

@@ -10,9 +10,9 @@ $theme-options: meta.module-variables(theme);
 
 $cids: ({{#each components}}{{.}},{{/each}});
 
-$top-selector: #{"{{top_selector}}"};
-$theme-prefix: {{theme_prefix}};
-$default-theme: {{default_theme}};
+$top-selector: #{"{{topSelector}}"};
+$theme-prefix: {{themePrefix}};
+$default-theme: {{defaultTheme}};
 
 @use "ungic.components" with ($cids: $cids);
 $inverse-mode: false;
@@ -20,20 +20,18 @@ $inverse-mode: false;
    $inverse-mode: true;
 {{/if}}
 
-// default_inverse
 $project: meta.module-variables(project);
 $theme-options: map.merge($theme-options, (theme-name: {{theme}}));
-{{#if release}}
-    $theme-config: map.get($theme-options, config);
-    $theme-config: map.merge($theme-config, (inverse: {{default_inverse}}));
-    $theme-options: map.merge($theme-options, (config: $theme-config));
-{{/if}}
+
+$theme-config: map.merge(map.get($theme-options, config), (inverse: {{defaultInverse}}));
+$theme-options: map.merge($theme-options, (config: $theme-config));
+
 $project: map.merge($project, (theme: $theme-options, theme-prefix: $theme-prefix, default-theme: $default-theme, top-selector: $top-selector, inverse-mode: $inverse-mode));
 
 
 {{#unless inverse}}
     $export: un-meta.export(project, theme, $theme-options);
-    {{#if advanced_export}}
+    {{#if advancedExport}}
         $export: un-meta.export(project, properties, map.get($project, properties));
     {{/if}}
     $export: un-meta.export(project, config, map.get($project, config));
@@ -57,7 +55,7 @@ $project: map.merge($project, (theme: $theme-options, theme-prefix: $theme-prefi
         $export: un-meta.export({{.}}, config, $config);
     {{/unless}}
     {{#unless ../inverse}}
-        {{#if ../advanced_export}}
+        {{#if ../advancedExport}}
         $export: un-meta.export({{.}}, properties,  meta.module-variables({{.}}-properties));
         {{/if}}
     {{/unless}}
@@ -76,24 +74,24 @@ $project: map.merge($project, (theme: $theme-options, theme-prefix: $theme-prefi
 {{#each render}}
     {{#if ../inverse}}
         .un-inverse {
-            {{#if ../theme_prefix}}
+            {{#if ../themePrefix}}
                 &.un-theme-{{../theme}} {
                     @include meta.load-css("ungic.components.{{.}}.render");
                 }
             {{/if}}
-            {{#unless ../theme_prefix}}
+            {{#unless ../themePrefix}}
                 @include meta.load-css("ungic.components.{{.}}.render");
             {{/unless}}
         }
     {{/if}}
 
     {{#unless ../inverse}}
-        {{#if ../theme_prefix}}
+        {{#if ../themePrefix}}
             .un-theme-{{../theme}} {
                 @include meta.load-css("ungic.components.{{.}}.render");
             }
         {{/if}}
-        {{#unless ../theme_prefix}}
+        {{#unless ../themePrefix}}
             @include meta.load-css("ungic.components.{{.}}.render");
         {{/unless}}
     {{/unless}}

@@ -1,0 +1,26 @@
+$colors: ( // List type possible for all colors (is_light_theme, is_dark_theme)
+    primary: #c0206b,
+    secondary: #48bb2d,
+    success: #1BC167,
+    danger: #FF5252,
+    info: #2196F3,
+    warning: #FFC94B,
+    system: #48bb2d,
+    text-color: (#423a47, #FFF),
+    background-color: (#FFF, #171518)
+);
+
+$config: (
+    inverse: false,
+    brightness: (
+        offset-brighten: 20,            // List type possible (is_light_theme, is_dark_theme)
+        offset-dim: 20,                 // List type possible (is_light_theme, is_dark_theme)
+        saturation-brighten: (0, 10%),    // List type possible (is_light_theme, is_dark_theme)
+        saturation-dim: (0, 0)          // List type possible (is_light_theme, is_dark_theme)
+    ),
+    relative-light-limit : true,
+    gray: (
+        saturation: (20%, 5%),     // List type possible (is_light_theme, is_dark_theme)
+        hue: #e71a84           // List type possible (is_light_theme, is_dark_theme)
+    )
+);

@@ -1,58 +1,36 @@
 module.exports = {
-    top_selector: {
-        type: 'string',
-        default: 'html'
-    },
-    rtl_prefix: {
-        type: "object",
-        properties: {
-            prefixType: {
-                type: 'string',
-                enum: ['attribute', 'class']
-            },
-            prefix: {
-                type: 'string'
-            }
-        },
-        default: {
-            prefixType: "attribute"
-        }
-    },
     dev: {
         type: "object",
-        required: ['default_theme'],
+        required: ['theme'],
         properties: {
-            default_theme: {
+            theme: {
                 type: "string"
             },
-            config: {
-                type: "object",
-                properties: {
-                    autoprefixer: {
-                        type: "boolean",
-                        default: true
-                    },
-                    inverse: {
-                        type: ["boolean"]
-                    },
-                    direction: {
-                        type: ["string"],
-                        enum: ["ltr", "rtl"]
-                    },
-                    opposite_direction: {
-                        type: ["boolean"]
-                    }
-                }
+            autoprefixer: {
+                type: "boolean",
+                default: true
+            },
+            inverse: {
+                type: ["boolean"]
+            },
+            defaultInverse: {
+                type: ["boolean"]
+            },
+            direction: {
+                type: ["string"],
+                enum: ["ltr", "rtl"]
+            },
+            oppositeDirection: {
+                type: ["boolean"]
             }
         },
         default: {
-            config: {
-                inverse: true,
-                autoprefixer: true,
-                direction: 'ltr',
-                opposite_direction: true
-            },
-            default_theme: 'default'
+            inverse: true,
+            autoprefixer: true,
+            defaultInverse: false,
+            direction: 'ltr',
+            oppositeDirection: true,
+            theme: 'default'
         }
     },
     release: {
@@ -62,7 +40,7 @@ module.exports = {
                 patternProperties: {
                     "^[A-z_]+\w*$": {
                         type: "object",
-                        required: ['autoprefixer', 'inverse', 'default_inverse', 'theme_mode', 'inverse_mode', 'direction', 'opposite_direction'],
+                        required: ['autoprefixer', 'inverse', 'defaultInverse', 'themeMode', 'inverseMode', 'direction', 'oppositeDirection'],
                         properties: {
                             autoprefixer: {
                                 type: "boolean",
@@ -71,14 +49,14 @@ module.exports = {
                             inverse: {
                                 type: ["boolean"]
                             },
-                            default_inverse: {
+                            defaultInverse: {
                                 type: ["boolean"]
                             },
-                            theme_mode: {
+                            themeMode: {
                                 type: ["string"],
                                 enum: ["combined", "external"]
                             },
-                            inverse_mode: {
+                            inverseMode: {
                                 type: ["string"],
                                 enum: ["combined", "external"]
                             },
@@ -94,7 +72,7 @@ module.exports = {
                                     }
                                 ]
                             },
-                            opposite_direction: {
+                            oppositeDirection: {
                                 type: ["boolean"]
                             }
                         }
@@ -107,23 +85,35 @@ module.exports = {
                 patternProperties: {
                     "^[A-z_]+\w*$": {
                         type: "object",
-                        required: ['components', 'default_theme', 'version', 'config_id'],
+                        required: ['components', 'configId'],
                         properties: {
-                            name: {
-                                type: 'string'
-                            },
-                            config_id: {
+                            configId: {
                                 type: "string",
                                 default: "default"
                             },
+                            defaultTheme: {
+                                type: "string"
+                            },
                             themes: {
-                                type: 'array'
+                                "anyOf": [
+                                    {
+                                        type: "array",
+                                    },
+                                    {
+                                        type: "boolean",
+                                        enum: [false]
+                                    },
+                                    {
+                                        type: "string",
+                                        enum: ["*"]
+                                    }
+                                ]
                             },
                             version: {
                                 type: 'string'
                             },
-                            default_theme: {
-                                type: 'string'
+                            excludeComponents: {
+                                type: 'array'
                             },
                             components: {
                                 "anyOf": [
@@ -145,22 +135,22 @@ module.exports = {
         default: {
             configs: {
                 default: {
-                    theme_mode: "external",
-                    inverse_mode: "combined",
+                    themeMode: "external",
+                    inverseMode: "combined",
                     inverse: true,
-                    default_inverse: false,
+                    defaultInverse: false,
                     autoprefixer: true,
                     direction: 'ltr',
-                    opposite_direction: true
+                    oppositeDirection: true
                 }
             },
             build: {
-                "main": {
-                    name: 'main',
-                    config_id: "default",
+                default: {
+                    configId: "default",
+                    themes: [],
+                    defaultTheme: "default",
                     components: "*",
-                    default_theme: 'default',
-                    version: '0.0.1'
+                    excludeComponents: []
                 }
             }
         }

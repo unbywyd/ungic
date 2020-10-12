@@ -1,4 +1,12 @@
 module.exports = {
+    beautify: {
+        type: 'object',
+        default: {}
+    },
+    minifier: {
+        type: 'object',
+        default: {}
+    },
     templates: {
         type: 'object',
         required: ['extname'],
@@ -25,11 +33,11 @@ module.exports = {
             decodeEntities: false
         }
     },
-    replace_amp_to_symbol: {
+    replaceAmpToSymbol: {
         type: 'boolean',
         default: true
     },
-    supported_types: {
+    supportedTypes: {
         type: 'object',
         properties: {
             txt: {
@@ -77,18 +85,19 @@ module.exports = {
             "yaml": "data"
         }
     },
-    supported_include_types: {
+    supportedIncludeTypes: {
         type: 'array',
         default: ['txt', 'hbs', 'html', 'md', 'mustache', 'pug', '_']
     },
     cleancss: {
-        type: ['object']
+        type: ['object'],
+        default: {}
     },
-    relative_src: {
+    relativeSrc: {
         type: 'boolean',
         default: false
     },
-    delete_from_dist: {
+    deleteFromDist: {
         type: 'boolean',
         default: false
     }

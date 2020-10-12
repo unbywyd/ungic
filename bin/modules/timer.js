@@ -1,13 +1,12 @@
 const EventEmitter = require('events');
 class events extends EventEmitter{};
 class Timer {
-    #time=0;
     constructor(time=0) {
-        this.#time = time;
+        this._time = time;
         this._events = new events();
     }
     _timer() {
-        this.time = this.#time;
+        this.time = this._time;
         this.timer = setTimeout(function() {
             delete this.timer;
             this._events.emit('finish');

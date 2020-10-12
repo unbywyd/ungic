@@ -6,6 +6,8 @@ let skeleton = require('./bin/modules/skeleton');
 let readline = require('./bin/modules/readline');
 const fg = require('fast-glob');
 const { clear } = require('console');
+const open = require('open');
+
 
 let logger = function (options) {
   this.options = options;
@@ -14,16 +16,16 @@ let logger = function (options) {
 }
 logger.prototype.decorate = function (message, label, color) {
   let strArray = message.split('\n');
-  strArray = strArray.map(el => colors[color].bold('| ') + el);
+  let c = colors[color] ? colors[color] : colors.cyan;
+  strArray = strArray.map(el => c.bold('| ') + el);
   let closeLines = '';
   for (let i = 0; i < ((8 * 2) + label.length); i++) {
     closeLines += '-';
   }
-  let output = colors[color].bold(`------- ${label} -------`);
+  let output = c.bold(`------- ${label} -------`);
   output += ("\n" + strArray.join('\n'));
-  output += ("\n" + colors[color].bold(closeLines));
+  output += ("\n" + c.bold(closeLines));
 
-  // Добавить в стораж, удалить через промежуток времени, при получении нового проверить если нет старого
   if(this.storage.has(output)) {
     return
   }
@@ -50,6 +52,25 @@ logger.prototype.success = function (message, target) {
   let label = target ? 'Success: ' + target : 'Success';
   this.decorate(message, label, 'green');
 }
+logger.prototype.system = function (message, target, status) {
+  let label = target ? 'System: ' + target : 'System';
+  let color = 'cyan';
+  if (message instanceof Error) {
+    message = message.stack;
+    color = 'red';
+  } else {
+    if(status === false || status === 'error') {
+      color = 'red';
+    }
+    if(status === true || status === 'success') {
+      color = 'green';
+    }
+    if(status == 'warning') {
+      color = 'yellow';
+    }
+  }
+  this.decorate(message, label, color);
+}
 logger.prototype.warning = function (message, target) {
   let label = target ? 'Warning: ' + target : 'Warning';
   this.decorate(message, label, 'yellow');
@@ -75,17 +96,10 @@ class App extends skeleton {
         if (this.rl) {
           this.rl.next();
         }
-        if (label.toLowerCase().indexOf('project ready') != -1 && !this.ready) {
-          this.ready = true;
-          this.createReadline(this.appMenu, {
-            context: this
-          });
-        }
       }
     });
     let yargs = require('yargs')
       .option('verbose', {
-        alias: 'v',
         type: 'boolean',
         description: 'Run with verbose logging',
         default: false
@@ -94,7 +108,7 @@ class App extends skeleton {
         alias: 'l',
         type: 'boolean',
         description: 'Enable log output to console',
-        default: true
+        default: false
       })
       .option('mode', {
         alias: 'm',
@@ -107,19 +121,18 @@ class App extends skeleton {
           command: 'init'
         });
       })
-      .command('run', "Launches ungic project", yargs => {
+      .command('create <name>', "Create new a project", args => {
+        this.setConfig({
+          command: 'create'
+        });
+      })
+      .command('run [port]', "Launches ungic project", yargs => {
         return yargs
           .option('open', {
             alias: 'o',
             type: 'boolean',
             description: 'Open start page in browser',
             default: true
-          })
-          .option('port', {
-            alias: 'p',
-            type: 'number',
-            description: 'Port number to start the server',
-            default: 2020
           })
       }, args => {
         this.setConfig({
@@ -136,15 +149,13 @@ class App extends skeleton {
   async initialize() {
     let config = this.config;
 
-    if (['init', 'run'].indexOf(config.command) == -1) {
+    if (['init', 'run', 'create'].indexOf(config.command) == -1) {
       console.log(colors.yellow.bold('To get started with ungic, you need to follow these simple steps:'));
-      console.log(colors.yellow('● Select a previously prepared directory or new empty directory'));
-      console.log(colors.yellow('● Initialize a new project using <ungic init> command'));
-      console.log(colors.yellow('● Run with <ungic run> command'));
+      console.log(colors.yellow('● Go to working directory (an empty directory is recommended) ') + colors.yellow('and initialize a new project using ') + colors.yellow.bold('ungic init') + colors.yellow(' command. \n') + colors.yellow('Or create a new directory: ') + colors.yellow.bold('ungic create <projectName>'));
+      console.log(colors.yellow('● Run the project using ')+colors.yellow.bold('ungic run') + colors.yellow(' command and start working with source files!'));
       require('yargs').showHelp();
       return;
     }
-
     this.app = new ungic(config);
 
     if (config.log) {
@@ -153,36 +164,51 @@ class App extends skeleton {
       console.log(colors.cyan('Log output to console disabled. You can enable this option using the "--log true" command.'));
     }
     this.app.on('log', (type, message, args = {}) => {
-      if (!config.log && ['success', 'error'].indexOf(type) == -1) {
+      if (!config.log && ['system', 'error'].indexOf(type) == -1) { //  && ['success', 'error'].indexOf(type) == -1
         return;
       }
-      if (type == 'log') {
-        this.logger.log(message, args.plugin_id ? args.plugin_id : false);
-      } else if (type == 'error') {
-        this.logger.error(message, args.plugin_id ? args.plugin_id : false);
-      } else if (type == 'warning') {
-        this.logger.warning(message, args.plugin_id ? args.plugin_id : false);
-      } else if (type == 'success') {
-        this.logger.success(message, args.plugin_id ? args.plugin_id : false);
+      if(type == 'system') {
+        let message_type = args.message_type === undefined ? 'system' : args.message_type;
+        this.logger.system(message, args.plugin_id ? args.plugin_id : false, message_type);
+      } else {
+        if (type == 'log') {
+          this.logger.log(message, args.plugin_id ? args.plugin_id : false);
+        } else if (type == 'error') {
+          this.logger.error(message, args.plugin_id ? args.plugin_id : false);
+        } else if (type == 'warning') {
+          this.logger.warning(message, args.plugin_id ? args.plugin_id : false);
+        } else if (type == 'success') {
+          this.logger.success(message, args.plugin_id ? args.plugin_id : false);
+        }
       }
       if(args.exit) {
         process.exit(0);
       }
     });
-    this.on('log', (type, message) => {
-      if (!config.log && ['success', 'error'].indexOf(type) == -1) {
+    this.on('log', (type, message, args={}) => {
+      if (!config.log && ['system'].indexOf(type) == -1) {
         return;
       }
-      if (type == 'log') {
-        this.logger.log(message);
-      } else if (type == 'error') {
-        this.logger.error(message);
-      } else if (type == 'warning') {
-        this.logger.warning(message);
-      } else if (type == 'success') {
-        this.logger.success(message);
+      if(type == 'system') {
+        let message_type = args.message_type === undefined ? 'system' : args.message_type;
+        this.logger.system(message, message_type);
+      } else {
+        if (type == 'log') {
+          this.logger.log(message);
+        } else if (type == 'error') {
+          this.logger.error(message);
+        } else if (type == 'warning') {
+          this.logger.warning(message);
+        } else if (type == 'success') {
+          this.logger.success(message);
+        }
       }
     });
+    if (config.command == 'create') {
+      await this.app.createApp(config.name);
+      process.exit();
+      return
+    }
     if (config.command == 'init') {
       await this.app.initialize();
     }
@@ -190,28 +216,61 @@ class App extends skeleton {
       await this.app.begin();
     }
     let self = this;
+
+    this.logger.system(`${this.app.config.name} app running at: ${colors.cyan.bold(this.app.fastify.address)}`);
     this.appMenu = async function(yargs) {
       yargs
+        .command('release <release_name> [build_name]', 'Build a full release', {}, args => {
+          try {
+            this.close();
+            require('./bin/cli/release/').call(self, args).finally(() => {
+               this.open();
+            }).catch(e => {
+              console.log(e);
+            });
+          } catch(e) {
+            console.log(e);
+          }
+        })
+        .command('info', 'Info about current project', args => {
+        }, args => {
+          try {
+            self.logger.system(`Project: ${colors.green.bold(self.app.config.name)} v${colors.green.bold(self.app.config.version)} / ${config.mode}`);
+          } catch(e) {
+            console.log(e);
+          }
+        })
+        .command('open [url]', 'Open url of project in Browser', args => {
+        }, args => {
+          try {
+            args.url = args.url ? args.url : '/';
+            open(self.app.fastify.address + (/^\//.test(args.url) ? args.url : '/' + args.url));
+          } catch(e) {
+            console.log(e);
+          }
+        })
         .command('log <status>', 'Log output to the console', args => {
           args.positional('status', {
             describe: 'Enable or disable log output to console',
             type: 'boolean'
           });
         }, args => {
-          let log = args.status;
-          if(log != config.log) {
-            config.log = log;
-            if(log) {
-              this.logger.log(colors.cyan('Log output to the console is activated'));
-            } else {
-              this.logger.log(colors.cyan('Log output to the console is deactivated'));
+          try {
+            let log = args.status;
+            if(log != config.log) {
+              config.log = log;
+              if(log) {
+                self.logger.log(colors.cyan.bold('Log output to the console is activated'));
+              } else {
+                self.logger.log(colors.cyan.bold('Log output to the console is deactivated'));
+              }
             }
+          } catch(e) {
+            console.log(e);
           }
         });
 
-
         let cliModes = fg.sync('./bin/cli/*.js', { cwd: __dirname });
-
         if (cliModes.length) {
           for (let handler of cliModes) {
             let name = path.basename(handler, path.extname(handler));
@@ -245,10 +304,14 @@ class App extends skeleton {
               });
             }
           }
-
         yargs.argv;
     }
-    this.logger.success('The project has been successfully launched and is ready to go.', 'Project ready');
+    if (!this.ready) {
+      this.ready = true;
+      this.createReadline(this.appMenu, {
+        context: this
+      });
+    }
   }
 }
 

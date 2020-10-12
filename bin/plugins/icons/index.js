@@ -9,7 +9,7 @@ fsp.exists = promisify(fs.exists);
 const path = require('path');
 const skeleton = require('../../modules/skeleton');
 const renderMaster = require('../../modules/render-master');
-const {extend: Collection} = require('../../modules/collectionSync');
+const {extend: Collection} = require('../../modules/collection-sync');
 const {extend: Model} = require('../../modules/model');
 const SVGO = require('svgo');
 const cheerio = require('cheerio');
@@ -28,6 +28,12 @@ var sizeOf = require('image-size');
 hbs.registerHelper("coordinate", function(val) {
     return !val ? val : val * -1 + 'px';
 });
+
+class builder extends skeleton {
+    constructor(scheme, config={}) {
+        super(scheme, {objectMerge: true}, config);
+    }
+}
 
 let codepointManager = function(parent) {
     this.storage = [];
@@ -52,12 +58,9 @@ codepointManager.prototype.init = async function() {
             this.codepoints = _.uniq(_.pluck(saveIcons, 'codepoint'));
             await fsp.writeFile(this.cacheFile, JSON.stringify(saveIcons));
        } catch(e) {
-            console.log(e);
-            this.parent.error('Icon cache file is corrupted!');
+            //console.log(e);
        }
     }
-    // Функция для инициализации, считывает кеш файл и добавляет в сторож
-    // Нужно прогнать и проверить удаленные иконки, удалить из кеша, сохранить актуальный кеш.
 }
 codepointManager.prototype.save = async function(collection) {
     let icons = collection.map(model => _.pick(model.toJSON(), 'id', 'codepoint', 'path'));
@@ -69,7 +72,6 @@ codepointManager.prototype.save = async function(collection) {
     await fsp.writeFile(this.cacheFile, JSON.stringify(icons));
 }
 codepointManager.prototype.saveCodepoint = function(codepoint) {
-    console.log('saveCodepoint', typeof codepoint);
     if(this.codepoints.indexOf(codepoint) == -1) {
         this.codepoints.push(codepoint);
     }
@@ -77,7 +79,6 @@ codepointManager.prototype.saveCodepoint = function(codepoint) {
 codepointManager.prototype.get = function(iconData) {
     let collection = this.parent.collection;
     if(iconData.codepoint) {
-        // Если в проекте существует или не существует вообще  вернуть его собственный код
         let inProject = collection.findByID(iconData.id);
         if((inProject && inProject.codepoint == iconData.codepoint) || !inProject) {
             this.saveCodepoint(iconData.codepoint);
@@ -89,7 +90,7 @@ codepointManager.prototype.get = function(iconData) {
         return prev.codepoint;
     }
     let config = this.parent.config;
-    let codepoint = config.start_codepoint;
+    let codepoint = config.startCodepoint;
     if(this.codepoints.length) {
         codepoint = Math.max(...this.codepoints);
         codepoint += 1;
@@ -108,23 +109,6 @@ class iconsPlugin extends plugin {
             this.fileChanged(events);
         });
         this.iconsStorage = {};
-        this.svgo = new SVGO({
-            plugins: [
-                {removeUselessDefs: false},
-                {removeViewBox: false},
-                {removeDimensions: true},
-                {cleanupListOfValues:true},
-                {removeTitle:false},
-                {removeRasterImage: true},
-                {removeUselessStrokeAndFill: true},
-                {convertStyleToAttrs: false},
-                {removeStyleElement: true},
-                {removeScriptElement: true},
-                {convertPathData: {noSpaceAfterFlags: false}},
-                {mergePaths:false},
-                //{removeAttrs: {attrs:'(fill|stroke)'}}
-            ]
-        });
         let model = Model({
             id: {
                 type: 'string',
@@ -154,6 +138,35 @@ class iconsPlugin extends plugin {
             objectMerge: true
         });
         config = this.config;
+
+        let optimaze = {
+            plugins: [
+                {removeUselessDefs: false},
+                {inlineStyles: false},
+                {removeViewBox: false},
+                {removeDimensions: true},
+                {cleanupListOfValues:true},
+                {removeTitle:false},
+                {removeRasterImage: true},
+                {removeUselessStrokeAndFill: true},
+                {convertStyleToAttrs: false},
+                {removeStyleElement: true},
+                {removeScriptElement: true},
+                {convertPathData: {noSpaceAfterFlags: false}},
+                {mergePaths:false}
+            ]
+        }
+
+        if(config.svgSprite.removeColors) {
+            optimaze.plugins.push({
+                removeAttrs: {
+                    attrs: '(fill|stroke)'
+                }
+            });
+        }
+
+        this.svgo = new SVGO(optimaze);
+
         this.fontsDist = path.join(this.dist, config.fs.dist.fonts);
         this.spritesDist = path.join(this.dist, config.fs.dist.img, 'sprites');
         let collection = Collection(model);
@@ -165,23 +178,27 @@ class iconsPlugin extends plugin {
             //console.log('event', event, model);
             if(event == 'updated' || event == 'added' || event == 'removed') {
                 if(model.has('svg')) {
-                    if(config.icons_mode == 'fonts') {
-                        this.allFontsToRender();
-                    } else {
-                        this.allSVGToRender();
+                    if(this.buildConfig.svgIcons) {
+                        if(this.buildConfig.svgIconsMode == 'fonts') {
+                            this.allFontsToRender();
+                        } else {
+                            this.allSVGToRender();
+                        }
                     }
-                } else if(config.sprites.enabled) {
+                } else if(this.buildConfig.sprites) {
                     this.allSpritesToRender();
                 }
             } else if(event == 'add') {
                 let hasSvg = _.find(model, m => m.model.has('svg'));
                 if(hasSvg) {
-                    if(config.icons_mode == 'fonts') {
-                        this.allFontsToRender();
-                    } else {
-                        this.allSVGToRender();
+                    if(this.buildConfig.svgIcons) {
+                        if(this.buildConfig.svgIconsMode == 'fonts') {
+                            this.allFontsToRender();
+                        } else {
+                            this.allSVGToRender();
+                        }
                     }
-                } else if(config.sprites.enabled) {
+                } else if(this.buildConfig.sprites) {
                     this.allSpritesToRender();
                 }
             }
@@ -199,20 +216,27 @@ class iconsPlugin extends plugin {
                 this.log(message, type);
             }
         });
+        hbs.registerHelper("icons_icon", (id, context) => {
+            let iconRendered = this.getIconForRender(id);
+            if(iconRendered) {
+                return iconRendered;
+            }
+            return '';
+        });
     }
     async render(events) {
         this.emit('render');
-        let config = this.config;
+        let config = this.config, fontsData, svgSpriteData, spritesData;
         for(let event of events) {
             if(event.type == 'fonts') {
-                await this.fontGeneration(_.sortBy(event.models, model => model.get('id')));
+                fontsData = await this.fontGeneration(_.sortBy(event.models, model => model.get('id')));
             }
-            if(event.type == 'svg_sprite') {
-                this.generateSvgSprite(_.sortBy(event.models, model => model.get('id')));
+            if(event.type == 'svgSprite') {
+                svgSpriteData = this.generateSvgSprite(_.sortBy(event.models, model => model.get('id')));
             }
             if(event.type == 'sprite') {
                 try {
-                    await this.generateSprite(_.sortBy(event.models, model => model.get('id')));
+                    spritesData = await this.generateSprite(_.sortBy(event.models, model => model.get('id')));
                 } catch(e) {
                     console.log(e);
                 }
@@ -224,7 +248,76 @@ class iconsPlugin extends plugin {
         }
 
         await this.cpManager.save(this.collection);
+        await this.generateHTMLPage({svgSpriteData});
         this.emit('rendered');
+    }
+    rebuild() {
+        if(this.collection.size()) {
+            let icons = this.collection;
+            let hasSvg = icons.find(m => m.has('svg')), hasSprites = icons.find(m => !m.has('svg'));
+            if(hasSprites) {
+                this.allSpritesToRender();
+            }
+            if(hasSvg) {
+               if(this.buildConfig.svgIconsMode == 'fonts') {
+                    this.allFontsToRender();
+                } else {
+                    this.allSVGToRender();
+                }
+            }
+        } else {
+            this.system(`No icons`);
+        }
+    }
+    async generateHTMLPage(data={}) {
+        let template = path.join(__dirname, 'templates', 'icons.hbs');
+            template = await fsp.readFile(template, 'UTF-8');
+        let source = {
+            address: this.project.fastify.address,
+            icons: {}
+        }
+
+        source.release = this.releaseData;
+        if(this.collection.size()) {
+            if(this.releaseData) {
+                source.stylesheets = [];
+                if(data.fontsData) {
+                    source.stylesheets.push({href: data.fontsData.css_url});
+                }
+                if(data.spritesData) {
+                    source.stylesheets.push({href: data.spritesData.css_url});
+                }
+            }
+
+            if(data.svgSpriteData && data.svgSpriteData.sprite) {
+                source.svgSprite = data.svgSpriteData.sprite;
+            }
+            let hasSvg = this.collection.find(m => m.has('svg')), hasSprites = this.collection.find(m => !m.has('svg'));
+
+            if(hasSvg) {
+                let icons = this.collection.filter(m => m.has('svg'));
+                if(this.buildConfig.svgIconsMode == 'fonts') {
+                    source.icons.fonts = icons;
+                } else {
+                    source.icons.svgSprite = icons;
+                }
+            }
+
+            if(hasSprites) {
+                let icons = this.collection.filter(m => !m.has('svg'));
+                source.icons.sprites = icons;
+            }
+        } else {
+            source.icons = false;
+        }
+
+        try {
+            let doc = hbs.compile(template)(source);
+            await fse.outputFile(path.join(this.dist, 'demo-icons.html'), doc);
+        } catch(e) {
+            console.log(e);
+        }
+        return
     }
     async fileChanged(events) {
         let paths = [];
@@ -251,13 +344,15 @@ class iconsPlugin extends plugin {
         }
 
         if(svg) {
-            if(config.icons_mode == 'fonts') {
+            if(this.buildConfig.svgIconsMode == 'fonts') {
                 this.allFontsToRender();
             } else {
                 this.allSVGToRender();
             }
         }
-        //console.log(this.collection.size());
+        if(!this.collection.size()) {
+            await this.generateHTMLPage();
+        }
     }
     async setEntityByPath(ph, options={}) {
         let supports = ['png', 'svg', 'jpeg', 'jpg'];
@@ -302,6 +397,13 @@ class iconsPlugin extends plugin {
                     $(this).before($(this).html());
                     $(this).remove();
                 });
+
+                if(config.svgSprite.removeColors) {
+                    $svg.find('[style*="color"], [style*="fill"], [style*="stroke"]').each(function() {
+                        $(this).css({color:'', fill: '', stroke: ''});
+                    });
+                }
+
                 $svg.find('g').each(function() {
                     if($(this).html().trim() == '') {
                         $(g).remove();
@@ -362,7 +464,7 @@ class iconsPlugin extends plugin {
         if(options.title) {
             title = options.title;
         }
-        let className = config.svg_sprites.className;
+        let className = config.svgSprite.className;
         let uniqid = this.uniqid();
         if(!options.presentation && title) {
             $svg.attr('aria-labelledby', uniqid);
@@ -371,21 +473,21 @@ class iconsPlugin extends plugin {
             $svg.attr('aria-hidden', true);
         }
         let url = '#' + className + '-' + model.get('id');
-        if(config.svg_sprites.external) {
+        if(config.svgSprite.external && !this.releaseData) {
             url = 'ungic-sprite.svg' + url;
-            if(!options.relative_src) {
+            if(!options.relativeSrc) {
                 url = this.project.fastify.address + '/' + url;
             }
         }
         $svg.append(`<use xlink:href="${url}" />`);
-        if(config.svg_sprites.external) {
+        if(config.svgSprite.external) {
             $svg.attr('viewBox', $svgOrigin.attr('viewBox'));
         }
-        if(config.svg_sprites.width) {
-            $svg.attr('width', config.svg_sprites.width);
+        if(config.svgSprite.width) {
+            $svg.attr('width', config.svgSprite.width);
         }
-        if(config.svg_sprites.height) {
-            $svg.attr('height', config.svg_sprites.height);
+        if(config.svgSprite.height) {
+            $svg.attr('height', config.svgSprite.height);
         }
         let svg = cheerio.html($svg);
 
@@ -463,7 +565,8 @@ class iconsPlugin extends plugin {
         $symbol.attr('xmlns', $svg.attr('xmlns') ? $svg.attr('xmlns') : 'http://www.w3.org/2000/svg');
         $symbol.attr('viewBox', $svg.attr('viewBox'));
         $symbol.attr('fill', 'currentcolor');
-        $symbol.attr('id', config.svg_sprites.className + '-' + $svg.attr('id'));
+
+        $symbol.attr('id', config.svgSprite.className + '-' + $svg.attr('id'));
         if($svg.attr('class')) {
             $symbol.attr('class', $svg.attr('class'));
         }
@@ -472,9 +575,10 @@ class iconsPlugin extends plugin {
     }
     fontConfiguration() {
         let config = this.config;
+        let prefix = this.buildSuffix != '' ? (this.buildSuffix + '-') : '';
         return {
             font: {
-                name: config.fonts.name,
+                name: prefix + config.fonts.name,
                 class: config.fonts.className,
                 size: config.fonts.fontSize,
                 supports: [
@@ -487,7 +591,7 @@ class iconsPlugin extends plugin {
         }
     }
     async exportIcons(ids=[], relativePath) {
-        let toPath = relativePath ? path.join(this.dist, relativePath) : this.dist;
+        let toPath = relativePath ? path.join(this.dist, 'exports', relativePath) : path.join(this.dist, 'exports');
 
         if(path.extname(toPath) == '') {
             toPath = path.join(toPath, 'ungic-icons.json');
@@ -514,48 +618,76 @@ class iconsPlugin extends plugin {
         await fse.outputFile(toPath, JSON.stringify(result, null, 4));
         return toPath;
     }
-    async release(releaseData, icons) {
-        let result = false;
-        let {version, name, type} = releaseData;
+    async release(releaseData) {
+        if(Array.isArray(releaseData.svgIcons)) {
+            releaseData.svgIcons = _.map(releaseData.svgIcons, id => this.collection.get(id));
+        }
+        if(Array.isArray(releaseData.sprites)) {
+            releaseData.sprites = _.map(releaseData.sprites, id => this.collection.get(id));
+        }
+        let results = {
+            releases: []
+        }
+        let {version, releaseName, svgIconsMode} = releaseData;
+        let currentBuild = this.buildConfig;
+        this.buildConfig = releaseData;
+        releaseData.type = svgIconsMode;
         let dist = this.dist;
         let fontsDist = this.fontsDist;
         let spritesDist = this.spritesDist;
         let config = this.config;
-        this.dist =  path.join(this.dist, 'releases', name + '.' + version);
+        let svgSpriteData, fontsData, spritesData;
+        this.dist =  path.join(this.dist, 'releases', releaseName + '-v' + version);
         this.fontsDist = path.join(this.dist, config.fs.dist.fonts);
         this.spritesDist = path.join(this.dist, config.fs.dist.img, 'sprites');
         this.skipIconsEvent = true;
-
+        this.releaseData = releaseData;
+        if(!releaseData.combineIcons) {
+            this.buildSuffix = releaseData.filename ? releaseData.filename : releaseData.releaseName;
+        }
         try {
-            if(type == 'fonts') {
-                // Send icons to fonts
-                result = await this.fontGeneration(icons);
-            } else if (type == 'sprites') {
-                // Send sprite to release
-                result = await this.generateSprite(icons);
-            } else {
-                // Send to svg sprite
-                result = await this.generateSvgSprite(icons);
+            if(releaseData.svgIcons && Array.isArray(releaseData.svgIcons)) {
+                let icons = releaseData.svgIcons;
+                if(svgIconsMode == 'fonts') {
+                    fontsData = await this.fontGeneration(icons);
+                    results.releases.push(fontsData);
+                } else {
+                    svgSpriteData = this.generateSvgSprite(icons);
+                    results.releases.push(svgSpriteData);
+                }
+                let toExport = _.filter(icons, i => i.has('svg'));
+                let suffix = this.buildSuffix != '' ? (this.buildSuffix + '-') : '';
+                let exportFilename = `${suffix}ungic-icons.json`;
+                if(toExport.length) {
+                    let ids = _.pluck(toExport, 'id');
+                    await this.exportIcons(ids,  exportFilename);
+                }
+                results.exportFile = path.join(this.dist, 'exports', exportFilename);
             }
+            if(releaseData.sprites && Array.isArray(releaseData.sprites)) {
+                let icons = releaseData.sprites;
+                spritesData = await this.generateSprite(icons);
+                results.releases.push(spritesData);
+            }
+            await this.generateHTMLPage({svgSpriteData, fontsData, spritesData});
         } catch(e) {
-            console.log(e);
+            this.system('Build error:' + e.message, 'error');
+            return false;
         }
-        let toExport = _.filter(icons, i => i.has('svg'));
-        if(toExport.length) {
-            let ids = _.pluck(toExport, 'id');
-            await this.exportIcons(ids);
-        }
-        this.log(`Release ${releaseData.type} icons implemented successfully to ${this.dist} directory`, 'success');
+        this.buildConfig = currentBuild;
+        this.buildSuffix = '';
+        this.system(`${releaseData.type} release of icons implemented successfully to ${this.dist} directory`, 'success');
         this.dist = dist;
         this.fontsDist = fontsDist;
         this.spritesDist = spritesDist;
         delete this.skipIconsEvent;
-        return result;
+        delete this.releaseData;
+        return results;
     }
     getIconsList(onlySvg) {
         let models = this.collection.get();
         if(!models.length) {
-            throw new Error('No icons');
+            return [];
         }
 
         models = _.filter(models, m => {
@@ -567,7 +699,7 @@ class iconsPlugin extends plugin {
         return _.map(models, model => model.toJSON());
     }
     async importIcons(relativePath, saveIts) {
-        let toPath = relativePath ? path.join(this.dist, relativePath) : this.dist;
+        let toPath = relativePath ? path.join(this.dist, relativePath) : path.join(this.dist);
 
         if(path.extname(toPath) == '') {
             toPath = path.join(toPath, 'ungic-icons.json');
@@ -584,9 +716,14 @@ class iconsPlugin extends plugin {
         this.unwatch();
         for(let icon of icons) {
             let active = this.collection.findByID(icon.id);
-            if(saveIts && icon.path) {
+            if(icon.path) {
                 let toExt = path.join(this.root, icon.path);
-                await fse.outputFile(toExt, icon.svg);
+                if(!await fsp.exists(toExt)) {
+                    saveIts = true;
+                }
+                if(saveIts) {
+                    await fse.outputFile(toExt, icon.svg);
+                }
             }
             if(active && active.get('svg') != icon.svg || !active) {
                 icon.codepoint = this.getCodepoint(icon);
@@ -603,10 +740,11 @@ class iconsPlugin extends plugin {
     async generateSpriteSass(icons, local) {
         let template = path.join(__dirname, 'templates', 'sprites_sass.hbs');
         let config = this.config;
-        let dist =  path.join(this.spritesDist, config.sprites.className + '.png');
+        let prefix = this.buildSuffix != '' ? (this.buildSuffix + '-') : '';
+
+        let dist =  path.join(this.spritesDist, prefix + config.sprites.className + '.png');
 
         let toPath =  path.relative(path.join(this.dist, config.fs.dist.css), dist).replace(/\\+/g, '/');
-        // path.join(spritesPath, dist)
         if(local) {
             toPath = this.project.fastify.address + '/' + path.relative(this.project.dist, dist).replace(/\\+/g, '/');
         }
@@ -696,10 +834,14 @@ class iconsPlugin extends plugin {
         let sassSource = await this.getFontsSass(models);
         let fontConfig = this.fontConfiguration();
         let callbackData = {
+            type: 'fonts',
             icons: _.map(models, m => _.omit(m.toJSON(), 'svg')),
             config: fontConfig,
             sass: sassSource
         }
+        let prefix = this.buildSuffix != '' ? (this.buildSuffix + '-') : '';
+        callbackData.css_url = path.join(config.fs.dist.css, prefix + 'fonts-' + config.fonts.name  + '.css').replace(/\\+/g, '/');
+
         if(!this.skipIconsEvent) {
             this.emit('icons', {
                 type: 'fonts',
@@ -724,8 +866,7 @@ class iconsPlugin extends plugin {
             if(!css) {
                 this.error('Icon sass generation error');
             }
-            callbackData.css_url = path.join(config.fs.dist.css, 'fonts-' +  config.fonts.name  + '.css');
-            await fse.outputFile(path.join(this.dist, callbackData.css_url), css);
+            await fse.outputFile(path.join(this.dist, path.normalize(callbackData.css_url)), css);
         }
 
         let svgStreams = [];
@@ -741,7 +882,7 @@ class iconsPlugin extends plugin {
             svgStreams.push(data);
         });
 
-        let streamPath = path.join(this.fontsDist, config.fonts.name + '.svg');
+        let streamPath = path.join(this.fontsDist, fontConfig.font.name + '.svg');
         if(!await fsp.exists(streamPath)) {
             await fse.outputFile(streamPath, '');
         }
@@ -751,10 +892,10 @@ class iconsPlugin extends plugin {
                 let svgs = Buffer.concat(svgStreams);
                 let ttf = svg2ttf(svgs.toString());
                 try {
-                    await fse.outputFile(path.join(this.fontsDist, config.fonts.name + '.woff2'), Buffer.from(await ttf2woff2.compress(ttf.buffer)));
-                    await fse.outputFile(path.join(this.fontsDist, config.fonts.name + '.woff'), Buffer.from(ttf2woff(ttf.buffer).buffer));
-                    await fse.outputFile(path.join(this.fontsDist, config.fonts.name + '.eot'), Buffer.from(ttf2eot(ttf.buffer).buffer));
-                    await fse.outputFile(path.join(this.fontsDist, config.fonts.name + '.ttf'), Buffer.from(ttf.buffer));
+                    await fse.outputFile(path.join(this.fontsDist, fontConfig.font.name + '.woff2'), Buffer.from(await ttf2woff2.compress(ttf.buffer)));
+                    await fse.outputFile(path.join(this.fontsDist, fontConfig.font.name + '.woff'), Buffer.from(ttf2woff(ttf.buffer).buffer));
+                    await fse.outputFile(path.join(this.fontsDist, fontConfig.font.name + '.eot'), Buffer.from(ttf2eot(ttf.buffer).buffer));
+                    await fse.outputFile(path.join(this.fontsDist, fontConfig.font.name + '.ttf'), Buffer.from(ttf.buffer));
                 } catch(e) {
                   this.log(e);
                 }
@@ -791,58 +932,51 @@ class iconsPlugin extends plugin {
     }
     getCodepoint(data) {
         return this.cpManager.get(data);
-        /*let config = this.config;
-        let codepoint = config.start_codepoint;
-        if(this.codepoints.length) {
-            codepoint = Math.max(...this.codepoints);
-            codepoint += 1;
-        }
-        this.codepoints.push(codepoint);
-        return codepoint;*/
     }
     allFontsToRender() {
-        let config = this.config;
-        let models = this.collection.filter(m=>m.has('svg'));
-        if(models.length) {
-            let icons = models.map(model=>model.toJSON());
-            this.renderMaster.add({
-                description: `font icons: ${_.pluck(icons, 'id').join(', ')} to render`,
-                models,
-                type: 'fonts'
-            });
-        } else if(this.iconsStorage['fonts']) {
-            let ids = _.map(this.iconsStorage['fonts'].models, model => model.get('id'));
-            delete this.iconsStorage['fonts'];
-            this.emit('icons', {
-                type: 'fonts',
-                ids,
-                date: new Date
-            });
+        if(this.buildConfig.svgIcons) {
+            let models = this.collection.filter(m=>m.has('svg'));
+            if(models.length) {
+                let icons = models.map(model=>model.toJSON());
+                this.renderMaster.add({
+                    description: `font icons: ${_.pluck(icons, 'id').join(', ')} to render`,
+                    models,
+                    type: 'fonts'
+                });
+            } else if(this.iconsStorage['fonts']) {
+                let ids = _.map(this.iconsStorage['fonts'].models, model => model.get('id'));
+                delete this.iconsStorage['fonts'];
+                this.emit('icons', {
+                    type: 'fonts',
+                    ids,
+                    date: new Date
+                });
+            }
         }
     }
     allSVGToRender() {
-        let config = this.config;
-        let models = this.collection.filter(m=>m.has('svg'));
-        if(models.length) {
-            let icons = models.map(model=>model.toJSON());
-            this.renderMaster.add({
-                description: `svg icons: ${_.pluck(icons, 'id').join(', ')} to render`,
-                models,
-                type: 'svg_sprite'
-            });
-        } else if(this.iconsStorage['svg_sprite']) {
-            let ids = _.map(this.iconsStorage['svg_sprite'].models, model => model.get('id'));
-            delete this.iconsStorage['svg_sprite'];
-            this.emit('icons', {
-                type: 'svg_sprite',
-                ids,
-                date: new Date
-            });
+        if(this.buildConfig.svgIcons) {
+            let models = this.collection.filter(m=>m.has('svg'));
+            if(models.length) {
+                let icons = models.map(model=>model.toJSON());
+                this.renderMaster.add({
+                    description: `svg icons: ${_.pluck(icons, 'id').join(', ')} to render`,
+                    models,
+                    type: 'svgSprite'
+                });
+            } else if(this.iconsStorage['svgSprite']) {
+                let ids = _.map(this.iconsStorage['svgSprite'].models, model => model.get('id'));
+                delete this.iconsStorage['svgSprite'];
+                this.emit('icons', {
+                    type: 'svgSprite',
+                    ids,
+                    date: new Date
+                });
+            }
         }
     }
     allSpritesToRender() {
-        let config = this.config;
-        if(config.sprites.enabled) {
+        if(this.buildConfig.sprites) {
             let models = [];
             models = this.collection.filter(m=> !m.has('svg'));
             if(models.length) {
@@ -864,6 +998,16 @@ class iconsPlugin extends plugin {
         }
     }
     async initialize() {
+        if(this.project.config.build.plugins[this.id]) {
+            try {
+                this.builder = new builder(require('./build.model-scheme'), this.project.config.build.plugins[this.id]);
+            } catch(e) {
+                return this.system('Icons build scheme incorrect. Origin: \n' + e.message, 'error', {exit: true});
+            }
+        }
+
+        this.buildSuffix = '';
+
         await this.cpManager.init();
         let files = await fg('**/*.{svg,png,jpeg,jpg}', {dot: false, cwd: this.root, deep: 10});
         if(files.length) {
@@ -872,8 +1016,9 @@ class iconsPlugin extends plugin {
             }
         }
         let config = this.config;
+        this.buildConfig = this.builder.config.dev;
         try {
-            if(config.icons_mode == 'fonts') {
+            if(this.buildConfig.svgIconsMode == 'fonts') {
                 this.allFontsToRender();
             } else {
                 this.allSVGToRender();
@@ -882,7 +1027,7 @@ class iconsPlugin extends plugin {
         } catch(e) {
             console.log(e);
         }
-        this.on('watcher:'+ config.fs.dirs.source + ':' +config.fs[config.fs.dirs.source].icons, (event, ph, stat) => {
+        this.on('watcher:'+ config.fs.dirs.source + ':' +config.fs.source.icons, (event, ph, stat) => {
             let supports = ['.png', '.svg', '.jpeg', '.jpg'];
             if(supports.indexOf(path.extname(ph)) != -1) {
                 this.watchController.emit('bind', event, ph);
@@ -902,8 +1047,13 @@ class iconsPlugin extends plugin {
             $svg.append(this.getSymbol(model));
         }
         let svgContent = cheerio.html($svg);
-        if(config.svg_sprites.external || this.skipIconsEvent) {
-            fse.outputFileSync(path.join(this.dist, 'ungic-sprite.svg'), svgContent);
+        if(config.svgSprite.external || this.skipIconsEvent) {
+            let prefix = this.buildSuffix != '' ? (this.buildSuffix + '-') : '';
+            if(this.releaseData) {
+                fse.outputFileSync(path.join(this.dist, 'exports', prefix + 'ungic-sprite.svg'), svgContent);
+            } else {
+                fse.outputFileSync(path.join(this.dist, 'ungic-sprite.svg'), svgContent);
+            }
         }
         return svgContent;
     }
@@ -918,7 +1068,7 @@ class iconsPlugin extends plugin {
         if(!svg) {
             return this.getHTMlSpriteIcon(model, options);
         } else {
-            if(config.icons_mode == 'fonts') {
+            if(this.buildConfig.svgIconsMode == 'fonts') {
                 return this.getHTMlFontIcon(model, options);
             } else {
                 return this.getHTMLSvgSprite(model, options);
@@ -927,13 +1077,15 @@ class iconsPlugin extends plugin {
     }
     async generateSprite(models) {
         if(!models.length) {
-            this.warning('No images');
-            return
+            if(!this.skipIconsEvent) {
+                this.warning('No images');
+            }
+            return {};
         }
         let config = this.config;
-        let callbackData;
+        let callbackData = {};
+        let prefix = this.buildSuffix != '' ? (this.buildSuffix + '-') : '';
         await new Promise((done, rej) => {
-
             let sprites = _.map(models, model => model.get('finalPath'));
             /*
             *   Пробежать и срезать размер в тем папку и сохранить все ссылки, отправить в смитх и затем временные крякнуть*
@@ -943,19 +1095,17 @@ class iconsPlugin extends plugin {
                     if(err) {
                         this.log(err);
                     } else {
-                        let distPath = path.join(this.spritesDist, config.sprites.className + '.png');
+                        let distPath = path.join(this.spritesDist, prefix + config.sprites.className + '.png');
 
                         await fse.outputFile(distPath, result.image);
                         let coordinates = result.coordinates;
                         let storage = [];
-
 
                         for(let ph in coordinates) {
 
                             let model = this.collection.find(model => model.has('finalPath') && path.normalize(model.get('finalPath')) == path.normalize(ph)); // path.join(path.sep, path.normalize(ph).split(this.root)[1]) == path.join(path.sep, path.normalize(model.get('path')))
                             storage.push({
                                 id: model.id,
-                                //className: model.get('className'),
                                 name: model.get('name'),
                                 coordinates: coordinates[ph]
                             });
@@ -964,11 +1114,15 @@ class iconsPlugin extends plugin {
                         let sassOut = await this.generateSpriteSass(storage);
 
                         callbackData = {
+                            type: 'sprites',
                             icons: storage,
                             sass: sassOut,
                             dist: distPath,
                             dist_url: path.relative(path.join(this.dist, config.fs.dist.css), distPath).replace(/\\+/g, '/')
                         }
+                        //let prefix = this.buildSuffix != '' ? (this.buildSuffix + '-') : '';
+                        callbackData.css_url = path.join(config.fs.dist.css, prefix + 'sprites-' + config.sprites.className  + '.css').replace(/\\+/g, '/');
+
                         if(!this.skipIconsEvent) {
                             this.emit('icons', {
                                 type: 'sprite',
@@ -984,7 +1138,6 @@ class iconsPlugin extends plugin {
                                 let css = await new Promise((ready, rej) => {
                                     sass.render(renderConfig, (err, result) => {
                                         if(err) {
-                                            console.log(err);
                                             this.error(err.message);
                                             return ready(false);
                                         }
@@ -994,9 +1147,7 @@ class iconsPlugin extends plugin {
                                 if(!css) {
                                     this.error('Icon sass generation error');
                                 }
-                                let url = path.join(config.fs.dist.css, 'sprites-' + config.sprites.className  + '.css');
-                                callbackData.css_url = url;
-                                await fse.outputFile(path.join(this.dist, url), css);
+                                await fse.outputFile(path.join(this.dist, path.normalize(callbackData.css_url)), css);
                             } catch(e) {
                                 console.log(e);
                             }
@@ -1016,21 +1167,24 @@ class iconsPlugin extends plugin {
     }
     generateSvgSprite(models) {
         if(!models.length) {
-            this.warning('No icons');
-            return
+            if(!this.skipIconsEvent) {
+                this.warning('No icons');
+            }
+            return {};
         }
         let config = this.config;
-        let callbackData;
+        let callbackData = {};
         try {
             let sprite = this.getSvgSprite(models);
             callbackData = {
+                type: 'svgSprite',
                 icons: _.map(models, m => _.omit(m.toJSON(), 'svg')),
                 sprite,
-                external: config.svg_sprites.external,
+                external: config.svgSprite.external,
             }
             if(!this.skipIconsEvent) {
                 this.emit('icons', {
-                    type: 'svg_sprite',
+                    type: 'svgSprite',
                     models,
                     date: new Date,
                     data: callbackData

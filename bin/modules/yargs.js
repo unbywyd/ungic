@@ -1,13 +1,9 @@
 module.exports = function(input) {
   let self = this;
   return yargs = require("yargs")(input)
-    .fail(function (msg, err, yargs) {       
-       
+    .fail(function (msg, err, yargs) {
         self.logger.error(msg, 'CLI');
         yargs.showHelp();
-        /*if('function' == typeof done) {
-            done();
-        }*/
     })
     .version(false)
     .showHelpOnFail(true)

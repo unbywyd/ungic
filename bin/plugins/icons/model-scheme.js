@@ -1,36 +1,4 @@
 module.exports = {
-    start_codepoint: {
-        type: 'number',
-        default: 61696
-    },
-    icons_mode: {
-        type: 'string',
-        enum: ["svg_sprites", "fonts"],
-        required: true,
-        default: 'svg_sprites'
-    },
-    sprites: {
-        type: 'object',
-        default: {
-            className: 'sprite',
-            enabled: true,
-            maxWidth: 70
-        },
-        properties: {
-            className: {
-                type: 'string'
-            },
-            maxWidth: {
-                type: 'number'
-            },
-            maxHeight: {
-                type: 'number'
-            },
-            enabled: {
-                type: 'boolean'
-            }
-        }
-    },
     render: {
         properties: {
             id: {
@@ -52,17 +20,44 @@ module.exports = {
             autorun: true
         }
     },
-    svg_sprites: {
+    startCodepoint: {
+        type: 'number',
+        default: 61696
+    },
+    sprites: {
+        type: 'object',
+        default: {
+            className: 'sprite',
+            maxWidth: 70,
+            maxHeight: 70
+        },
+        properties: {
+            className: {
+                type: 'string'
+            },
+            maxWidth: {
+                type: 'number'
+            },
+            maxHeight: {
+                type: 'number'
+            }
+        }
+    },
+    svgSprite: {
         type: 'object',
         default: {
             width: '2em',
             height: '2em',
             external: false,
+            removeColors: true,
             className: 'svg-icon'
         },
         properties: {
             className: {
                 type: 'string'
+            },
+            removeColors: {
+                type: 'boolean'
             },
             external: {
                 type: 'boolean'
@@ -89,6 +84,7 @@ module.exports = {
             fontHeight: 512,
             centerHorizontally: true,
             normalize: true,
+            fontWeight: 400,
             className: 'icon',
             fontSize: '2em'
         },

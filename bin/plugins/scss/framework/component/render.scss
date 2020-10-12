@@ -1,119 +1,145 @@
 /*
-   The main component file that is responsible for the generation of css styles (rules).
-   This file may include everything that is required to write the rules.
-   A quick tip on existing modules:
-        Components
-            @Module ".core" - Get access to the main functionality of the component (Example: @use ".core" as this)
-               You can access to:
-                   this.$config or this.config() method  - component configuration (processed variables after overrides)
-                   this.$project - get access to source project variables
-                   @function exist()
-                   @function export($oid, $data)
-                   @function this($selector)
-                   @function cid($as_selector:null)
-                   @function properties()
-                   @function prop($prop, $args...)
-                   @function is-prop-changed($prop)
-                   @function default-prop($prop)
-                   @function project-prop($prop)
-                   @function config($key:'')
-                   @function project-config($key:'')
-                   @mixin component
-                   @mixin this
-                   @mixin wrap($suffix: null, $merge: true)
-                   @mixin and($suffix: null)
-                   @mixin nest($suffix: null)
+	 The main component file that is responsible for the generation of css styles (rules).
+	 This file may include everything that is required to write the rules.
+	 A quick tip on existing modules:
+				Components / Modules
+						// CORE
+						@Module ".core" - Get access to the main functionality of the component (Example: @use ".core" as this)
+							You can access to:
+									this.$config or this.config() method  - component configuration (processed variables after overrides)
+									this.$project - get access to source project variables
 
-            @Module ".core/theme" as theme -  get access to the theme module
-                You can access to:
-                    @function has-palette($color-name, $tint-name)
-                    @function palette($color-name, $tint-name, $hue-offset: 0)
-                    @function lighten($color, $percent)
-                    @function darken($color, $percent)
-                    @function lightness($color, $percent)
-                    @function brightness($color, $percent, $hue-offset: null)
-                    @function dim($color, $percent, $hue-offset: null)
-                    @function brighten($color, $percent, $hue-offset: null)
-                    @function tint($color, $amount)
-                    @function config($key:'')
-                    @function get($key:'')
-                    @function subs($light, $dark)
-                    @function subs-theme($theme_name, $value, $default: null)
-                    @function colors($color: '')
-                    @function gray($offset:0)
-                    @function color($color-name, $color-tint: 0, $hue-offset: 0)
-                    @mixin is-inverse
-                    @mixin is-dark()
-                    @mixin is-light()
-                    @mixin is-type($type)
-                    @mixin is-theme($theme-name)
-                    @mixin ignore-inverse
-                    @mixin is($prefix)
+									@Functions:
+										this.config($key:'')
+										this.exist()
+										this.export($oid, $data)
+										this.this($selector)
+										this.cid($as_selector:null)
+										this.properties()
+										this.prop($prop, $args...)
+										this.is-prop-changed($prop)
+										this.default-prop($prop)
+										this.project-prop($prop)
+										this.project-config($key:'')
 
-            @Module "functions" as functions -  get access to personal functions
-            @Module "mixins" as mixins -  get access to personal mixins
-            // You can also attach any newly created files in the component
+									@Mixins:
+										this.component
+										this.this
+										this.wrap($suffix: null, $merge: true)
+										this.and($suffix: null)
+										this.nest($suffix: null)
 
-            @Module "ungic.components" - get all components id of this project (Example: @use "ungic.components" as cids; $cids: cids.$cids)
+						// THEME
+						@Module ".core/theme" as theme -  get access to the theme module
+								You can access to:
+									@Functions:
+										this.has-palette($color-name, $tint-name)
+										this.palette($color-name, $tint-name, $hue-offset: 0)
+										this.lighten($color, $percent)
+										this.darken($color, $percent)
+										this.lightness($color, $percent)
+										this.brightness($color, $percent, $hue-offset: null)
+										this.dim($color, $percent, $hue-offset: null)
+										this.brighten($color, $percent, $hue-offset: null)
+										this.tint($color, $amount)
+										this.config($key:'')
+										this.get($key:'')
+										this.subs($light, $dark)
+										this.subs-theme($theme_name, $value, $default: null)
+										this.colors($color: '')
+										this.gray($offset:0)
+										this.color($color-name, $color-tint: 0, $hue-offset: 0)
 
-            @Module "ungic.components.{CID}" - get other component as module
-            @Module "ungic.components.{CID}.render" - get component rules. Example for use: @include meta.load-css("ungic.components.grid.render");
-            @Module "ungic.components.CID.mixins - get personal mixins of component
-            @Module "ungic.components.CID.functions - get personal functions of component
-            @Module "ungic.components.CID.theme - get theme module of component
+									@Mixins:
+										this.is-inverse
+										this.is-dark()
+										this.is-light()
+										this.is-type($type)
+										this.is-theme($theme-name)
+										this.ignore-inverse
+										this.is($prefix)
 
-        Icons
-            @Module "ungic.sprites" -  get sprites module from icons plugin
-                You can access to:
-                    .$icons - get all icons
-                    .$className
-                    "render()" mixin - to render all icons
-            @Module "ungic.font-icons" - get font icons module from icons plugin
-                You can access to:
-                    .$icons - get all icons
-                    "core_icon()" mixin - Basic rules of icons
-                    "icon-exists($icon-name)" function
-                    "get-icon($icon-name)" function
-                    "icon($icon-name, $before: true)" mixin - to render icon
-                    "render()" mixin - to render all icons
-        Project
-            @Module "ungic.project" - get access to project
-                You can access to:
-                    .$config - Get project configuration
-                    .$properties - Get project properties
-            @Module "ungic.project.config" - get project configuration
+						// FUNCTIONS AND MIXINS
+						@Module "functions" as functions -  get access to personal functions
+						@Module "mixins" as mixins -  get access to personal mixins
+						// You can also attach any newly created files in the component
 
-        System
-            @Module "ungic.default-properties"
-            @Module "ungic.default-theme"
-            @Module "ungic.meta" - System methods
-            @Module "ungic.utils" - Various tools:
-                @function str-replace($string, $search, $replace: '', $global: true)
-                @function deep-merge($source-map, $secondary-map)
-                @function merge($maps...)
-                @function negative($number)
-                @function unit-merge($number, $unit)
-                @function strip-unit($number)
-                @function remove-nth($list, $index)
-                @function replace-nth($list, $index, $replaceable_value)
-                @function char($character-code)
-                // RTL tools
-                @function dir($ltr, $rtl) // get value relative to direction
-                @function rtli($val) // rtl ignore or @function rtl-ignore($val)
-                @function rtl-prepend($ltr, $rtl-prepend, $sep:' ')
-                @function rtl-append($ltr, $rtl-append, $sep: ' ')
+						// CROSS-USE OF COMPONENTS
+						@Module "ungic.components" - get all components id of this project (Example: @use "ungic.components" as cids; $cids: cids.$cids)
+						// Get core of another component
+						@Module "ungic.components.{CID}" - get other component as module (Full access to the core of the component)
+						// Get theme of another component
+						@Module "ungic.components.{CID}.theme - get theme module of component
+						@Module "ungic.components.{CID}.render" - get component rules. Example for use: @include meta.load-css("ungic.components.grid.render");
+						@Module "ungic.components.{CID}.mixins - get personal mixins of component
+						@Module "ungic.components.{CID}.functions - get personal functions of component
+
+				Icons
+						@Module "ungic.sprites" -  get sprites module from icons plugin
+								You can access to:
+										@Functions:
+											exist() - Check if this component is activated in the project (In the configuration of the plugin icons, you can disable the generation of sprites, then this function will be available and will return false)
+											get-icons() - Get all icons
+											get-icon($icon_name) - Get data map of icon by $icon_name
+											get-icons-list() - Get icons list
+
+										@Mixins:
+											render() - to render all icons
+											icon-core() - ro render core styles of icon
+											icon($icon-name) - to render specific icon
+											icon-label() - to render label of icon
+
+										@Variables:
+											$url - Get URL to sprite
+											$className	- Get className of sprite
+
+						@Module "ungic.font-icons" - get font icons module from icons plugin
+								You can access to:
+										.$icons - get all icons
+										"core_icon()" mixin - Basic rules of icons
+										"icon-exists($icon-name)" function
+										"get-icon($icon-name)" function
+										"icon($icon-name, $before: true)" mixin - to render icon
+										"render()" mixin - to render all icons
+				Project
+						@Module "ungic.project" - get access to project
+								You can access to:
+										.$config - Get project configuration
+										.$properties - Get project properties
+						@Module "ungic.project.config" - get project configuration
+
+				System and Helpers
+						@Module "ungic.default-properties"
+						@Module "ungic.default-theme"
+						@Module "ungic.meta" - System methods
+						@Module "ungic.utils" as utils - Various tools:
+							@Functions:
+								utils.str-replace($string, $search, $replace: '', $global: true)
+								utils.deep-merge($source-map, $secondary-map)
+								utils.merge($maps...)
+								utils.negative($number)
+								utils.unit-merge($number, $unit)
+								utils.strip-unit($number)
+								utils.remove-nth($list, $index)
+								utils.replace-nth($list, $index, $replaceable_value)
+								utils.char($character-code)
+								// RTL tools
+								utils.dir($ltr, $rtl) // get value relative to direction
+								utils.rtli($val) // rtl ignore or @function rtl-ignore($val)
+								utils.rtl-prepend($ltr, $rtl-prepend, $sep:' ')
+								utils.rtl-append($ltr, $rtl-append, $sep: ' ')
 */
 
-@use ".core" as this;
-@use ".core/theme" as theme;
-@use "functions" as *;
-@use "mixins" as *;
-@use "ungic.meta" as un-meta;
-@use "ungic.utils" as un-utils;
-@use "ungic.components" as components;
+@use ".core"as this;
+@use ".core/theme"as theme;
+@use "functions"as *;
+@use "mixins"as *;
+@use "ungic.meta"as un-meta;
+@use "ungic.utils"as un-utils;
+@use "ungic.components"as components;
 
-@use "sass:meta" as meta;
-@use "sass:map" as map;
+@use "sass:meta"as meta;
+@use "sass:map"as map;
 
 
 @include this.component {

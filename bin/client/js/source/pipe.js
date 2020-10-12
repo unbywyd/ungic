@@ -25,10 +25,10 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
     }
+
     let connect = document.querySelector('[data-connect]').getAttribute('data-connect');
     const socket = io(connect);
-    let elements = [];
-    const resource = performance.getEntriesByType("resource");
+    const resource = window.performance ? window.performance.getEntriesByType("resource") : [];
     const pagesrc = document.querySelector('[data-connect]').getAttribute('data-src');
     socket.on('change', (events) => {
         for(let e of events) {
@@ -37,17 +37,25 @@ document.addEventListener("DOMContentLoaded", function() {
                 window.location.reload();
                 return
             }
-            for(let res of resource) {
-                if(res.name == url) {
-                    if(window.timer) {
-                        window.timer.update();
+            let skips = [];
+            if(e.relative.indexOf('.css') != -1) {
+                let links = document.querySelectorAll('[href*="'+relative+'"]');
+                if(links.length) {
+                    for(let link of links) {
+                        link.setAttribute('href', url + '?v=' + Date.now());
+                        skips.push(link);
                     }
+                }
+            }
+            for(let res of resource) {
+                if(res.name.indexOf(url) != -1) {
                     if(res.initiatorType == 'link') {
                         let links = document.querySelectorAll('[href*="'+relative+'"]');
                         if(links.length) {
                             for(let link of links) {
-                                link.setAttribute('href', url + '?v=' + Date.now());
-                                console.log(`${relative} has been updated`);
+                                if(skips.indexOf(link) == -1) {
+                                    link.setAttribute('href', url + '?v=' + Date.now());
+                                }
                             }
                         }
                     } else {

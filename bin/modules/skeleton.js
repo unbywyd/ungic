@@ -51,6 +51,10 @@ class ungicStructure {
     error(message, args={}) {
         this.log(message, 'error', args);
     }
+    system(message, message_type = 'system', args={}) {
+        args.message_type = message_type;
+        this.log(message, 'system', args);
+    }
     warning(message, args={}) {
         this.log(message, 'warning', args);
     }

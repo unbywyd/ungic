@@ -14,15 +14,13 @@ fsp.exists = promisify(fs.exists);
 const skeleton = require('./modules/skeleton');
 const open = require('open');
 const Collector = require('./modules/collector.js');
+const merge = require('deepmerge');
 
 class finishController extends skeleton {
     constructor(config={}) {
         super({}, {objectMerge: true}, config);
         this.collector = new Collector({timeout: 100});
-        //console.log('Create collector!');
-        //console.log('On finish collector!');
         this.collector.on('finish', events => {
-            ///console.log('On finished!');
             if(this.parent.fastify.io) {
                 this.parent.fastify.io.emit('change', events);
             }
@@ -30,7 +28,6 @@ class finishController extends skeleton {
         this.tasks = new Set;
     }
     push(event) {
-        //console.log('EVENT', event);
         this.collector.add(event);
     }
     task(id) {
@@ -48,12 +45,13 @@ let appPaths;
 class app extends skeleton {
     constructor(args={}) {
         let config_cmd = {
-            server: {
-                port: args.port
-            },
+            server: {},
             mode: args.mode,
             verbose: args.verbose,
             openInBrowser: args.open
+        }
+        if(args.port) {
+            config_cmd.server.port = args.port;
         }
         let config = {
             plugins: {
@@ -63,47 +61,55 @@ class app extends skeleton {
             }
         }
         appPaths = require('./modules/app-paths')(args.command == 'init');
+
         let configPath = appPaths.config;
         let packagePath = appPaths.package;
+        let PLUGINS_SETTINGS = {};
+
+        let introPluginsSettings = (key, env) => {
+            let getConfig = (ph) => {
+                try {
+                    let data = fs.readFileSync(ph, 'UTF-8');
+                    data = JSON.parse(data);
+                    return data;
+                } catch(e) {
+
+                }
+                return {}
+            }
+            let configs = [getConfig(packagePath), getConfig(configPath)];
+            if(!PLUGINS_SETTINGS[key]) {
+                PLUGINS_SETTINGS[key] = {}
+            }
+            for(let config of configs) {
+                if(typeof config[key] == 'object') {
+                    if(config[key][args.mode]) {
+                        PLUGINS_SETTINGS[key] = config[key][args.mode];
+                        if(env && config[key][args.mode].length != undefined) {
+                            process.env[env] = config[key][args.mode];
+                        }
+                    }
+                }
+            }
+        }
         if(packagePath) {
             let packageData = require(packagePath);
             config.name = packageData.name;
             config.version = packageData.version;
             config.author = packageData.author;
-            if(typeof packageData.browserslist == 'object') {
-                if(packageData.browserslist[args.mode]) {
-                    process.env.BROWSERSLIST = packageData.browserslist[args.mode];
-                    process.env.browserslist = packageData.browserslist[args.mode];
-                }
-            }
-            if(typeof packageData.cleancss == 'object') {
-                process.env.postcss_clean = packageData.cleancss;
-            } else {
-                process.env.postcss_clean = {}
-            }
-            if(typeof packageData.minifier == 'object') {
-                process.env.minifier = packageData.minifier;
-            } else {
-                process.env.minifier = {}
-            }
-            if(typeof packageData.cheerio == 'object') {
-                process.env.cheerio = packageData.cheerio;
-            } else {
-                process.env.cheerio = {}
-            }
-            if(typeof packageData.beautify == 'object') {
-                process.env.beautify = packageData.beautify;
-            } else {
-                process.env.beautify = {}
-            }
+            introPluginsSettings('browserslist', 'BROWSERSLIST');
+            introPluginsSettings('cleancss');
+            introPluginsSettings('minifier');
+            introPluginsSettings('cheerio');
+            introPluginsSettings('beautify');
         }
         if(configPath) {
             config = Object.assign(config, require(configPath), config_cmd);
         } else {
             config = Object.assign(config, config_cmd);
         }
-
         super(require('./model-scheme'), {objectMerge: true}, config);
+        this.PLUGINS_SETTINGS = PLUGINS_SETTINGS;
         config = this.config;
         process.env.NODE_ENV = config.mode;
         this.sockets = new Map;
@@ -112,20 +118,32 @@ class app extends skeleton {
         this.finishController = new finishController;
         this.finishController.parent = this;
     }
-    async initialize() {
+    async createApp(name) {
+        let ph = path.join(appPaths.root, name);
+        if(await fsp.exists(ph)) {
+            this.system(name + ' directory already exists', 'error');
+        } else {
+            await fse.emptyDir(ph);
+        }
+        return this.initialize({
+            root: ph
+        });
+    }
+    async initialize(options={}) {
         if(appPaths.config) {
-            this.log('Project successfully initialized. Use "ungic run" command for starting', 'success');
+            this.system('Project successfully initialized. Use "ungic run" command for starting', 'warning');
             return process.exit();
         }
         if(!appPaths.config && !appPaths.package) {
-            this.log('Note! Recommended to create package.json using npm init command.', 'warning');
+            this.system('Note! Recommended to create package.json using npm init command.', 'warning');
             let response = await prompts({
                 type: 'confirm',
                 name: 'next',
-                message: 'You want to continue without installation npm package.json?'
+                message: 'Do you want to continue without installation npm package.json?',
+                initial: true
             });
             if(!response.next) {
-                this.log('Please initialize npm first', 'Note');
+                this.system('Please initialize npm first', 'Note');
                 return process.exit();
             }
             response = await prompts([
@@ -149,21 +167,22 @@ class app extends skeleton {
             ]);
             this.setConfig(response);
         }
-        await fse.outputFile(path.join(appPaths.root, 'ungic.config.json'), JSON.stringify(this.config, null, 4));
 
-        let prj = new ungicProject(this.config);
+        options.app = this;
+        let prj = new ungicProject(this.config, options);
         try {
-            await prj.initialize();
+            let config = await prj.initialize();
+            await fse.outputFile(path.join(options.root ? options.root : appPaths.root, 'ungic.config.json'), JSON.stringify(merge(this.config, config, {arrayMerge: (destinationArray, sourceArray) => _.union(destinationArray, sourceArray)}), null, 4));
         } catch(e) {
-            this.log(e);
+            this.system(e);
             return
         }
-        this.log('Project successfully initialized. Use "ungic run" command for starting', 'success');
+        this.system('Project successfully initialized. Use "ungic run" command for starting', 'success');
         process.exit();
     }
     async begin() {
         if(!appPaths.config && !appPaths.package) {
-            this.error('This directory is not an ungic project. To get started use <ungic --help> command.', {exit: true});
+            this.system('This directory is not an ungic project. To get started use <ungic --help> command.', 'error', {exit: true});
             return;
         }
         let config = this.config;
@@ -224,7 +243,7 @@ class app extends skeleton {
             try {
                 this.fastify.address = await this.fastify.listen(port);
             } catch(err) {
-                this.log(err.message);
+                this.system(err.message);
                 await start(port+1);
             }
         }
@@ -243,13 +262,10 @@ class app extends skeleton {
         serverConfig.address = this.fastify.address;
         this.setConfig({server:serverConfig});
 
-        this.log(`Server is listening on ${this.fastify.address}`);
-        this.project = new ungicProject(this.config);
+        this.project = new ungicProject(this.config, {app: this});
         this.project.on('log', (type, message, args={}) => {
             this.log(message, type, args);
         });
-
-        //console.log(config.fs.dirs.dist);
         this.project.on('watcher:' + config.fs.dirs.dist, (event, ph) => {
             let relative = path.relative(this.project.dist, ph).replace(/\\+/g, '/');
             this.finishController.push({
@@ -258,7 +274,13 @@ class app extends skeleton {
                 relative
             });
         });
-
+        this.project.on('icons', icons => {
+            this.finishController.push({
+                icons,
+                event: 'icons',
+                relative: 'ungic-icons.html'
+            });
+        });
         this.project.on('plug_render', id => {
             this.finishController.task(id);
         });

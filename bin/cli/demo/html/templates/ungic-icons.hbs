@@ -1,9 +1,9 @@
-<div class="icons-page">
-    {{#if icons.svg_sprites}}
-        <h2>Svg sprites</h2>
-        <div class="icons-items">
-            {{#each icons.svg_sprites}}
-                <div role="button" class="icons-item" data-id="{{id}}">
+<div class="ungic_icons-page">
+    {{#if icons.svgSprite}}
+        <h2>SVG sprite</h2>
+        <div class="ungic_icons-items">
+            {{#each icons.svgSprite}}
+                <div role="button" title="{{id}}" class="ungic_icons-item" data-id="{{id}}">
                     {{{icon id}}}
                 </div>
             {{/each}}
@@ -11,10 +11,10 @@
     {{/if}}
 
     {{#if icons.sprites}}
-        <h2>Sprites</h2>
-        <div class="icons-items">
+        <h2>Image sprite</h2>
+        <div class="ungic_icons-items">
             {{#each icons.sprites}}
-                <div role="button" class="icons-item" data-id="{{id}}">
+                <div role="button" title="{{id}}" class="ungic_icons-item" data-id="{{id}}">
                     {{{icon id}}}
                 </div>
             {{/each}}
@@ -23,9 +23,9 @@
 
     {{#if icons.fonts}}
         <h2>Font icons</h2>
-        <div class="icons-items">
+        <div class="ungic_icons-items">
             {{#each icons.fonts}}
-                <div role="button" class="icons-item" data-id="{{id}}">
+                <div role="button" title="{{id}}" class="ungic_icons-item" data-id="{{id}}">
                     {{{icon id}}}
                 </div>
             {{/each}}
@@ -35,8 +35,8 @@
 <script>
     document.addEventListener('click', function(e) {
 
-        let parent = e.target.closest(".icons-item");
-        if(e.target.classList.contains('icons-item') || parent) {
+        let parent = e.target.closest(".ungic_icons-item");
+        if(e.target.classList.contains('ungic_icons-item') || parent) {
             let el = parent ? parent : e.target;
             let id = el.getAttribute('data-id');
             var copyText = document.createElement("input");

@@ -3,26 +3,28 @@ const _ = require('underscore');
 const underscoreExtends = require('./underscore-extends');
 const Ajv = require('ajv');
 class events extends EventEmitter{};
+const merge = require('deepmerge');
 
 class Model {
-    #events = new events;
-    #config = {};
-    #ajv = new Ajv({useDefaults: true});
-    #changed = (attributes, event) => {
-        this.changed = {};
-        this.#events.emit('change', event, attributes);
-        for(let attr in attributes) {
-            this.changed[attr] = attributes[attr];
-            this.#events.emit('change:' + attr, event, attributes[attr]);
-        }
-    }
     constructor(attributes={}, options={}) {
-        this.#config = options;
+        this._events = new events;
+        this._config = options;
+        this._ajv = new Ajv({useDefaults: true});
+        this._changed = (attributes, event) => {
+            this.changed = {};
+            this._events.emit('change', event, attributes);
+            for(let attr in attributes) {
+                this.changed[attr] = attributes[attr];
+                this._events.emit('change:' + attr, event, attributes[attr]);
+            }
+        }
+
         this.id = `f${(+new Date).toString(16)}`;
         this.attributes = {};
         if(this.schema) {
-            this.#ajv.addSchema(this.schema, 'validation');
+            this._ajv.addSchema(this.schema, 'validation');
         }
+        this._ajv.validate('validation', this.attributes);
         this.changed = {};
         this.set(attributes, {silent: true});
     }
@@ -33,20 +35,20 @@ class Model {
         if('string' == typeof errors) {
             errors = [errors];
         }
-        if(this.#events.listeners('errors').length) {
-            this.#events.emit('errors', errors.map(e => 'object' != typeof e ? {message:e} : e));
+        if(this._events.listeners('errors').length) {
+            this._events.emit('errors', errors.map(e => 'object' != typeof e ? {message:e} : e));
         } else {
             throw new Error(errors.map(e=> typeof e == 'object' ? JSON.stringify(e, null, 4) : e).join(','));
         }
         return false;
     }
     _getErrors() {
-        return this.#ajv.errorsText();
+        return this._ajv.errorsText();
     }
     _validation(attributes, setError=true) {
         let response = true;
         if(this.schema) {
-            response = this.#ajv.validate('validation', attributes);
+            response = this._ajv.validate('validation', attributes);
         }
         if(setError && !response) {
             return this._setError();
@@ -60,7 +62,9 @@ class Model {
         let changed = {};
         let prevValue = this.get(attribute);
         if(options.objectMerge && 'object' == typeof prevValue) {
-            value = _.extend(prevValue, value);
+            value = merge(prevValue, value, {
+                arrayMerge: (destinationArray, sourceArray) => _.union(destinationArray, sourceArray)
+            });
         }
         this.attributes[attribute] = value;
 
@@ -83,7 +87,7 @@ class Model {
         return changed;
     }
     on(event, callback) {
-        this.#events.on(...arguments);
+        this._events.on(...arguments);
     }
     clear(options={}) {
         let changed = {};
@@ -99,7 +103,7 @@ class Model {
             changed[attr].actual = this.attributes[attr];
         }
         if(!options.silent) {
-            this.#changed(changed, 'clear');
+            this._changed(changed, 'clear');
         }
     }
     unset(attribute, options={}) {
@@ -118,7 +122,7 @@ class Model {
                 return;
             }
             changed[attribute].actual = this.attributes[attribute];
-            this.#changed(changed, 'unset');
+            this._changed(changed, 'unset');
         }
         return changed;
     }
@@ -134,16 +138,13 @@ class Model {
             }
         }
 
-        if('function' == typeof this.#config.attrPrehandler) {
-            attributes = this.#config.attrPrehandler.call(this, attributes);
+        if('function' == typeof this._config.attrPrehandler) {
+            attributes = this._config.attrPrehandler.call(this, attributes);
         }
-
-
         options = _.extend({
             merge: true,
             objectMerge: false
-        }, this.#config, options);
-
+        }, this._config, options);
 
         if(!options.merge) {
             attributes = _.extend({}, attributes);
@@ -154,7 +155,7 @@ class Model {
         if(!this._validation(attributes)) {
             return;
         }
-        //this.attributes = attributes;
+
         for(let attr in attributes) {
             let setted = this._set(attr, attributes[attr], options);
             changed = Object.assign({}, changed, setted);
@@ -163,7 +164,7 @@ class Model {
         this.changed = changed;
 
         if(Object.keys(changed).length && !options.silent) {
-            this.#changed(changed, 'set');
+            this._changed(changed, 'set');
         }
     }
     has(attribute) {

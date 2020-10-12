@@ -1,0 +1,300 @@
+const path = require('path');
+const fg = require('fast-glob');
+const fse = require('fs-extra');
+const fs = require('fs');
+const _ = require('underscore');
+const {extend:Model} = require('../../modules/model');
+const prompts = require('../../modules/prompt.js');
+const scssInquirer = require('./scss_inquirer');
+const htmlInquirer = require('./html_inquirer');
+const iconsInquirer = require('./icons_inquirer');
+const archiver = require('archiver');
+const moment = require('moment');
+
+module.exports = async function(args) {
+	let scssPlugin = this.app.project.plugins.get('scss');
+  let htmlPlugin = this.app.project.plugins.get('html');
+  let iconsPlugin = this.app.project.plugins.get('icons');
+
+  let buildConfig = this.app.config.build.releases.default;
+  if(this.app.config.build.releases[args.build_name]) {
+    buildConfig = this.app.config.build.releases[args.build_name];
+  }
+
+  let release = _.extend({
+  	version: args.version ? args.version : this.app.config.version,
+  	releaseName: args.release_name
+  }, args);
+
+  args.scss_build_name = buildConfig.scssBuildName;
+  args.html_build_name = buildConfig.htmlBuildName;
+  args.icons_build_name = buildConfig.iconsBuildName;
+  let pages = htmlPlugin.collection.findAllWhere({ type: 'page' });
+  if(!pages.length) {
+    return this.logger.system(`This project has no pages.`, 'CLI', 'warning');
+  }
+
+
+  let response = await prompts.call(this, [{
+    type: 'confirm',
+    name: 'reconfig',
+    message: 'Do you want to configure release?',
+    default: false
+  }]);
+
+  let reconfig = response && response.reconfig;
+  args.silently = reconfig === false;
+  args.commonRelease = true;
+
+  if(reconfig) {
+    response = await prompts.call(this, [{
+      type: 'input',
+      name: 'version',
+      message: 'Version',
+      default: release.version,
+      validate: v => v.toString().replace(/\s+/, '') !== ''
+    }]);
+    if(response) {
+      release.version = response.version;
+    }
+  }
+
+  let releaseDist = path.join(this.app.project.dist, 'releases', release.releaseName + '-v' + release.version);
+
+  let htmlRelease = await htmlInquirer.call(this, args, release);
+
+  if('object' == typeof htmlRelease) {
+    let pagesChosen = htmlRelease.pages, scssComponents = [], commonIcons = [], releaseByPage = {}, commonSvgIcons = [], commonSpritesIcons = [];
+
+    for(let pagePath of pagesChosen) {
+      let releaseData = Object.assign({}, _.omit(htmlRelease, 'pages', 'excludePages'));
+      let data = await htmlPlugin.getReleaseInfo(_.find(pages, page => page.path == pagePath));
+
+      let pageIcons = data.icons && data.icons.length ? data.icons : [];
+      if (pageIcons.length) {
+        let icons_ids = _.pluck(pageIcons, 'icon_id');
+        releaseData.icons_ids = icons_ids;
+        commonIcons = _.uniq(commonIcons.concat(icons_ids));
+      }
+      if (data.pipes && data.pipes.length) {
+        let iconsSassUsed = scssPlugin.iconsSaveStorage.storage;
+        let icons = [];
+        releaseData.pipes = data.pipes;
+        for (let cid of data.pipes) {
+          let res = _.filter(iconsSassUsed, icon => {
+            return icon.cid == cid
+          });
+          if (res) {
+            icons = icons.concat(res);
+          }
+        }
+        if (icons.length) {
+          let icons_ids = _.uniq(_.pluck(icons, 'icon_id').concat(releaseData.icons_ids));
+          releaseData.icons_ids = icons_ids;
+          commonIcons = _.uniq(commonIcons.concat(icons_ids));
+        }
+        scssComponents = _.uniq(scssComponents.concat(data.pipes));
+      }
+      releaseByPage[pagePath] = releaseData;
+    }
+
+    if(commonIcons.length) {
+      for(let id of commonIcons) {
+        let icon = iconsPlugin.collection.get(id);
+        if(icon.has('svg')) {
+          commonSvgIcons.push(id);
+        } else {
+          commonSpritesIcons.push(id);
+        }
+      }
+    }
+
+    let generateScssRelease = true
+    if(scssComponents.length && reconfig) {
+      response = await prompts.call(this, [{
+        type: 'confirm',
+        name: 'scss',
+        message: 'Selected pages contain scss components, do you want to generate CSS release with them?',
+        default: true
+      }]);
+      if(response) {
+        generateScssRelease = response.scss;
+      }
+    }
+
+    let scssRelease;
+    if(generateScssRelease && scssComponents.length) {
+      scssRelease = await scssInquirer.call(this, args, release, {
+        components: scssComponents,
+        excludeComponents: []
+      });
+      if(typeof scssRelease != 'object') {
+        this.logger.system(`CSS release was not implemented`);
+      }
+    }
+
+    let generateIconsRelease = true;
+    if(commonIcons.length && reconfig) {
+      response = await prompts.call(this, [{
+        type: 'confirm',
+        name: 'icons',
+        message: 'Selected pages contain icons, do you want to generate ICONS release with them?',
+        default: true
+      }]);
+      if(response) {
+        generateIconsRelease = response.icons;
+      }
+    }
+
+    let iconsRelease;
+    if(generateIconsRelease && commonIcons.length) {
+      iconsRelease = await iconsInquirer.call(this, args, release, {
+        svgIcons: commonSvgIcons.length ? commonSvgIcons : false,
+        sprites: commonSpritesIcons.length ? commonSpritesIcons : false
+      });
+    }
+    let originSvgIconsMode = iconsPlugin.buildConfig.svgIconsMode;
+
+    let combineIcons = buildConfig.combineIcons;
+    let combineScssComponents = buildConfig.combineScssComponents;
+    if(reconfig && iconsRelease) {
+      response = await prompts.call(this, [{
+        type: 'confirm',
+        name: 'combineIcons',
+        message: 'Do you want to combine all the icons of each page into one release?',
+        default: combineIcons
+      }]);
+      if(response) {
+        combineIcons = response.combineIcons;
+      }
+      response = await prompts.call(this, [{
+        type: 'confirm',
+        name: 'combineScssComponents',
+        message: 'Do you want to combine all the scss components of each page into one release? (Into a single .css file)',
+        default: combineScssComponents
+      }]);
+      if(response) {
+        combineScssComponents = response.combineScssComponents;
+      }
+    }
+
+    await fse.emptyDir(releaseDist);
+    if(buildConfig.saveAssetsDirs) {
+      for(let dir of buildConfig.saveAssetsDirs) {
+        if(await fse.pathExists(path.join(this.app.project.dist, dir))) {
+          await fse.copy(path.join(this.app.project.dist, dir), path.join(releaseDist, dir));
+        }
+      }
+    }
+
+    let commonScssRelease;
+    if(scssRelease) {
+        try {
+          commonScssRelease = await scssPlugin.release(_.extend({}, scssRelease));
+        } catch(e) {
+          this.logger.system(`CSS release completed with an error: ${e.message}`, 'CLI', 'error');
+        }
+    }
+    let scssReleasesByPage = {};
+    for(let page in releaseByPage) {
+      let data = releaseByPage[page];
+      let filename = scssRelease.releaseName + '-' + path.basename(page, path.extname(page));
+      if(!combineScssComponents) {
+        if(Array.isArray(data.pipes) && data.pipes.length && scssRelease) {
+          try {
+            let release = await scssPlugin.release(_.extend({}, scssRelease, {components: data.pipes, filename}));
+            scssReleasesByPage[page] = release;
+            this.logger.system(`${filename}.css successfully generated for the ${page} page.`);
+          } catch(e) {
+            this.logger.system(`CSS release completed with an error: ${e.message}`, 'CLI', 'error');
+          }
+        }
+      }
+      if(!combineIcons && page != 'ungic-icons.html') {
+        if(Array.isArray(data.icons_ids) && data.icons_ids.length && iconsRelease) {
+          let svgIcons = _.filter(data.icons_ids, id => iconsPlugin.collection.get(id).has('svg'));
+          let sprites = _.reject(data.icons_ids, id => iconsPlugin.collection.get(id).has('svg'));
+          try {
+            let release = await iconsPlugin.release(_.extend({}, iconsRelease, {
+              svgIcons,
+              sprites,
+              filename
+            }));
+            data.iconsReleases = release.releases;
+          } catch(e) {
+            this.logger.system(`ICONS release completed with an error: ${e.message}`, 'CLI', 'error');
+          }
+        }
+      }
+      // Иконки
+    }
+
+    let commonIconsRelease;
+    if(commonIcons.length && iconsRelease) {
+      let svgIcons = _.filter(commonIcons, id => iconsPlugin.collection.get(id).has('svg'));
+      let sprites = _.reject(commonIcons, id => iconsPlugin.collection.get(id).has('svg'));
+      try {
+        commonIconsRelease = await iconsPlugin.release(_.extend({combineIcons}, iconsRelease, {
+          svgIcons,
+          sprites
+        }));
+      } catch(e) {
+        this.logger.system(`ICONS release completed with an error: ${e.message}`, 'CLI', 'error');
+      }
+    }
+    for(let page in releaseByPage) {
+      try {
+        let release = releaseByPage[page];
+        if(commonIconsRelease) {
+          release.iconsReleases = commonIconsRelease.releases;
+        }
+        if(combineScssComponents && commonScssRelease) {
+          release.scssURLS = commonScssRelease;
+        } else if(scssReleasesByPage[page]) {
+          release.scssURLS = scssReleasesByPage[page];
+        }
+        release.page = _.find(pages, p => p.path == page);
+        if(iconsRelease) {
+          iconsPlugin.buildConfig.svgIconsMode = iconsRelease.svgIconsMode;
+        }
+        await htmlPlugin.toRelease(release);
+        if(iconsRelease) {
+          iconsPlugin.buildConfig.svgIconsMode = originSvgIconsMode;
+        }
+      } catch (e) {
+        this.logger.system(e, 'CLI');
+      }
+    }
+    let tempPath = path.join(this.app.project.dist, 'releases', release.releaseName + '-v' + release.version + '.zip');
+    await new Promise((res, rej) => {
+        const output = fs.createWriteStream(tempPath);
+        const archive = archiver('zip', {
+          zlib: { level: 5 }
+        });
+        output.on('close', async() => {
+            try {
+              await fse.copy(tempPath, path.join(releaseDist, release.releaseName + '-v' + release.version + '.zip'));
+              await fse.remove(tempPath);
+            } catch(e) {
+              console.log(e);
+            }
+            res();
+        });
+        archive.pipe(output);
+        archive.directory(releaseDist, false);
+        archive.directory(this.app.project.sourceDir, 'source');
+        archive.append(Buffer.from(`
+/*******************************************
+*  This release generated using ungic.
+********************************************/
+  Release name: ${release.releaseName}
+  Release version: ${release.version}
+  Release date: ${moment().format('DD.MM.YYYY, h:mm')}
+  Project name: ${this.app.config.name}
+  Project version: ${this.app.config.version}
+  Author: ${this.app.config.author}`), { name: 'README.txt' });
+        archive.finalize();
+    });
+    this.logger.system(`${releaseDist} release successfully generated!`, 'CLI', 'success');
+  }
+}

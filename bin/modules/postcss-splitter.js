@@ -8,13 +8,13 @@ module.exports = postcss.plugin('ungic-splitter', function (opts) {
     root.walkComments(c => c.remove());
     root.walkRules(function(rule) {
         let regex = /\.un-theme-([^.\s\n}:{()#$]+)/;
-        let m;     
+        let m;
         if (opts.theme && (m = regex.exec(rule.selector)) !== null) {
 
 
             let theme = m[1];
-            //console.log(rule.selector, theme);
             let container = _.findWhere(themes, {theme});
+            //console.log(container, theme);
             let isNew;
 
             if(!container) {
@@ -59,6 +59,7 @@ module.exports = postcss.plugin('ungic-splitter', function (opts) {
             if(!container) {
                 container = {
                     inverse_root: new postcss.root(),
+                    //root: new postcss.root(),
                     theme: 'default'
                 }
                 isNew = true;

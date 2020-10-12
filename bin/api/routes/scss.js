@@ -9,13 +9,15 @@ async function routes(fastify, options) {
         }
         let iconsPlugin = app.project.plugins.get('icons');
 
-        if(!iconsPlugin.iconsStorage.fonts) {
-            reply.code('400');
-            throw new Error(`Icons plugin did not generate icon fonts`);
-        }
+        reply.code(200);
         reply.header("Content-Type", "text/css");
+        if(!iconsPlugin.iconsStorage.fonts) {
+            //reply.code('400');
+            //throw new Error(`Icons plugin did not generate icon fonts`);
+            return '';
+        }
+
         if(!iconsPlugin.iconsStorage.fonts.data.icons.length) {
-            reply.code(200);
             return '';
         }
         return iconsPlugin.getFontsCSS();
@@ -28,20 +30,20 @@ async function routes(fastify, options) {
         }
         let iconsPlugin = app.project.plugins.get('icons');
 
-        if(!iconsPlugin.iconsStorage.sprite) {
-            reply.code('400');
-            throw new Error(`Icons plugin did not generate sprites`);
-        }
+        reply.code(200);
         reply.header("Content-Type", "text/css");
+        if(!iconsPlugin.iconsStorage.sprite) {
+            //reply.code('400');
+            //throw new Error(`Icons plugin did not generate sprites`);
+            return '';
+        }
+
 
         if(!iconsPlugin.iconsStorage.sprite.data.icons.length) {
-            reply.code(200);
             return '';
         }
 
         let config = iconsPlugin.config;
-
-        // config.fs.dist.css
         return iconsPlugin.getSpritesCSS();
     });
 }

@@ -10,14 +10,22 @@ let scssPlugin = require('../plugins/scss');
 let htmlPlugin = require('../plugins/html');
 let iconsPlugin = require('../plugins/icons');
 let skeleton = require('../modules/skeleton');
+const merge = require('deepmerge');
 let appPaths;
+class builder extends skeleton {
+    constructor(scheme, config={}) {
+        super(scheme, {objectMerge: true}, config);
+    }
+}
 class ungicProject extends skeleton {
-    constructor(config) {
+    constructor(config, options={}) {
         super({}, {}, config);
         appPaths = require('../modules/app-paths')();
-        this.root = appPaths.root;
+        this.root = options.root ? options.root : appPaths.root;
+        this.app = options.app;
         config = this.config;
         this.dist = path.join(this.root, config.fs.dirs.dist);
+        this.sourceDir = path.join(this.root, config.fs.dirs.source);
         this.plugins = new Map;
         this.skipWatch = new Set;
     }
@@ -35,17 +43,52 @@ class ungicProject extends skeleton {
             }
         }
         await ensureDirs(this.root, this.fsDirs());
+
+        let buildPlugins = {
+            html: {},
+            scss: {},
+            icons: {}
+        }
+        let configPlugins = {
+            html: {},
+            scss: {},
+            icons: {}
+        }
+        for(let plugin in buildPlugins) {
+            let buildSchemePath = path.join('../plugins/' + plugin, './build.model-scheme');
+            let configSchemePath = path.join('../plugins/' + plugin, './model-scheme');
+            let Config = new builder(require(configSchemePath), config.plugins[plugin]);
+            configPlugins[plugin] = _.omit(Config.config, 'fs', 'render', 'id');
+            let Builder = new builder(require(buildSchemePath));
+            buildPlugins[plugin] = Builder.config;
+        }
+
+        return {
+            build: {
+                plugins: buildPlugins
+            },
+            plugins: configPlugins
+        }
+    }
+    async updateConfig() {
+        try {
+            let currentConfig = await fsp.readFile(path.join(this.root, 'ungic.config.json'), 'UTF-8');
+            currentConfig = JSON.parse(currentConfig);
+            this.setConfig(merge(this.config, currentConfig, {
+                arrayMerge: (destinationArray, sourceArray) => _.union(destinationArray, sourceArray)
+            }));
+        } catch(e) {
+            this.system('ungic.config.json incorrect', 'error');
+        }
     }
     async begin(options={}) {
         let config = this.config;
         this.fastify = options.fastify;
 
-        htmlPlugin = new htmlPlugin(Object.assign(config.plugins.html || {}, {
-            fs: config.fs
-        }), {
+        let htmlPluginConfig = _.extend({}, config.plugins.html || {}, {fs: config.fs});
+        htmlPlugin = new htmlPlugin(htmlPluginConfig, {
             project: this
         });
-
 
         htmlPlugin.on('log', (type, message, args) => {
             this.log(message, type, args);
@@ -67,9 +110,8 @@ class ungicProject extends skeleton {
 
         this.plugins.set(htmlPlugin.id, htmlPlugin);
 
-        scssPlugin = new scssPlugin(Object.assign(config.plugins.scss || {}, {
-            fs: config.fs
-        }), {project: this});
+        let scssPluginConfig = _.extend({}, config.plugins.scss || {}, {fs: config.fs});
+        scssPlugin = new scssPlugin(scssPluginConfig, {project: this});
 
         scssPlugin.on('log', (type, message, args) => {
             this.log(message, type, args);
@@ -81,17 +123,13 @@ class ungicProject extends skeleton {
         });
 
         this.plugins.set(scssPlugin.id, scssPlugin);
-        iconsPlugin = new iconsPlugin(Object.assign(config.plugins.icons || {}, {
-            fs: config.fs
-        }), {project: this});
+        let iconsPluginConfig = _.extend({}, config.plugins.icons || {}, {fs: config.fs});
+        iconsPlugin = new iconsPlugin(iconsPluginConfig, {project: this});
 
         uid = this.fastify.uid();
         iconsPlugin.on('render', () => {
             renderInterceptor(iconsPlugin);
         });
-        /*scssPlugin.on('render', ()=>{
-            this.emit('render');
-        })*/
 
         iconsPlugin.on('log', (type, message, args) => {
             this.log(message, type, args);
@@ -150,15 +188,18 @@ class ungicProject extends skeleton {
             console.log(e);
             this.error(e);
         }
-
+       // console.log(this.root);
         this.watcher = chokidar.watch(this.root, {
             ignoreInitial: true,
             ignorePermissionErrors: true,
-            ignored: ['*.TMP', '*.tmp'],
+            ignored: (ph) => ph.includes('node_modules') || ph.includes('.git') || path.extname(ph).toLowerCase() == '.tmp',
             awaitWriteFinish: {
-                stabilityThreshold: 50
+                stabilityThreshold: 100,
             },
         }).on('all', (event, ph, stat) => {
+            if(event == 'change' && path.join(this.root, 'ungic.config.json') == ph) {
+                this.updateConfig();
+            }
             let findDir = (fs, name) => {
                 if(fs.dirs) {
                     for(let dir in fs.dirs) {
@@ -180,7 +221,6 @@ class ungicProject extends skeleton {
                 }
             }
             let ph_splitter = _.filter(ph.split(this.root)[1].split(path.sep), ph => ph != "");
-
             let watchEvent = (storage, dir, prev="", prevdir="") => {
                 let _dir = findDir(storage, dir);
                 if(_dir) {

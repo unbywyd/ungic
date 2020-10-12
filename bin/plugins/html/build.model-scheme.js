@@ -2,27 +2,25 @@ module.exports = {
     dev: {
         type: "object",
         properties: {
-            config: {
-                type: "object",
-                properties: {
-                    beautify: {
-                        type: ['object', 'boolean'],
+            formatting: {
+                "anyOf": [
+                    {
+                        type: 'string',
+                        enum: ['minifier', 'beautify']
                     },
-                    minifier: {
-                        type: ['object', 'boolean']
-                    },
-                    validation: {
-                        type: 'boolean'
+                    {
+                        type: 'boolean',
+                        enum: [false]
                     }
-                }
+                ]
+            },
+            validation: {
+                type: 'boolean'
             }
         },
         default: {
-            config: {
-                beautify: true,
-                minifier: false,
-                validation: false
-            }
+            formatting: 'beautify',
+            validation: false
         }
     },
     release: {
@@ -33,37 +31,43 @@ module.exports = {
                     "^[A-z_]+\w*$": {
                         type: "object",
                         properties: {
-                            beautify: {
-                                type: ['object', 'boolean'],
-                            },
-                            minifier: {
-                                type: ['object', 'boolean']
+                            formatting: {
+                                "anyOf": [
+                                    {
+                                        type: 'string',
+                                        enum: ['minifier', 'beautify']
+                                    },
+                                    {
+                                        type: 'boolean',
+                                        enum: [false]
+                                    }
+                                ]
                             },
                             validation: {
                                 type: 'boolean'
                             },
-                            include_external_styles: {
+                            includeExternalStyles: {
                                 type: 'boolean'
                             },
-                            merge_internal_styles: {
+                            mergeInternalStyles: {
                                 type: 'boolean'
                             },
-                            optimize_internal_styles: {
+                            optimizeInternalStyles: {
                                 type: 'boolean'
                             },
-                            include_local_scripts: {
+                            includeLocalScripts: {
                                 type: 'boolean'
                             },
-                            internal_scripts_in_footer: {
+                            internalScriptsInFooter: {
                                 type: 'boolean'
                             },
-                            external_scripts_in_footer: {
+                            externalScriptsInFooter: {
                                 type: 'boolean'
                             },
-                            merge_internal_scripts: {
+                            mergeInternalScripts: {
                                 type: 'boolean'
                             },
-                            optimize_internal_scripts: {
+                            optimizeInternalScripts: {
                                 type: 'boolean'
                             }
                         }
@@ -75,26 +79,31 @@ module.exports = {
                 patternProperties: {
                     "^[A-z_]+\w*$": {
                         type: "object",
-                        required: ['version', 'name', 'config_id'],
+                        required: ['configId', 'pages', 'host'],
                         properties: {
                             version: {
                                 type: 'string'
                             },
-                            config_id: {
+                            configId: {
                                 type: "string",
                                 default: "default"
                             },
-                            name: {
-                                type: 'string'
+                            pages: {
+                                "anyOf": [
+                                    {
+                                        type: ["array"],
+                                    },
+                                    {
+                                        type: ["string"],
+                                        enum: ["*"]
+                                    }
+                                ]
+                            },
+                            excludePages: {
+                                type: 'array'
                             },
                             host: {
                                 type: 'string'
-                            },
-                            icons_release: {
-                                type: 'boolean'
-                            },
-                            scss_release: {
-                                type: 'boolean'
                             }
                         }
                     }
@@ -105,19 +114,24 @@ module.exports = {
         default: {
             configs: {
                 default: {
-                    beautify: false,
-                    minifier: true,
-                    validation: true
+                    formatting: 'beautify',
+                    validation: false,
+                    includeExternalStyles: false,
+                    mergeInternalStyles: false,
+                    optimizeInternalStyles: false,
+                    includeLocalScripts: false,
+                    internalScriptsInFooter: false,
+                    externalScriptsInFooter: false,
+                    mergeInternalScripts: false,
+                    optimizeInternalScripts: false
                 }
             },
             build: {
-                "main": {
-                    name: 'main',
+                default: {
+                    pages: "*",
                     host: '/',
-                    config_id: "default",
-                    version: '0.0.1',
-                    icons_release: true,
-                    scss_release: true
+                    excludePages: [],
+                    configId: "default"
                 }
             }
         }

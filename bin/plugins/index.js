@@ -1,11 +1,16 @@
 const skeleton = require('../modules/skeleton');
 const path = require('path');
 const fg = require('fast-glob');
+const _ = require('underscore');
+const merge = require('deepmerge');
+
 class ungicPlugin extends skeleton {
     constructor(privateScheme={}, modelConfig={}, sysconfig={}) {
         let commonScheme = require('./model-scheme');
 
-        super(Object.assign({}, commonScheme, privateScheme), {objectMerge: true}, modelConfig);
+        super(merge(Object.assign({}, commonScheme), privateScheme, {
+            arrayMerge: (destinationArray, sourceArray) => _.union(destinationArray, sourceArray)
+        }), {objectMerge: true}, modelConfig);
         let config = this.config;
         this.project = sysconfig.project;
         this.id = config.id;
@@ -34,6 +39,10 @@ class ungicPlugin extends skeleton {
     error(message, args={}) {
         args.plugin_id = this.id;
         this.log(message, 'error', args);
+    }
+    system(message, message_type = 'system', args={}) {
+        args.message_type = message_type;
+        this.log(message, 'system', args);
     }
     warning(message, args={}) {
         args.plugin_id = this.id;

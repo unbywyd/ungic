@@ -4,30 +4,30 @@ class events extends EventEmitter{};
 const underscoreExtends = require('./underscore-extends');
 
 class Collection {
-    #events = new events;
-    #options = {
-        add: true
-    }
-    #config = {
-        eventForEvery: true
-    }
-    #change = (event, data) => {
-        this.#events.emit(event, data);
-        this.#events.emit('all', event, data);
-    }
     constructor(config={}) {
+        this._events = new events;
+        this._options = {
+            add: true
+        }
+        this._change =  (event, data) => {
+            this._events.emit(event, data);
+            this._events.emit('all', event, data);
+        }
+        this._config = {
+            eventForEvery: true 
+        }
         this.collection = [];
-        this.#config = _.extend(this.#config, config);
+        this._config = _.extend(this._config, config);
         if(config.options) {
-            this.#options = _.extend(this.#options, config.options);
+            this._options = _.extend(this._options, config.options);
         }
     }
     _setError(errors) {
         if(!Array.isArray(errors)) {
             errors = [errors];
         }
-        if(this.#events.listeners('errors').length) {
-            this.#events.emit('errors', errors.map(e => 'object' != typeof e ? {message:e} : e));
+        if(this._events.listeners('errors').length) {
+            this._events.emit('errors', errors.map(e => 'object' != typeof e ? {message:e} : e));
         } else {
             throw new Error(errors.map(e=> typeof e == 'object' ? JSON.stringify(e, null, 4) : e).join(','));
         }
@@ -37,7 +37,7 @@ class Collection {
         let at = typeof options.at == 'number' ? options.at : this.size();
         this.collection.splice(at, 0, model);
         if(!options.silent) {
-            this.#change('added', model);
+            this._change('added', model);
         }
         return model;
     }
@@ -52,7 +52,7 @@ class Collection {
         model.set(attributes, options);
         //console.log(model.changed);
         if(!options.silent && _.keys(model.changed).length) {
-            this.#change('updated', model);
+            this._change('updated', model);
         }
         return model;
     }
@@ -64,10 +64,10 @@ class Collection {
             let id = model.id;
             this.collection = this.without(model);
             if(!options.silent) {
-                if(this.#config.eventForEvery) {
-                    this.#change('removed', model);
+                if(this._config.eventForEvery) {
+                    this._change('removed', model);
                 } else {
-                    this.#change('removed', [model]);
+                    this._change('removed', [model]);
                 }
             }
             return model;
@@ -93,12 +93,12 @@ class Collection {
             }
         }
         model.on('change', (event, data) => {
-            this.#events.emit('model', model, event, data);
+            this._events.emit('model', model, event, data);
         });
         return model;
     }
     async _set(models, options={}) {
-        options = _.extend({}, this.#options, options);
+        options = _.extend({}, this._options, options);
 
         if(!Array.isArray(models) && models) {
             models = [models];
@@ -149,8 +149,8 @@ class Collection {
                     }
                 }
             } else {
-                if('function' == typeof this.#config.attrPrehandler) {
-                    let attrs = await this.#config.attrPrehandler(model);
+                if('function' == typeof this._config.attrPrehandler) {
+                    let attrs = await this._config.attrPrehandler(model);
                     if(attrs) {
                         model = attrs;
                     }
@@ -181,14 +181,14 @@ class Collection {
         return this.find(model => model.id == id) ? true : false;
     }
     on(event, callback) {
-        this.#events.on(...arguments);
+        this._events.on(...arguments);
     }
     async add(models, options={}) {
         options.remove = "remove" in options ? options.remove : false;
         options.merge = "merge" in options ? options.merge : true;
         let changed = await this._set(models, options);
         if(!options.silent && changed.length) {
-            this.#change('add', changed);
+            this._change('add', changed);
         }
     }
     async set(models, options={}) {
@@ -198,7 +198,7 @@ class Collection {
         }, options);
         let changed = await this._set(models, options);
         if(!options.silent && changed.length) {
-            this.#change('set', changed);
+            this._change('set', changed);
         }
     }
     sort() {
@@ -255,14 +255,14 @@ class Collection {
             removed.push(this._remove(model, {silent: true}));
         }
         if(!options.silent) {
-            if(this.#config.eventForEvery) {
+            if(this._config.eventForEvery) {
                 if(Array.isArray(removed)) {
                     for(let model of removed) {
-                        this.#change('removed', model);
+                        this._change('removed', model);
                     }
                 }
             } else {
-                this.#change('removed', removed);
+                this._change('removed', removed);
             }
         }
     }
@@ -306,7 +306,7 @@ class Collection {
             changed = await this._set(models, {silent: true, add: true, remove: true, merge: true});
         }
         if(!options.silent) {
-            this.#change('reset', changed);
+            this._change('reset', changed);
         }
     }
     async create(attrs, options={}) {
@@ -316,7 +316,7 @@ class Collection {
         let model = await this._create(attrs, options);
         if(model) {
             if(!options.silent) {
-                this.#change('create', model);
+                this._change('create', model);
             }
             this._insert(model, options);
         }
