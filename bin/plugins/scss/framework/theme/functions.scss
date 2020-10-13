@@ -76,7 +76,7 @@ $theme: meta.module-variables(theme);
     @if math.is-unitless($percent) {
         $percent: math.percentage($percent);
     }
-    $relative-theme: config(relative-light-limit);
+    $relative-theme: theme-config(relative-light-limit);
     @if not $relative-theme {
         @return color.scale($color, $lightness: $percent);
     }
@@ -110,7 +110,7 @@ $theme: meta.module-variables(theme);
     @if math.is-unitless($percent) {
         $percent: math.percentage($percent);
     }
-    $relative-theme: config(relative-light-limit);
+    $relative-theme: theme-config(relative-light-limit);
     @if not $relative-theme {
         @return color.scale($color, $lightness: negative($percent));
     }
@@ -186,8 +186,8 @@ $theme: meta.module-variables(theme);
     $options: (
         offset: 0
     );
-    @if type-of(config(brightness)) == map {
-        $options: map.merge($options, config(brightness));
+    @if type-of(theme-config(brightness)) == map {
+        $options: map.merge($options, theme-config(brightness));
     }
 
     $offset: map.get($options, offset);
@@ -257,8 +257,8 @@ $theme: meta.module-variables(theme);
     $options: (
         offset: -20deg
     );
-    @if type-of(config(brightness)) == map {
-        $options: map.merge($options, config(brightness));
+    @if type-of(theme-config(brightness)) == map {
+        $options: map.merge($options, theme-config(brightness));
     }
     $offset: map.get($options, offset);
     @if(map.has-key($options, offset-brighten)) {
@@ -320,8 +320,8 @@ $theme: meta.module-variables(theme);
         saturation-odd-offset: 8,
         saturation-even-offset: 4
     );
-    @if config(tint) and type-of(config(tint)) == map {
-        $options: map.merge($options, config(tint));
+    @if theme-config(tint) and type-of(theme-config(tint)) == map {
+        $options: map.merge($options, theme-config(tint));
     }
     @if type-of($color) == string {
         $color: colors($color);
@@ -374,7 +374,7 @@ $theme: meta.module-variables(theme);
 /*
 *   Get theme config
 */
-@function config($key:'') {
+@function theme-config($key:'') {
     $config: get(config);
     @if map.has-key($config, $key) {
         @return map.get($config, $key);

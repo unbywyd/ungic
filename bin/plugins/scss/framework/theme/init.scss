@@ -2,10 +2,7 @@
 /*
 *   Set default variables
 */
-$cid: null !default;
-$config: () !default;
-$properties: () !default;
-$private_properties:() !default;
+
 $project: () !default;
 
 /*
@@ -15,3 +12,5 @@ $project: () !default;
     $settings: map.get($project, theme),
     $inverse-mode: map.get($project, inverse-mode)
 );
+
+@forward "functions";

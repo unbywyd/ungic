@@ -11,9 +11,10 @@
 @use "sass:list";
 @use "sass:string" as str;
 @use "ungic.meta" as un-meta;
-@use "property-handlers" as *;
+@use "ungic.meta.property-handlers" as *;
 @use "sass:selector";
 
+$component: meta.module-variables(this);
 /*
 *   Checks if component exists
 */
@@ -75,9 +76,9 @@
   }
   @if meta.function-exists($prop) {
     @if list.length($args) == 0 {
-      @return meta.call(meta.get-function($prop));
+      @return meta.call(meta.get-function($prop), $component);
     }
-    @return meta.call(meta.get-function($prop), $args...);
+    @return meta.call(meta.get-function($prop), $component, $args...);
   } @else {
     @if str.index($prop, line-height) == 1 {
       @return prop(font, line-height);
@@ -139,28 +140,6 @@
 }
 
 /*
-*   Returns the default property value (From core of framework)
-*/
-@function default-prop($prop) {
-  $props: meta.module-variables(default-props);
-  @if not map.has-key($props, $prop) {
-    @return null;
-  }
-  @return map.get($props, $prop);
-}
-
-/*
-*   Get project property value
-*/
-@function project-prop($prop) {
-  $props: map.get(this.$project, properties);
-  @if not map.has-key($props, $prop) {
-    @return null;
-  }
-  @return map.get($props, $prop);
-}
-
-/*
 *   Get processed config of component
 */
 @function config($key: "", $subkey: false) {
@@ -177,16 +156,4 @@
     }
   }
   @return this.$config;
-}
-
-/*
-*   Get project config
-*/
-@function project-config($key: "") {
-  $config: map.get(this.$project, config);
-
-  @if map.has-key($config, $key) {
-    @return map.get($config, $key);
-  }
-  @return $config;
 }

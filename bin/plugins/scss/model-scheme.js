@@ -1,8 +1,4 @@
 module.exports = {
-    topSelector: {
-        type: 'string',
-        default: 'html'
-    },
     rtlPrefix: {
         type: "object",
         properties: {

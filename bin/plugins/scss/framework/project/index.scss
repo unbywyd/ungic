@@ -5,6 +5,8 @@
 @use "config";
 @use "properties";
 @use "sass:meta";
+@forward "ungic.project.functions";
 
 $config: meta.module-variables(config);
 $properties: meta.module-variables(properties);
+

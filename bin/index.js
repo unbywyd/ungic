@@ -290,6 +290,7 @@ class app extends skeleton {
 
 
         try {
+            await this.project.initialize({run: true});
             await this.project.begin({fastify: this.fastify});
         } catch(e) {
             console.log(e);

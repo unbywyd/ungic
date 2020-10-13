@@ -7,9 +7,37 @@
         "root": "root",
         "path": "project/"
     },
+    "ungic.project.properties": {
+        "root": "root",
+        "path": "project/properties"
+    },
     "ungic.project.config": {
         "root": "root",
         "path": "project/config"
+    },
+    "ungic.project.functions": {
+        "root": "framework",
+        "path": "ungic/project/functions.scss"
+    },
+    "ungic.theme.init": {
+        "root": "framework",
+        "path": "theme/init.scss"
+    },
+    "ungic.theme": {
+        "root": "framework",
+        "path": "theme/index.scss"
+    },
+    "ungic.theme.functions": {
+        "root": "framework",
+        "path": "theme/functions.scss"
+    },
+    "ungic.theme.mixins": {
+        "root": "framework",
+        "path": "theme/mixins.scss"
+    },
+    "ungic.meta.property-handlers": {
+        "root": "framework",
+        "path": "ungic/meta/functions/property-handlers.scss"
     },
     "ungic.meta": {
         "root": "framework",

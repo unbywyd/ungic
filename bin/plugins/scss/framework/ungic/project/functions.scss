@@ -1,0 +1,30 @@
+@use "ungic.project.config" as config;
+@use "ungic.project.properties" as properties;
+@use "sass:meta";
+@use "sass:map";
+
+$config: meta.module-variables(config);
+$properties: meta.module-variables(properties);
+
+/*
+*   Get project config
+*/
+@function config($key: "") {
+  $config: $config;
+
+  @if map.has-key($config, $key) {
+    @return map.get($config, $key);
+  }
+  @return $config;
+}
+
+/*
+*   Get project property value
+*/
+@function prop($prop) {
+  $props: $properties;
+  @if not map.has-key($props, $prop) {
+    @return null;
+  }
+  @return map.get($props, $prop);
+}

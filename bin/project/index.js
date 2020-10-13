@@ -29,7 +29,7 @@ class ungicProject extends skeleton {
         this.plugins = new Map;
         this.skipWatch = new Set;
     }
-    async initialize() {
+    async initialize(options={}) {
         let config = this.config;
         let ensureDirs = async (root, dirs) => {
             for(let dir in dirs) {
@@ -42,32 +42,35 @@ class ungicProject extends skeleton {
                 }
             }
         }
+
         await ensureDirs(this.root, this.fsDirs());
 
-        let buildPlugins = {
-            html: {},
-            scss: {},
-            icons: {}
-        }
-        let configPlugins = {
-            html: {},
-            scss: {},
-            icons: {}
-        }
-        for(let plugin in buildPlugins) {
-            let buildSchemePath = path.join('../plugins/' + plugin, './build.model-scheme');
-            let configSchemePath = path.join('../plugins/' + plugin, './model-scheme');
-            let Config = new builder(require(configSchemePath), config.plugins[plugin]);
-            configPlugins[plugin] = _.omit(Config.config, 'fs', 'render', 'id');
-            let Builder = new builder(require(buildSchemePath));
-            buildPlugins[plugin] = Builder.config;
-        }
+        if(!options.run) {
+            let buildPlugins = {
+                html: {},
+                scss: {},
+                icons: {}
+            }
+            let configPlugins = {
+                html: {},
+                scss: {},
+                icons: {}
+            }
+            for(let plugin in buildPlugins) {
+                let buildSchemePath = path.join('../plugins/' + plugin, './build.model-scheme');
+                let configSchemePath = path.join('../plugins/' + plugin, './model-scheme');
+                let Config = new builder(require(configSchemePath), config.plugins[plugin]);
+                configPlugins[plugin] = _.omit(Config.config, 'fs', 'render', 'id');
+                let Builder = new builder(require(buildSchemePath));
+                buildPlugins[plugin] = Builder.config;
+            }
 
-        return {
-            build: {
-                plugins: buildPlugins
-            },
-            plugins: configPlugins
+            return {
+                build: {
+                    plugins: buildPlugins
+                },
+                plugins: configPlugins
+            }
         }
     }
     async updateConfig() {

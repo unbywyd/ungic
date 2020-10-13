@@ -4,8 +4,10 @@
 @use "sass:map";
 @use "sass:math";
 @use "sass:meta";
-@use "../utils/" as *;
+@use "../../utils/" as *;
 @use "ungic.project.config" as config;
+@use "ungic.default-properties" as default-props;
+@use "ungic.project" as project;
 
 /*
 *   Export data for a specific component
@@ -19,6 +21,11 @@
         @return null;
     }
     @return to-export($cid, $oid, json-encode($data));
+}
+
+@function test($cid) {
+    $config: module-variables($cid);
+    @return map.get($config, cid);
 }
 
 @function parse-pm($options:()) {
@@ -109,7 +116,6 @@
     @return $hsl-color1 < $hsl-color2;
 }
 
-
 @function check-color-name($color) {
     $available-colors: config.$available-theme-colors;
     @if list.index($available-colors, $color) {
@@ -117,4 +123,15 @@
     }
     @warn '#{$color} is not a registered color';
     @return false;
+}
+
+/*
+*   Returns the default property value (From core of framework)
+*/
+@function default-prop($prop) {
+  $props: meta.module-variables(default-props);
+  @if not map.has-key($props, $prop) {
+    @return null;
+  }
+  @return map.get($props, $prop);
 }

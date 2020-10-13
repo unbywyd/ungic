@@ -106,9 +106,21 @@ class scssPlugin extends plugin {
               if(/^ungic\./.test(url)) {
                   if(routes[url]) {
                       let to = routes[url];
-                      done({
-                          file: path.join(this[to.root], to.path)
-                      });
+                      if(to.inline) {
+                          let ph = path.join(this[to.root], to.path), contents = '';
+                          if(fs.existsSync(ph)) {
+                            contents = fs.readFileSync(ph, 'UTF-8');
+                          } else {
+                            this.log(`${url} module not exist`, 'warning');
+                          }
+                          done({
+                            contents
+                          });
+                      } else {
+                        done({
+                            file: path.join(this[to.root], to.path)
+                        });
+                      }
                   } else {
                       if(/^ungic\.from-html/.test(url)) {
                           let lid = url.split('.')[2];
@@ -266,7 +278,7 @@ class scssPlugin extends plugin {
               }
           } catch(e) {
             let message = e.stack;
-            this.error('Error while processing ${url} module in ${prev} file. Sass compilation error: ' + message);
+            this.error(`Error while processing ${url} module in ${prev} file. Sass compilation error: ${message}`);
             if(message.indexOf("NoSuchMethodError: method not found: 'call'") != -1) {
               this.error('Attempt to use an unknown "'+url+'" component. Error in '+ prev);
             }
@@ -386,9 +398,9 @@ class scssPlugin extends plugin {
             if(!(buildConfig.direction == 'ltr' && !buildConfig.oppositeDirection)) {
                 plugins.push(rtl(rtlOptions));
             }
-            if(config.topSelector == 'html') {
+            //if(config.topSelector == 'html') {
                 plugins.push(postcssThemeAfter());
-            }
+            //}
         }
 
         let cleanscssMerging;
@@ -448,7 +460,7 @@ class scssPlugin extends plugin {
         if(!await fsp.exists(this.root, 'project', 'themes', source.theme) && !await fsp.exists(this.root, 'project', 'themes', source.theme + '.scss')) {
             this.error(`${source.theme} theme in the project does not exist`, {exit: true});
         }
-        source.topSelector = config.topSelector;
+        //source.topSelector = config.topSelector;
 
         if(!release) {
             source.theme = buildConfig.theme;
@@ -674,7 +686,6 @@ class scssPlugin extends plugin {
             await fse.copy(path.join(this.framework, 'project'), path.join(this.root, 'project'));
             await fse.outputFile(path.join(this.root, 'README.txt'), 'If you are just starting to work with Ungic then to get started, you should open the following files:\n * project/config.scss\n * project/properties.scss\n * project/reassignment.scss \n and read the comments at the beginning of the files.\n\nNote! In order to start writing your own styles, you need to create components!\nYou need to run the ungic project (> ungic run) and go to the scss plugin menu (> scss), use the "create <cid>" command to create a new component!\nAfter that, study the files that will appear in the components directory! Good luck!');
         }
-
 
         if(this.project.config.build.plugins[this.id]) {
             try {

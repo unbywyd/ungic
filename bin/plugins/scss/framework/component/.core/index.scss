@@ -7,31 +7,7 @@ $config: () !default;
 $project: () !default;
 $properties: () !default;
 $private_properties: () !default;
-
-
-/*
-*   Customize theme
-*/
-@use "theme/init" with (
-    $cid: $cid,
-    $project: $project,
-    $config: $config,
-    $properties: $properties,
-    $private_properties: $private_properties
-);
-
-/*
-*   Use customized theme
-*   Returns:
-*       $config
-*       functions
-*/
-@use "theme";
-
-/*
-*   Get theme settings
-*/
-$theme: theme.get();
+$theme: () !default;
 
 /*
 *   Customize the core configuration

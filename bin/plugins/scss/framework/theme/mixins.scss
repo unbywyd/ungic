@@ -2,7 +2,6 @@
 @use "init" as config;
 @use "sass:map";
 
-$top_selector: map.get(config.$project, top-selector);
 @mixin _wrap($prepend) {
     $output: ();
     @if(&) {
@@ -23,7 +22,7 @@ $top_selector: map.get(config.$project, top-selector);
     $inverse: get(inverse);
     $inverse-mode: get(inverse-mode);
     @if $inverse and not $inverse-mode {
-        @include _wrap('[un-prefix="#{$topSelector}:not(.un-inverse)"]') {
+        @include _wrap('[un-prefix="html:not(.un-inverse)"]') {
             @content;
         }
     } @else if $inverse {
@@ -40,7 +39,7 @@ $top_selector: map.get(config.$project, top-selector);
     $inverse: get(inverse);
     $inverse-mode: get(inverse-mode);
     @if get(theme-type) == $type and not $inverse-mode {
-        @include _wrap('[un-prefix="#{$topSelector}:not(.un-inverse)"]') {
+        @include _wrap('[un-prefix="html:not(.un-inverse)"]') {
             @content;
         }
     } @else if $inverse-mode and get(theme-type) == $type {

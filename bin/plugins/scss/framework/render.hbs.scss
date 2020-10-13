@@ -10,7 +10,6 @@ $theme-options: meta.module-variables(theme);
 
 $cids: ({{#each components}}{{.}},{{/each}});
 
-$top-selector: #{"{{topSelector}}"};
 $theme-prefix: {{themePrefix}};
 $default-theme: {{defaultTheme}};
 
@@ -26,8 +25,12 @@ $theme-options: map.merge($theme-options, (theme-name: {{theme}}));
 $theme-config: map.merge(map.get($theme-options, config), (inverse: {{defaultInverse}}));
 $theme-options: map.merge($theme-options, (config: $theme-config));
 
-$project: map.merge($project, (theme: $theme-options, theme-prefix: $theme-prefix, default-theme: $default-theme, top-selector: $top-selector, inverse-mode: $inverse-mode));
+$project: map.merge($project, (theme: $theme-options, theme-prefix: $theme-prefix, default-theme: $default-theme, inverse-mode: $inverse-mode));
 
+@use "ungic.theme.init" as ungic_theme with (
+    $project: $project
+);
+$theme: ungic_theme.get();
 
 {{#unless inverse}}
     $export: un-meta.export(project, theme, $theme-options);
@@ -64,7 +67,8 @@ $project: map.merge($project, (theme: $theme-options, theme-prefix: $theme-prefi
         $config: $config,
         $properties: $properties,
         $private_properties: meta.module-variables({{.}}-properties),
-        $project: $project
+        $project: $project,
+        $theme: $theme // Передаем тему компоненту
     );
     {{#unless ../inverse}}
         @use "ungic.components.{{.}}.once" as {{.}}-once;
