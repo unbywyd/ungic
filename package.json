@@ -1,6 +1,6 @@
 {
   "name": "ungic",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Web layout environment",
   "main": "index.js",
   "bin": {
@@ -62,7 +62,6 @@
     "html5-validator": "^1.2.1",
     "image-size": "^0.8.3",
     "inquirer": "^7.3.3",
-    "install": "^0.13.0",
     "js-beautify": "^1.13.0",
     "js-yaml": "^3.14.0",
     "json-tree-view": "^0.4.12",
