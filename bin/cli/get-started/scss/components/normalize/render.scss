@@ -1,5 +1,5 @@
 @use ".core"as this;
-@use ".core/theme"as *;
+@use "ungic.theme" as *;
 @use "functions"as *;
 @use "mixins"as *;
 @use "ungic.meta"as un-meta;

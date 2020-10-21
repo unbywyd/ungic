@@ -154,6 +154,8 @@ $component: meta.module-variables(this);
     } @else {
       @return $result;
     }
+  } @else if $key != "" {
+    @return false;
   }
   @return this.$config;
 }

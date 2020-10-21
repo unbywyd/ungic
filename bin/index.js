@@ -122,11 +122,14 @@ class app extends skeleton {
         let ph = path.join(appPaths.root, name);
         if(await fsp.exists(ph)) {
             this.system(name + ' directory already exists', 'error');
+            return process.exit();
         } else {
             await fse.emptyDir(ph);
         }
         return this.initialize({
-            root: ph
+            root: ph,
+            name,
+            createMode: true
         });
     }
     async initialize(options={}) {
@@ -135,23 +138,27 @@ class app extends skeleton {
             return process.exit();
         }
         if(!appPaths.config && !appPaths.package) {
-            this.system('Note! Recommended to create package.json using npm init command.', 'warning');
-            let response = await prompts({
-                type: 'confirm',
-                name: 'next',
-                message: 'Do you want to continue without installation npm package.json?',
-                initial: true
-            });
-            if(!response.next) {
-                this.system('Please initialize npm first', 'Note');
-                return process.exit();
+            let response;
+            if(!options.createMode) {
+                this.system('Note! Recommended to create package.json using npm init command.', 'warning');
+                response = await prompts({
+                    type: 'confirm',
+                    name: 'next',
+                    message: 'Do you want to continue without installation npm package.json?',
+                    initial: true
+                });
+                if(!response.next) {
+                    this.system('Please initialize npm first', 'Note');
+                    return process.exit();
+                }
             }
+
             response = await prompts([
                 {
                     type: 'text',
                     name: 'name',
                     message: 'project name',
-                    initial: path.basename(appPaths.root).replace(/\s+/, '_')
+                    initial: options.name ? options.name : path.basename(appPaths.root).replace(/\s+/, '_')
                 },
                 {
                     type: 'text',

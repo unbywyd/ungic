@@ -172,9 +172,9 @@ class htmlPlugin extends plugin {
 
         this.typeHandlers.set('html', async attrs => {
             attrs.body = await this.ungicParser.parse(attrs.body, attrs);
-            let body = attrs.body;
+            let body = attrs.body, sourceBody = body;
             body = body.replace(/<!-{1,}[\w\W]+?-{2,}>/gm, '');
-            if((/<html/g.test(body) && /<\/html/g.test(body)) || (/<body/g.test(body) && /<\/body/g.test(body))) {
+            if((/<html/g.test(body) && /<\/html/g.test(body)) || (/<body/g.test(body) && /<\/body/g.test(body)) || /UNGIC\:PAGE/.test(sourceBody)) {
                 attrs.type = 'page';
                 if(/<html\s+.+\s(amp|⚡)\s?.*>/g.test(attrs.body)) {
                     attrs.amp = true;
@@ -310,14 +310,14 @@ class htmlPlugin extends plugin {
                     if(searchBy) {
                         data = getDeepEl(searchBy, data);
                     }
-                    return '<pre data-path="'+this.ungic.model.path+'" class="un-debug">' + JSON.stringify(data, null, 4) + '</pre>';
+                    return '<div dir="ltr"><pre dir="ltr" data-path="'+this.ungic.model.path+'" class="un-debug">' + JSON.stringify(data, null, 4) + '</pre></div>';
                 }
             },
             debug: function() {
                 if(self.release) {
                     return '';
                 }
-                return '<pre data-path="'+this.ungic.model.path+'" class="un-debug">' + JSON.stringify(this, null, 4) + '</pre>';
+                return '<div dir="ltr"><pre dir="ltr" data-path="'+this.ungic.model.path+'" class="un-debug">' + JSON.stringify(this, null, 4) + '</pre></div>';
             },
             debug_source: function() {
                 if(self.release) {
@@ -335,7 +335,8 @@ class htmlPlugin extends plugin {
             if('string' == typeof searchBy) {
                 data = getDeepEl(searchBy, data);
             }
-            return '<pre data-path="'+this.ungic.model.path+'" class="un-debug">' + JSON.stringify(data, null, 4) + '</pre>';
+            //console.log(this);
+            return '<div dir="ltr"><pre dir="ltr" data-path="'+this.ungic.model.path+'" class="un-debug">' + JSON.stringify(data, null, 4) + '</pre></div>';
         });
         Handlebars.registerHelper("debug_source", function() {
             if(self.release) {
@@ -413,6 +414,7 @@ class htmlPlugin extends plugin {
         Handlebars.registerHelper('include', (template, context) => {
             let rootData = context.data.root;
             let source = {ungic: _.clone(rootData.ungic)};
+            source.ungic.UID = '_' + Math.random().toString(36).substr(2, 9);
             let activeModel = this.collection.findByID(source.ungic.model ? source.ungic.model.id : source.ungic.page.id);
             let options = context.hash ? context.hash: {};
             //let dirname = source.ungic.dirname ? source.ungic.dirname : path.dirname(source.ungic.page.path);
@@ -848,6 +850,9 @@ class htmlPlugin extends plugin {
         if(await fsp.exists(rootPath)) {
            throw new Error(`${name} page already exist!`);
         }
+        if(args.components) {
+            args.components = args.components.join(',');
+        }
         return fse.outputFile(rootPath, Handlebars.compile(template)(args));
     }
     async _render(events) {
@@ -866,7 +871,8 @@ class htmlPlugin extends plugin {
             project: {
                 name: prjConfig.name,
                 version: prjConfig.version,
-                author: prjConfig.author
+                author: prjConfig.author,
+                address: this.project.fastify.address
             }
         }
         for(let event of events) {
@@ -874,6 +880,7 @@ class htmlPlugin extends plugin {
                 let scssPlugin = this.project.plugins.get('scss');
                 let attrs = model.get();
                 source = _.extend(source, {
+                    model: model,
                     page: {
                         id: model.id,
                         path: attrs.path
@@ -885,6 +892,7 @@ class htmlPlugin extends plugin {
                         ungic: source
                     });
                 } catch(e) {
+                    console.log(e);
                     this.log(e);
                     this.log(`An error occurred while rendering the ${attrs.path} page. Origin: ${e.message}`, 'error');
                 }
@@ -920,6 +928,7 @@ class htmlPlugin extends plugin {
                 }
                 let configCheerio = typeof config.cheerio == 'object' ? config.cheerio : {};
                 configCheerio = _.extend({decodeEntities: false}, this.project.app.PLUGINS_SETTINGS.cheerio, configCheerio);
+
                 const $ = cheerio.load(output, configCheerio);
                 let $body = $('body'), $head =  $('head');
                 scssPlugin.cleanHtmlInternalSass(model.id);

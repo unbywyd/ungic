@@ -2,7 +2,7 @@
 *   Any custom mixins
 */
 @use "../.core" as this;
-@use "../.core/theme" as *;
+@use "ungic.theme" as *;
 @use "ungic.utils" as *;
 @use "sass:map" as map;
 @use "sass:list" as list;
@@ -20,16 +20,16 @@
 }
 
 @mixin responsive-rule($selector, $point) {
-  .#{$selector}-min-#{$point} {
+  .#{$selector}-f#{$point} {
 		@include media(screen and media(min-#{$point})) {
 			@content;
 		}
   }
-  .#{$selector}-max-#{$point} {
+  .#{$selector}-t#{$point} {
 		@include media(screen and media(max-#{$point})) {
 			@content;
 		}
-  } 
+  }
 }
 
 @mixin responsive-tool($tool-name, $static-tool, $skipbp: null) {
@@ -40,13 +40,13 @@
 		}
 	}
 	@each $point, $media in $breakpoints {
-		@if($skipbp != $point) {		
+		@if($skipbp != $point) {
 			@include responsive-rule($tool-name, $point) {
 				@content;
 			}
 		}
 	}
-}  
+}
 
 /**
 *	Serves to generate grid columns
@@ -66,12 +66,12 @@
 	@if(type-of($val) == number) {
 		flex-basis: (100 / $val) + 0%;
 		min-width: (100 / $val) + 0%;
-	} @else if(type-of($val) == map) {	
+	} @else if(type-of($val) == map) {
 		@each $rule, $v in $val {
 			&:nth-child(#{$rule}) {
 				flex-basis: $v;
 				min-width: $v;
 			}
 		}
-	}	
+	}
 }

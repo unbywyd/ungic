@@ -1,5 +1,5 @@
 @use ".core" as *;
-@use ".core/theme" as *;
+@use "ungic.theme"as *;
 @use "functions" as *;
 @use "mixins" as *;
 @use "ungic.meta" as un-meta;
@@ -7,9 +7,8 @@
 @use "sass:meta" as meta;
 @use "sass:map" as map;
 
-@use "./bootstrap" as *;
+@use "./bootstrap";
 
-body {
-	background-color: color(background-color);
-	color: color(text-color);
+html {
+	font-size: prop(font-size);
 }

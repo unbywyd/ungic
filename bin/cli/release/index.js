@@ -110,7 +110,7 @@ module.exports = async function(args) {
     }
 
     let generateScssRelease = true
-    if(scssComponents.length && reconfig) {
+    if(scssComponents.length && reconfig && buildConfig.IncludeOnlyUsedComponents) {
       response = await prompts.call(this, [{
         type: 'confirm',
         name: 'scss',
@@ -123,18 +123,22 @@ module.exports = async function(args) {
     }
 
     let scssRelease;
-    if(generateScssRelease && scssComponents.length) {
-      scssRelease = await scssInquirer.call(this, args, release, {
-        components: scssComponents,
-        excludeComponents: []
-      });
-      if(typeof scssRelease != 'object') {
-        this.logger.system(`CSS release was not implemented`);
+    if(generateScssRelease) {
+      if(!buildConfig.IncludeOnlyUsedComponents) {
+        scssRelease = await scssInquirer.call(this, args, release);
+      } else if(scssComponents.length) {
+        scssRelease = await scssInquirer.call(this, args, release, {
+          components: scssComponents,
+          excludeComponents: []
+        });
+        if(typeof scssRelease != 'object') {
+          this.logger.system(`CSS release was not implemented`);
+        }
       }
     }
 
     let generateIconsRelease = true;
-    if(commonIcons.length && reconfig) {
+    if(commonIcons.length && reconfig && buildConfig.IncludeOnlyUsedComponents) {
       response = await prompts.call(this, [{
         type: 'confirm',
         name: 'icons',
@@ -147,17 +151,30 @@ module.exports = async function(args) {
     }
 
     let iconsRelease;
-    if(generateIconsRelease && commonIcons.length) {
-      iconsRelease = await iconsInquirer.call(this, args, release, {
-        svgIcons: commonSvgIcons.length ? commonSvgIcons : false,
-        sprites: commonSpritesIcons.length ? commonSpritesIcons : false
-      });
+    if(generateIconsRelease) {
+      if(!buildConfig.IncludeOnlyUsedComponents) {
+        iconsRelease = await iconsInquirer.call(this, args, release);
+        let allIcons = [];
+        if(Array.isArray(iconsRelease.svgIcons) && iconsRelease.svgIcons.length) {
+          allIcons = iconsRelease.svgIcons;
+        }
+        if(Array.isArray(iconsRelease.sprites) && iconsRelease.sprites.length) {
+          allIcons = allIcons.concat(iconsRelease.sprites);
+        }
+        commonIcons = allIcons;
+      } else if(commonIcons.length) {
+        iconsRelease = await iconsInquirer.call(this, args, release, {
+          svgIcons: commonSvgIcons.length ? commonSvgIcons : false,
+          sprites: commonSpritesIcons.length ? commonSpritesIcons : false
+        });
+      }
     }
     let originSvgIconsMode = iconsPlugin.buildConfig.svgIconsMode;
 
     let combineIcons = buildConfig.combineIcons;
     let combineScssComponents = buildConfig.combineScssComponents;
-    if(reconfig && iconsRelease) {
+
+    if(reconfig && iconsRelease && pages.length) {
       response = await prompts.call(this, [{
         type: 'confirm',
         name: 'combineIcons',
@@ -167,6 +184,8 @@ module.exports = async function(args) {
       if(response) {
         combineIcons = response.combineIcons;
       }
+    }
+    if(reconfig && scssRelease && pages.length) {
       response = await prompts.call(this, [{
         type: 'confirm',
         name: 'combineScssComponents',
@@ -195,6 +214,7 @@ module.exports = async function(args) {
           this.logger.system(`CSS release completed with an error: ${e.message}`, 'CLI', 'error');
         }
     }
+    //console.log(scssRelease);
     let scssReleasesByPage = {};
     for(let page in releaseByPage) {
       let data = releaseByPage[page];

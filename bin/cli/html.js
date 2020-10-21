@@ -93,12 +93,17 @@ module.exports = function (yargs, done) {
           message: `Language ISO Code. Will set lang attribute to the html tag`,
           default: 'en',
           validate: v => v.replace(/\s+/, '') !== ''
-        },
-        {
+        }];
+        let response = await prompts.call(this, questions);
+        let lang = 'en';
+        if(response) {
+          lang = response.lang;
+        }
+        questions = [{
           type: 'boolean',
           name: 'rtl',
           message: `RTL`,
-          default: false
+          default: ['he', 'ar'].includes(lang)
         },
         {
           type: 'input',
@@ -125,6 +130,7 @@ module.exports = function (yargs, done) {
         if (!answers) {
           return this.logger.warning('Action canceled', 'CLI');
         }
+        answers.lang = lang;
         answers.name = args.name;
         try {
           await plugin.createPage(answers);

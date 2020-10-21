@@ -3,8 +3,44 @@
 | Note: Ungic packer works for nodejs 10 + |
 | --- |
 
+| Note: The first version is deprecated, came Ungic v2! |
+| --- |
 
-# About ungic packer
+# About ungic v2
+* Rewritten core of sass components moved all main methods to the core of the sass framework.
+* The sass theme is now a separate module, using: @use "ungic.theme";
+* Rewritten functionality for creating releases for plugins
+* General release based on html pages
+* Menu changes
+* Added support for external libraries for sass components, you can use @use "@bootstrap" to include bootstrap from node_modules.
+* Added example of bootstrap based component, to install it, follow these steps:
+    * go to your project directory
+    * npm install bootstrap
+    * ungic run -l true -o false (Run ungic project with logs and without opening a browser)
+    * go to menu > other
+    * bootstrap
+    * After that, a sass bootstrap component will appear in your project, which can be configured like other ungic components, and also, subject to the rules and requirements when writing sass in ungic, all ungic features will also work for bootstrap (themes, inversions, rtl, etc. )
+
+# Get started
+*  install globally ungic with npm - ```npm install ungic -g```
+*  Create new project ```ungic create myProject```
+*  Go to the project ```cd myProject``` and run ```ungic run```
+
+You can also initialize ungic to your working directory (it is recommended to do this after npm initialization ```npm init``` and ```ungic init```)
+*  Go to your project ```cd myWork``` and initialize ungic ```ungic init```
+*  Run ```ungic run```
+
+Install the demo for visual presentation about ungic project:
+* Go to *ungic menu -> other -> demo*
+or use boilerplate template
+* ungic *menu -> other -> boilerplate*
+
+You have a source directory where you need to work with icons, styles or html pages. All source files are automatically collected and generated in the dist directory. For build setup and other working algorithms, edit the ```ungic.config.json``` config file. Upon completion of the project, build the release using the ```release``` command in the menu of the running project. You can generate a general release, or you can for each plugin separately.
+
+**Note!** The entire workflow should be carried out directly using a local server of ungic, and not with physical files opened in the browser! You can use ```open <utl>``` command in main menu after running project to open file from dist directory in your browser.
+
+
+# About ungic packer v1
 Ungic layout's packer is a development environment for preparing web resources such as styles (css), icons and html documents. Ungic packer is based on its own modular [Dart Sass](https://sass-lang.com/dart-sass) framework.
 
 The purpose of ungic packer is to facilitate the preparation of materials to front-end, but rather, helps to solve the following tasks:

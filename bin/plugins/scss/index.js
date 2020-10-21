@@ -8,7 +8,8 @@ const fse = require('fs-extra');
 const _ = require('underscore');
 const { promisify } = require("util");
 fsp.exists = promisify(fs.exists);
-const appPaths = require('../../modules/app-paths')();
+const AppPaths = require('../../modules/app-paths');
+let appPaths = AppPaths();
 const path = require('path');
 const skeleton = require('../../modules/skeleton');
 const renderMaster = require('../../modules/render-master');
@@ -506,8 +507,9 @@ class scssPlugin extends plugin {
             if(!releaseData.oppositeDirection) {
                 dir = (releaseData.direction ? '.' + releaseData.direction : '');
             }
+            let res = await this._sassRender(hbs.compile(renderTemplate)(source), components, {release});
+            //await fse.outputFile(path.join(this.dist, 'test.scss'), res.css);
 
-            let res = await this._sassRender(hbs.compile(renderTemplate)(source), components, {release}); //  {main: true}
             if(res && res.css) {
                 data.push(res.css);
                 source.inverse = releaseData.inverse;
@@ -553,13 +555,15 @@ class scssPlugin extends plugin {
                         }
                     }
                 }
+
                 let result = await this._postcss(Buffer.concat(data), releaseData, release);
                 for(let r of result) {
                     if(typeof r == 'string') {
                         let output = await this.getReleseLabel(releaseData, r);
-                        let url = path.join(config.fs.dist.css, (releaseData.filename ? releaseData.filename : releaseData.releaseName)  + dir + '.css');
-
+                        let url = path.join(config.fs.dist.css, 'v' + moment().unix() + '-' +  (releaseData.filename ? releaseData.filename : releaseData.releaseName)  + dir + '.css');
                         await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
+                        //console.log(output);
+                        //console.log('outputFile', path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url));
                         this.releaseResults.push(url);
                     } else {
                         for(let e of r) {
@@ -567,8 +571,9 @@ class scssPlugin extends plugin {
                                 let output = await this.getReleseLabel(releaseData, e.root);
                                 let theme = e.theme ? e.theme : '';
                                 try {
-                                    let url = path.join(config.fs.dist.css, (releaseData.filename ? releaseData.filename : releaseData.releaseName) + '.theme-' + theme + dir + '.css');
+                                    let url = path.join(config.fs.dist.css, 'v' + moment().unix() + '-' +  (releaseData.filename ? releaseData.filename : releaseData.releaseName) + '.theme-' + theme + dir + '.css');
                                     await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
+                                    //console.log('outputFile', path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url));
                                     this.releaseResults.push(url);
                                 } catch(e) {
                                     this.log(e, 'error');
@@ -579,7 +584,7 @@ class scssPlugin extends plugin {
                                 let theme = e.theme;
                                 try {
                                     let label = (theme == 'default') ? '' : '.theme-' + theme;
-                                    let url = path.join(config.fs.dist.css, (releaseData.filename ? releaseData.filename : releaseData.releaseName) + label + '-inverse' + dir + '.css');
+                                    let url = path.join(config.fs.dist.css, 'v' + moment().unix() + '-' + (releaseData.filename ? releaseData.filename : releaseData.releaseName) + label + '-inverse' + dir + '.css');
                                     await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
                                     this.releaseResults.push(url);
                                 } catch(e) {
@@ -618,6 +623,7 @@ class scssPlugin extends plugin {
           return this.error('At least one component is required to implement the release.', {exit: true});
       }
       let releasePath = path.join(this.dist, 'releases', release.releaseName + '-v' + release.version);
+
       try {
           await this._renderComponents(components, release);
           this.system(`${release.releaseName} release successfully generated to ${releasePath}`, true);
@@ -646,6 +652,7 @@ class scssPlugin extends plugin {
     }
     async initialize() {
         let config = this.config;
+        appPaths = AppPaths();
         this.renderMaster = new renderMaster(_.extend(config.render, {
             id: this.id
         }), this._render.bind(this));

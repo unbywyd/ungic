@@ -40,6 +40,7 @@ module.exports = async function(args, defaultConfig={}, overlayConfig={}) {
   	*		Если звездочка, помечаем все компоненты как выбранные.
   	*/
     selectedComponents = allScssComponents;
+    release.components = selectedComponents;
   }
 
   /*

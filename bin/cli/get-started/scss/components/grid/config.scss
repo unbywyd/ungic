@@ -2,27 +2,40 @@
 $columns-counts: 12;
 
 $class-names: (
-  column: 'cell', 
+  column: 'cell',
   container: 'container',
   nest: 'nest'
 );
-$gap-step: 10;
-$breakpoints: (
-  xs: 576px, 
-  sm: 768px, 
-  md: 992px,
-  lg: 1400px 
-);
-$container-as-breakpoints: false;
 
+$gap-steps: 10;
+$gap-space: 2;
+$gap-custom: (
+	8: 4px,
+	16: 8px
+);
+
+$breakpoints: (
+  xs: 556px,
+  sm: 778px,
+  md: 1200px,
+  lg: 1440px
+);
+
+$breakpoints-with-padding: true;
+$width-container-with-padding: false;
+
+// Ignore intermediate breakpoints, will assign the max-width of lg breakpoint to the container.
+$container-max-width-only: false;
+
+// Custom grids
 $columns-number-group: (
 '2': (2,2,3,4,6),
 '3': (
-  1,  
+  1,
   2,
   (
     '2n': 50%,
-    '2n+1': 25%  
+    '2n+1': 25%
   ),
   4,
   6
@@ -34,15 +47,15 @@ icons: (
   ),
 ));
 
-$media-rules: (  
+$media-rules: (
 	(
 		'rules': ('xs', 'max-xs', '<xs'),
-		'media': (max-width, xs)	
+		'media': (max-width, xs)
 	),
 	(
 		'rules': ('sm', '<sm', 'max-sm'),
 		'media': (max-width, sm)
-	), 
+	),
 	(
 		'rules': ('md', '<md', 'max-md'),
 		'media': (max-width, md)

@@ -12,6 +12,9 @@ $theme: meta.module-variables(theme);
 
 
 @function has-palette($color-name, $tint-name) {
+    @if $color-name == gray or $color-name == grey or $color-name == "gray" or $color-name == "grey" {
+        @return true;
+    }
     @if type-of($color-name) != string {
         @warn '#{$color-name} must be a registered color-name';
         @return false;
@@ -20,6 +23,7 @@ $theme: meta.module-variables(theme);
         @return false;
     }
     $palettes: get(palettes);
+
     @if(type-of($palettes) != map) {
         @warn 'No palettes. Requires #{$tint-name} tint of palette for #{$color-name} color.';
         @return false;
@@ -41,6 +45,9 @@ $theme: meta.module-variables(theme);
 */
 @function palette($color-name, $tint-name, $hue-offset: 0) {
 
+    @if $color-name == gray or $color-name == grey or $color-name == "gray" or $color-name == "grey" {
+        $color-name: "gray";
+    }
     @if has-palette($color-name, $tint-name) {
         $palettes: get(palettes);
         $palette: map.get($palettes, $color-name);
@@ -423,6 +430,9 @@ $theme: meta.module-variables(theme);
 *   Get theme colors or specific color
 */
 @function colors($color: '') {
+    @if $color == gray or $color == grey or $color == "gray" or $color == "grey" {
+        @return gray();
+    }
     $colors: get(colors);
     @if map.has-key($colors, $color) {
         @return map.get($colors, $color);
@@ -436,6 +446,9 @@ $theme: meta.module-variables(theme);
 *   Get gray color with $offset
 */
 @function gray($offset:0) {
+    @if type-of($offset) == string {
+        @return palette("gray", $offset);
+    }
     $saturation: 0;
     $hue: 0;
     $theme-config: get(config);
@@ -497,7 +510,7 @@ $theme: meta.module-variables(theme);
         }
         $color-tint: nth($color-tint, 2);
     }
-    @if $color-name == gray or $color-name  == grey {
+    @if $color-name == gray or $color-name  == grey or $color-name == "gray" or $color-name == "grey" {
         @return gray($color-tint);
     }
     @if type-of($color-name) != string {

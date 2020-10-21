@@ -46,7 +46,7 @@ async function routes(fastify, options) {
         }
         reply.header("Content-Type", "application/javascript");
 
-        let pages = request.query.as.split(',');
+        let pages = request.query.as ? request.query.as.split(',') : [];
         if(pages.length) {
             pages = _.map(pages, p => {
                 if(path.extname(p) == '') {
@@ -72,7 +72,7 @@ async function routes(fastify, options) {
                 let href = '/' + path.relative(htmlPlugin.dist, pathToCSS).replace(/\\+/g, '/');
                 href = fastify.address + href.replace(/\\+/g, '/');
                 output += `
-                    let link = document.createElement('link');
+                    var link = document.createElement('link');
                     link.setAttribute('rel', 'stylesheet');
                     link.setAttribute('data-component', "${cid}");
                     link.href = "${href}?v=${Date.now()}";

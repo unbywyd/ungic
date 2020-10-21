@@ -220,7 +220,7 @@ class App extends skeleton {
     this.logger.system(`${this.app.config.name} app running at: ${colors.cyan.bold(this.app.fastify.address)}`);
     this.appMenu = async function(yargs) {
       yargs
-        .command('release <release_name> [build_name]', 'Build a full release', {}, args => {
+        .command('release <release_name> [version] [build_name]', 'Build a full release', {}, args => {
           try {
             this.close();
             require('./bin/cli/release/').call(self, args).finally(() => {

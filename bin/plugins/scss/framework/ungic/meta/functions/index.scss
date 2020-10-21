@@ -117,6 +117,9 @@
 }
 
 @function check-color-name($color) {
+    @if $color == gray or $color == grey or $color == "gray" {
+        @return true;
+    }
     $available-colors: config.$available-theme-colors;
     @if list.index($available-colors, $color) {
         @return true;

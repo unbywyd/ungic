@@ -2,7 +2,7 @@
 *   Any custom functions
 */
 @use "../.core" as this;
-@use "../.core/theme" as *;
+@use "ungic.theme" as *;
 @use "ungic.utils" as *;
 @use "sass:map" as map;
 @use "sass:list" as list;
@@ -14,12 +14,12 @@
   @return em(strip-unit($px), strip-unit($base));
 }
 
-@function breakpoint($size, $container-as-breakpoints: true) {
+@function breakpoint($size, $breakpoints-with-padding: true) {
   $result: null;
   $grid-breakpoints: this.config(breakpoints);
-  $cnt-bp: this.config(container-as-breakpoints);
+  $padding-offset: this.config(breakpoints-with-padding);
   $offset: 0;
-  @if ($cnt-bp and $container-as-breakpoints) {
+  @if ($padding-offset and $breakpoints-with-padding) {
     $offset: px(this.prop(padding-left) + this.prop(padding-right));
   }
   @if (map.has-key($grid-breakpoints, $size)) {
@@ -32,8 +32,8 @@
 
 @function breakpoints($list-by: null) {
   $grid-breakpoints: this.config(breakpoints);
-  $cnt-bp: this.config(container-as-breakpoints);
-  @if ($cnt-bp) {
+  $padding-offset: this.config(breakpoints-with-padding);
+  @if ($padding-offset) {
     $offset: px(this.prop(padding-left) + this.prop(padding-right));
     $results: ();
     @each $key, $point in $grid-breakpoints {
@@ -70,12 +70,7 @@
 }
 
 @function container-size($size) {
-  $cnt-bp: this.config(container-as-breakpoints);
-  @if ($cnt-bp) {
-    @return breakpoint($size, false);
-  } @else {
-    @return breakpoint($size);
-  }
+  @return breakpoint($size, this.config(width-container-with-padding));
 }
 
 @function media($rule, $parentheses: true) {
@@ -95,4 +90,8 @@
     }
   }
   @return false;
+}
+
+@function q($rule) {
+  @return media($rule, false);
 }

@@ -19,6 +19,7 @@ const ttf2eot = require('ttf2eot');
 const ttf2woff = require('ttf2woff');
 const ttf2woff2 = require('wawoff2');
 const stream = require('stream');
+const moment = require('moment');
 const watchGrouping = require('../../modules/watch-grouping');
 const hbs = require('handlebars');
 const sass = require('sass');
@@ -489,6 +490,13 @@ class iconsPlugin extends plugin {
         if(config.svgSprite.height) {
             $svg.attr('height', config.svgSprite.height);
         }
+        if(options.class && options.class.length) {
+            for(let cl of options.class.split(',')) {
+                if(cl.trim() != "") {
+                    $svg.addClass(cl.trim());
+                }
+            }
+        }
         let svg = cheerio.html($svg);
 
         let label = '';
@@ -520,10 +528,18 @@ class iconsPlugin extends plugin {
         if(options.label) {
             label = options.label;
         }
+        let config = this.config;
+        if(!config.fonts.lables) {
+            title = '';
+        }
+        let classes = "";
+        if(options.class) {
+            classes = options.class;
+        }
         if(options.href) {
-            return `<a href="${options.href}"><i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${model.get('id')}"></i>${title}${label}</a>`;
+            return `<a href="${options.href}"><i aria-hidden="true" class="${classes} ${fontConfig.font.class} ${fontConfig.font.class}-${model.get('id')}"></i>${title}${label}</a>`;
         } else {
-            return `<i aria-hidden="true" class="${fontConfig.font.class} ${fontConfig.font.class}-${model.get('id')}"></i>${title}`;
+            return `<i aria-hidden="true" class="${classes} ${fontConfig.font.class} ${fontConfig.font.class}-${model.get('id')}"></i>${title}`;
         }
     }
     getHTMlSpriteIcon(id, options={}) {
@@ -545,10 +561,14 @@ class iconsPlugin extends plugin {
         if(options.label) {
             label = options.label;
         }
+        let classes = "";
+        if(options.class) {
+            classes = options.class;
+        }
         if(options.href) {
-            return `<a href="${options.href}"><i aria-hidden="true" class="${config.sprites.className}-${model.get('id')}"></i>${title}${label}</a>`;
+            return `<a href="${options.href}"><i aria-hidden="true" class="${classes} ${config.sprites.className}-${model.get('id')}"></i>${title}${label}</a>`;
         } else {
-            return `<i aria-hidden="true" class="${config.sprites.className}-${model.get('id')}"></i>${title}`;
+            return `<i aria-hidden="true" class="${classes} ${config.sprites.className}-${model.get('id')}"></i>${title}`;
         }
     }
     getSymbol(id) {
@@ -642,9 +662,11 @@ class iconsPlugin extends plugin {
         this.spritesDist = path.join(this.dist, config.fs.dist.img, 'sprites');
         this.skipIconsEvent = true;
         this.releaseData = releaseData;
+        this.buildSuffix = '';
         if(!releaseData.combineIcons) {
             this.buildSuffix = releaseData.filename ? releaseData.filename : releaseData.releaseName;
         }
+        this.buildSuffix = this.buildSuffix + 'v' + moment().unix();
         try {
             if(releaseData.svgIcons && Array.isArray(releaseData.svgIcons)) {
                 let icons = releaseData.svgIcons;
@@ -695,7 +717,6 @@ class iconsPlugin extends plugin {
                 return m;
             }
         });
-
         return _.map(models, model => model.toJSON());
     }
     async importIcons(relativePath, saveIts) {
@@ -788,14 +809,19 @@ class iconsPlugin extends plugin {
             this.error('No generated font icons');
             return ' ';
         }
-        let sassSource = await this.getFontsSass(this.iconsStorage.fonts.models, true);
-        if(!this.lastFontsCSSGeneratedDate || this.lastFontsCSSGeneratedDate != this.iconsStorage.fonts.date) {
-            this.lastFontsCSSGeneratedDate = this.iconsStorage.fonts.date;
-            let result = sass.renderSync({data:`${sassSource} @include render();`});
-            this.lastFontsCSS = result.css.toString();
-            return this.lastFontsCSS;
-        } else {
-            return this.lastFontsCSS;
+        try {
+            let sassSource = await this.getFontsSass(this.iconsStorage.fonts.models, true);
+            if(!this.lastFontsCSSGeneratedDate || this.lastFontsCSSGeneratedDate != this.iconsStorage.fonts.date) {
+                this.lastFontsCSSGeneratedDate = this.iconsStorage.fonts.date;
+                let result = sass.renderSync({data:`${sassSource} @include render();`});
+                this.lastFontsCSS = result.css.toString();
+                return this.lastFontsCSS;
+            } else {
+                return this.lastFontsCSS;
+            }
+        } catch(e) {
+            console.log(e);
+            return '';
         }
     }
     async getSpritesCSS() {

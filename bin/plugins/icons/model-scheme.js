@@ -29,7 +29,7 @@ module.exports = {
         default: {
             className: 'sprite',
             maxWidth: 70,
-            maxHeight: 70
+            maxHeight: false
         },
         properties: {
             className: {
@@ -39,7 +39,10 @@ module.exports = {
                 type: 'number'
             },
             maxHeight: {
-                type: 'number'
+                "oneOf": [
+                    { type: "boolean",  enum:[false]},
+                    { type: "number" }
+                ]
             }
         }
     },
@@ -86,9 +89,13 @@ module.exports = {
             normalize: true,
             fontWeight: 400,
             className: 'icon',
-            fontSize: '2em'
+            fontSize: '2em',
+            lables: true
         },
         properties: {
+            lables: {
+                type: 'boolean'
+            },
             className: {
                 type: 'string'
             },

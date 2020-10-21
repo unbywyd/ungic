@@ -55,7 +55,7 @@ $project_props: project.$properties;
                 style: inherit
             ));
         } @else if type-of($_border) != list {
-            $_border: ($_border);
+            $_border: ($_border, );
         }
 
         $styles: (dotted, dashed, solid, double, groove, ridge, inset, outset, none, hidden);
@@ -248,7 +248,7 @@ $project_props: project.$properties;
                 $font: map.merge($font, (style: inherit, size: inherit, variant: inherit, family: inherit, weight: inherit));
             } @else {
                 @if type-of($_font) != list {
-                    $_font: ($_font);
+                    $_font: ($_font, );
                 }
                 @each $value in $_font {
                     @if list.index($styles, $value) {
@@ -355,7 +355,7 @@ $project_props: project.$properties;
         } @else {
             $_bg: map.get($properties, background);
             @if type-of($_bg) != list {
-                $_bg: ($_bg);
+                $_bg: ($_bg, );
             }
             $position: ();
             @each $value in $_bg {
@@ -542,6 +542,7 @@ $project_props: project.$properties;
 
 @function _border-radius-handler($radius, $properties) {
     @if map.has-key($properties, border-radius) {
+
         @if type-of(map.get($properties, border-radius)) == map {
             $radius: map.merge($radius, map.get($properties, border-radius));
         } @else {
@@ -555,7 +556,7 @@ $project_props: project.$properties;
                 ));
             } @else {
                 @if type-of($_radius) == number {
-                    $_radius: ($_radius);
+                    $_radius: ($_radius, );
                 }
                 @if type-of($_radius) == list {
                     @if list.length($_radius) == 1 {
