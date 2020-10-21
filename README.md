@@ -3,7 +3,7 @@
 | Note: Ungic packer works for nodejs 10 + |
 | --- |
 
-| Note: The first version is deprecated, came Ungic v2! |
+| Note: The first version is deprecated, Ungic v2 has come! |
 | --- |
 
 # About ungic v2
