@@ -99,7 +99,7 @@ class app extends skeleton {
             config.author = packageData.author;
             introPluginsSettings('browserslist', 'BROWSERSLIST');
             introPluginsSettings('cleancss');
-            introPluginsSettings('minifier');
+            introPluginsSettings('htmlminifier');
             introPluginsSettings('cheerio');
             introPluginsSettings('beautify');
         }

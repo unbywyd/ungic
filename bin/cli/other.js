@@ -22,7 +22,7 @@ module.exports = function (yargs, done) {
               await scssPlugin.createComponent('ungic_icons');
               await scssPlugin.createComponent('myproject');
               await scssPlugin.createComponent('test');
-              this.logger.log('Copy and process files, please wait');
+              this.logger.log('Copying and processing files in progress, please wait');
               await fse.copy(demoPath, path.join(app.project.root, app.project.fsDirs('source')), {
                 overwrite: true
               });
@@ -46,7 +46,7 @@ module.exports = function (yargs, done) {
           let sourcePath2 = path.join(__dirname, './get-started');
           try {
             await intro.call(this, async()=> {
-              this.logger.log('Copy and process files, please wait', 'CLI');
+              this.logger.log('Copying and processing files in progress, please wait', 'CLI');
               try {
                 await scssPlugin.createComponent('ungic_icons');
               } catch(e) {
@@ -94,7 +94,7 @@ module.exports = function (yargs, done) {
 
           try {
             await intro.call(this, async()=> {
-              this.logger.log('Copy and process files, please wait', 'CLI');
+              this.logger.log('Copying and processing files in progress, please wait', 'CLI');
               try {
                 await scssPlugin.createComponent('ungic_icons');
               } catch(e) {

@@ -2,7 +2,7 @@ module.exports = function(input) {
   let self = this;
   return yargs = require("yargs")(input)
     .fail(function (msg, err, yargs) {
-        self.logger.error(msg, 'CLI');
+        self.logger.system(msg, 'CLI');
         yargs.showHelp();
     })
     .version(false)

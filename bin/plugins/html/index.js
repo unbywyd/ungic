@@ -36,7 +36,7 @@ const babelify = require('babelify');
 const browserify = require('browserify');
 const sass = require('sass');
 
-
+const systemConfig = require('./system-config');
 class builder extends skeleton {
     constructor(scheme, config={}) {
         super(scheme, {objectMerge: true}, config);
@@ -184,7 +184,7 @@ class htmlPlugin extends plugin {
         });
 
         config = this.config;
-        let enums = _.uniq(_.values(config.supportedTypes));
+        let enums = _.uniq(_.values(systemConfig.supportedTypes));
         enums.push('page');
         let model = Model({
             type: {
@@ -291,7 +291,7 @@ class htmlPlugin extends plugin {
         });
 
         this.on('watcher:'+ config.fs.dirs.source + ':' +config.fs.source.html, (event, ph, stat) => {
-            let availableTypes = _.keys(config.supportedTypes).map(type => '.' + type);
+            let availableTypes = _.keys(systemConfig.supportedTypes).map(type => '.' + type);
             if(availableTypes.indexOf(path.extname(ph)) != -1) {
                 this.setEntityByPath(event, path.relative(this.root, ph));
             }
@@ -471,8 +471,8 @@ class htmlPlugin extends plugin {
                     if(activeModel.get('type') == 'template' && model.get('type') != 'template') {
                         return this.log(`Templates can include only templates. Error building ${rootData.ungic.page.path} page in ${activeModel.get('path')} entity`, 'error');
                     }
-                    let supportedTypes = config.supportedTypes;
-                    let supportedIncludeTypes = config.supportedIncludeTypes;
+                    let supportedTypes = systemConfig.supportedTypes;
+                    let supportedIncludeTypes = systemConfig.supportedIncludeTypes;
                     supportedIncludeTypes = supportedIncludeTypes.map(type => supportedTypes[type]);
                     if(supportedIncludeTypes.indexOf(model.get('type')) == -1) {
                         return this.log(`${model.get('type')} type not supported for including. Error building ${rootData.ungic.page.path} page in ${activeModel.get('path')} entity`, 'error');
@@ -612,11 +612,11 @@ class htmlPlugin extends plugin {
             return
         }
         handlerID = handlerID.replace('.', '');
-        let availableTypes = _.keys(config.supportedTypes);
+        let availableTypes = _.keys(systemConfig.supportedTypes);
         if(availableTypes.indexOf(handlerID) == -1) {
             return
         }
-        attrs.type = config.supportedTypes[handlerID];
+        attrs.type = systemConfig.supportedTypes[handlerID];
         if(this.typeHandlers.has(handlerID)) {
             try {
                 attrs = await this.typeHandlers.get(handlerID).call(this, attrs);
@@ -1295,7 +1295,7 @@ class htmlPlugin extends plugin {
                 }
                 if(build.formatting === 'minifier') {
                     let params = typeof config.minifier == 'object' ? config.minifier : {};
-                        params = _.extend(this.project.app.PLUGINS_SETTINGS.minifier, params);
+                        params = _.extend(this.project.app.PLUGINS_SETTINGS.htmlminifier, params);
                         try {
                             output = minify(output, _.extend({
                               "caseSensitive": false,
@@ -1373,7 +1373,7 @@ class htmlPlugin extends plugin {
             this.iconsStorage = options.icons;
         }
         let config = this.config;
-        let types = _.keys(config.supportedTypes).join('|');
+        let types = _.keys(systemConfig.supportedTypes).join('|');
         let files = await fg('**/*.('+types+')', {dot: false, cwd: this.root, deep: 10});
         for(let file of files) {
             await this.setEntityByPath('add', file, {silent: true});

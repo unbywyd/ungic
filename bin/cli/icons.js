@@ -61,7 +61,7 @@ module.exports = function (yargs, done) {
           let demoPath = path.join(__dirname, './icons-page');
           try {
             await intro.call(this, async()=> {
-              this.logger.log('Copy and process files, please wait', 'CLI');
+              this.logger.log('Copying and processing files in progress, please wait', 'CLI');
               await scssPlugin.createComponent('ungic_icons');
               await fse.copy(demoPath, path.join(app.project.root, app.project.fsDirs('source')), {
                 overwrite: true
