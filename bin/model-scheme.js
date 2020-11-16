@@ -55,7 +55,7 @@ module.exports = {
                             combineScssComponents: {
                                 type: 'boolean'
                             },
-                            IncludeOnlyUsedComponents: {
+                            includeOnlyUsedComponents: {
                                 type: 'boolean'
                             },
                             scssBuildName: {
@@ -93,7 +93,7 @@ module.exports = {
                     scssBuildName: "default",
                     htmlBuildName: "default",
                     iconsBuildName: "default",
-                    IncludeOnlyUsedComponents: false,
+                    includeOnlyUsedComponents: false,
                     combineIcons: true,
                     combineScssComponents: true
                 }

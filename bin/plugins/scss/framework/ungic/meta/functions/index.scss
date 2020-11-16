@@ -4,10 +4,9 @@
 @use "sass:map";
 @use "sass:math";
 @use "sass:meta";
-@use "../../utils/" as *;
+@use "ungic.utils" as *;
 @use "ungic.project.config" as config;
 @use "ungic.default-properties" as default-props;
-@use "ungic.project" as project;
 
 /*
 *   Export data for a specific component
@@ -21,11 +20,6 @@
         @return null;
     }
     @return to-export($cid, $oid, json-encode($data));
-}
-
-@function test($cid) {
-    $config: module-variables($cid);
-    @return map.get($config, cid);
 }
 
 @function parse-pm($options:()) {
@@ -115,16 +109,38 @@
     $hsl-color2: list.nth(hsl($than-this-color), 3);
     @return $hsl-color1 < $hsl-color2;
 }
-
-@function check-color-name($color) {
-    @if $color == gray or $color == grey or $color == "gray" {
-        @return true;
-    }
+@function get-all-available-сolors() {
     $available-colors: config.$available-theme-colors;
-    @if list.index($available-colors, $color) {
+    $required-colors: (primary, secondary, system, info, danger, success, warning, text-color, background-color);
+    @each $color-name in $required-colors {
+        @if not list.index($available-colors, $color-name) {
+            $available-colors: list.append($available-colors, $color-name, $separator: comma);
+        }
+    }
+    @return $available-colors;
+}
+@function is-color-available($color-name) {
+    @if type-of($color-name) != string {
+        $color-name: meta.inspect($color-name);
+    }
+    $available-colors: get-all-available-сolors();
+    @if not list.index($available-colors, $color-name) {
+        @return false;
+    }
+    @return true;
+}
+
+@function check-color-name($color-name) {
+    @if type-of($color-name) != string {
+        $color-name: meta.inspect($color-name);
+    }
+    @if $color-name == "gray" or $color-name == "grey" {
         @return true;
     }
-    @warn '#{$color} is not a registered color';
+    @if is-color-available($color-name) {
+        @return true;
+    }
+    @warn '#{$color-name} is not available color!';
     @return false;
 }
 
@@ -137,4 +153,22 @@
     @return null;
   }
   @return map.get($props, $prop);
+}
+
+
+@function parse-selector($selector) {
+    $output: ();
+    @if type-of($selector) == list {
+        @each $selector in & {
+            $ishtml: list.nth($selector, 1);
+            @if $ishtml == html {
+                $selector: remove-nth($selector, 1);
+            }
+            $output: list.append($output, $selector, comma);
+        }
+    } @else {
+        @warn '#{$selector} selector must be of type list';
+        $output: $selector;
+    }
+    @return $output;
 }

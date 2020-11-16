@@ -8,7 +8,7 @@ module.exports = function(action) {
     htmlPlugin.renderMaster.pause();
     iconsPlugin.renderMaster.pause();
     let collector = new Collector({
-      timeout: 1000
+      timeout: 1500
     });
     try {
       await action();
@@ -17,7 +17,7 @@ module.exports = function(action) {
     }
     let spareMethod = setTimeout(() => {
       collector.add({});
-    }, 1000);
+    }, 1500);
     function toCollect(events) {
       clearTimeout(spareMethod);
       collector.add(events);

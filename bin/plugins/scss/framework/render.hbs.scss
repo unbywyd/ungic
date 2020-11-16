@@ -2,7 +2,7 @@
 @use "sass:map";
 @use "ungic.utils" as un-utils;
 @use "ungic.meta" as un-meta;
-@use "ungic.project" as project;
+@use "ungic.project.config" as project-config;
 @use "ungic.themes.{{theme}}" as theme;
 
 $theme-options: meta.module-variables(theme);
@@ -19,56 +19,59 @@ $inverse-mode: false;
    $inverse-mode: true;
 {{/if}}
 
-$project: meta.module-variables(project);
 $theme-options: map.merge($theme-options, (theme-name: {{theme}}));
 
 $theme-config: map.merge(map.get($theme-options, config), (inverse: {{defaultInverse}}));
 $theme-options: map.merge($theme-options, (config: $theme-config));
 
-$project: map.merge($project, (theme: $theme-options, theme-prefix: $theme-prefix, default-theme: $default-theme, inverse-mode: $inverse-mode));
+$project-configs: meta.module-variables(project-config);
+$project: (theme: $theme-options, theme-prefix: $theme-prefix, default-theme: $default-theme, inverse-mode: $inverse-mode, config: $project-configs);
 
 @use "ungic.theme.init" as ungic_theme with (
     $project: $project
 );
+
 $theme: ungic_theme.get();
 
 {{#unless inverse}}
     $export: un-meta.export(project, theme, $theme-options);
-    {{#if advancedExport}}
-        $export: un-meta.export(project, properties, map.get($project, properties));
-    {{/if}}
-    $export: un-meta.export(project, config, map.get($project, config));
+    $export: un-meta.export(project, config, $project-configs);
 {{/unless}}
 
+@use "ungic.project.properties" as p-properties;
+$project-properties: meta.module-variables(p-properties);
+
 {{#each components}}
-    @use "ungic.components.{{.}}.config" as {{.}}-config;
-    $config: meta.module-variables({{.}}-config);
-
     @use "ungic.components.{{.}}.properties" as {{.}}-properties;
-    $properties: map.merge(map.get($project, properties), meta.module-variables({{.}}-properties));
+    $properties: un-utils.merge($project-properties, meta.module-variables({{.}}-properties));
 
-    @use "ungic.components.{{.}}.reassignment" as {{.}}-reassignment with (
+    @use "ungic.components.{{.}}.properties_over" as {{.}}-properties_over with (
         $cid: {{.}},
-        $config: $config,
         $properties: $properties
     );
-    $config: {{.}}-reassignment.$config;
-    $properties: {{.}}-reassignment.$properties;
+    $properties: {{.}}-properties_over.$properties;
+
+    @use "ungic.components.{{.}}.core.props.config" as {{.}}-core_props with (
+        $properties: $properties,
+        $private_properties: meta.module-variables({{.}}-properties)
+    );
+
+    @use "ungic.components.{{.}}.config" as {{.}}-config;
+    $config: meta.module-variables({{.}}-config);
+    @use "ungic.components.{{.}}.config_over" as {{.}}-config_over with (
+        $cid: {{.}},
+        $config: $config
+    );
+    $config: {{.}}-config_over.$config;
     {{#unless ../inverse}}
         $export: un-meta.export({{.}}, config, $config);
     {{/unless}}
-    {{#unless ../inverse}}
-        {{#if ../advancedExport}}
-        $export: un-meta.export({{.}}, properties,  meta.module-variables({{.}}-properties));
-        {{/if}}
-    {{/unless}}
-    @use "ungic.components.{{.}}.core" as {{.}}-core with (
+
+    $project: map.merge($project, (properties: $project-properties));
+    @use "ungic.components.{{.}}.core.config" as {{.}}-core with (
         $cid: {{.}},
         $config: $config,
-        $properties: $properties,
-        $private_properties: meta.module-variables({{.}}-properties),
-        $project: $project,
-        $theme: $theme // Передаем тему компоненту
+        $project: $project
     );
     {{#unless ../inverse}}
         @use "ungic.components.{{.}}.once" as {{.}}-once;

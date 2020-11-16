@@ -1,7 +1,7 @@
 {
   "name": "ungic",
-  "version": "2.1.0",
-  "description": "Web layout environment",
+  "version": "2.2.0",
+  "description": "Development environment for web layout",
   "main": "index.js",
   "bin": {
     "ungic": "index.js"
@@ -12,26 +12,29 @@
   },
   "keywords": [
     "web layout",
+    "web coding",
+    "sass framework",
+    "sass dart",
+    "inversion",
+    "theming",
+    "sass compponents",
     "template engines",
     "html",
-    "scss",
-    "sass",
+    "css",
     "svg",
     "web icons",
     "sprites",
     "image sprites",
     "font icons",
-    "dart sass",
-    "sass framework",
-    "sass compponents",
-    "inversion",
-    "theming",
+    "pug",
+    "handlebars",
+    "mustache",
     "rtl",
     "packer",
     "templates"
   ],
   "author": "unbywyd",
-  "homepage": "https://packer.ungic.com/",
+  "homepage": "https://ungic.com",
   "license": "ISC",
   "devDependencies": {
     "uglifyify": "^5.0.2"

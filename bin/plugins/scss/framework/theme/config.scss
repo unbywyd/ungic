@@ -40,7 +40,7 @@ $darkest: dark;
 /*
 *   Generate a missing third (extra) color
 */
-@if not map.has-key($colors, extra) and map.has-key($colors, primary) and map.has-key($colors, secondary) {
+@if un-meta.is-color-available(extra) and (not map.has-key($colors, extra) and map.has-key($colors, primary) and map.has-key($colors, secondary)) {
   $primary: map.get($colors, primary);
 
   @if(type-of($primary) == list) {
@@ -54,7 +54,7 @@ $darkest: dark;
   @if(type-of($secondary) == list) {
     @if($inverse) {
       $secondary: nth($secondary, 2);
-    } @else {      
+    } @else {
       $secondary: nth($secondary, 1);
     }
   }

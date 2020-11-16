@@ -116,7 +116,7 @@ class App extends skeleton {
         description: 'Providing the mode configuration. Manipulates NODE_ENV environment variable.',
         default: 'development'
       })
-      .command('init', "Initial initialization of the project", args => {
+      .command('init', "Initialize an ungic project to an existing NPM project directory", args => {
         this.setConfig({
           command: 'init'
         });
@@ -126,7 +126,7 @@ class App extends skeleton {
           command: 'create'
         });
       })
-      .command('run [port]', "Launches ungic project", yargs => {
+      .command('run [port]', "Launch current ungic project", yargs => {
         return yargs
           .option('open', {
             alias: 'o',
@@ -220,7 +220,13 @@ class App extends skeleton {
     this.logger.system(`${this.app.config.name} app running at: ${colors.cyan.bold(this.app.fastify.address)}`);
     this.appMenu = async function(yargs) {
       yargs
-        .command('release <release_name> [version] [build_name]', 'Build a full release', {}, args => {
+        .command('release <release_name> [build_name]', 'Build a full release', yargs => {
+          yargs.option('version', {
+            alias: 'v',
+            type: 'number',
+            description: 'Release version'
+          })
+        }, args => {
           try {
             this.close();
             require('./bin/cli/release/').call(self, args).finally(() => {

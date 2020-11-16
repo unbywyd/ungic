@@ -1,0 +1,15 @@
+/* --------------------------------------------------*/
+//	Don't change this part
+@use "sass:map";
+$cid: null !default;
+$properties: () !default;
+/* ------------------------------------------------ */
+
+/*
+*   This file is used to override the properties of components
+*   To redefine a specific component, check the $cid (Component ID) variable.
+*/
+
+@if($cid == mycomponent) {
+  $properties: map.merge($properties, ());
+}

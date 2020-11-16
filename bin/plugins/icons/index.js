@@ -698,7 +698,7 @@ class iconsPlugin extends plugin {
         }
         this.buildConfig = currentBuild;
         this.buildSuffix = '';
-        this.system(`${releaseData.type} release of icons implemented successfully to ${this.dist} directory`, 'success');
+        this.system(`${releaseData.type} release successfully generated to ${this.dist}`, 'success');
         this.dist = dist;
         this.fontsDist = fontsDist;
         this.spritesDist = spritesDist;

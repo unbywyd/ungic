@@ -34,13 +34,34 @@ class builder extends skeleton {
 }
 
 let componentsMethods = {
-    reassignment: function(cid, done) {
-        fsp.readFile(path.join(this.root, 'project', 'reassignment.scss'), 'UTF-8').then(content => {
-            done({
-                contents: content
-            });
-        });
+  properties_over: async function(cid, done) {
+    let exist = await fsp.exists(path.join(this.root, 'project', 'properties-over.scss'));
+    if(exist) {
+      fsp.readFile(path.join(this.root, 'project', 'properties-over.scss'), 'UTF-8').then(content => {
+          done({
+              contents: content
+          });
+      });
+    } else {
+      done({
+        contents: `$cid: null !default; $properties: () !default;`
+      });
     }
+  },
+  config_over: async function(cid, done) {
+    let exist = await fsp.exists(path.join(this.root, 'project', 'config-over.scss'));
+    if(exist) {
+      fsp.readFile(path.join(this.root, 'project', 'config-over.scss'), 'UTF-8').then(content => {
+          done({
+              contents: content
+          });
+      });
+    } else {
+      done({
+        contents: `$cid: null !default; $config: () !default;`
+      });
+    }
+  }
 }
 
 class scssPlugin extends plugin {
@@ -57,6 +78,7 @@ class scssPlugin extends plugin {
         this.internalSassRules = new Storage;
         this.internalSassRulesRequired = new Storage;
         this.iconsSaveStorage = new Storage;
+        this.componentsDepends = new Storage;
         let model = Model({
             oid: {
                 type: 'string',
@@ -89,18 +111,30 @@ class scssPlugin extends plugin {
             this.depends[cid] = [];
         });
     }
-    regComponentRouter(cid, url) {
-        if(url != 'stdin') {
+    getDepsFor(cid) {
+        let deps = this.componentsDepends.get({
+          usedCID: cid
+        });
+        return _.uniq(_.pluck(deps, 'cid'));
+    }
+    regComponentRouter(url, cid) {
+        //this.componentsDepends
+        if(path.isAbsolute(url)) {
             let forCID = this.cidByPath(url);
-            if(!this.depends[forCID]) {
+            this.componentsDepends.set({
+              cid: forCID, // Данный компонент
+              usedCID: cid // включает данный компонент
+            });
+            /*if(!this.depends[forCID]) {
                 this.depends[forCID] = [];
             }
             if(this.depends[forCID].indexOf(cid) == -1) {
                 this.depends[forCID].push(cid);
-            }
+            }*/
         }
     }
     _importer(url, prev, done, context) {
+      //console.log(url, prev);
         (async() => {
           try {
               let routes = require('./route');
@@ -118,11 +152,43 @@ class scssPlugin extends plugin {
                             contents
                           });
                       } else {
-                        done({
-                            file: path.join(this[to.root], to.path)
-                        });
+                        let ph = path.join(this[to.root], to.path);
+                        if(fs.existsSync(ph)) {
+                          done({
+                              file: ph
+                          });
+                        } else {
+                          done({
+                            contents: to.default || ''
+                          });
+                        }
                       }
                   } else {
+                      if(url == 'ungic.component.core') {
+                        if(path.isAbsolute(prev)) {
+                          let cid = this.cidByPath(prev);
+                          return done({
+                            file: path.join(this.components, cid, '.core')
+                          });
+                        } else {
+                          this.log('Inappropriate use of ungic.core module!');
+                          return done({
+                            content: ''
+                          });
+                        }
+                      }
+                      if(url == 'ungic.component.props') {
+                        let cid;
+                        if(!path.isAbsolute(prev)) {
+                          let parsed = prev.split('.');
+                            cid = parsed[2];
+                        } else {
+                          cid = this.cidByPath(prev);
+                        }
+                        return done({
+                          file: path.join(this.components, cid, '.core', 'props')
+                        });
+                      }
                       if(/^ungic\.from-html/.test(url)) {
                           let lid = url.split('.')[2];
                           let cid = 'stdin';
@@ -192,10 +258,10 @@ class scssPlugin extends plugin {
                               });
                           }
                           let cid = parsed[2];
-                          this.regComponentRouter(cid, prev);
+                          this.regComponentRouter(prev, cid);
                           if(parsed.length == 3) {
                               if(!await fsp.exists(path.join(this.components, cid))) {
-                                  this.error(`Error while processing ${url} module in ${prev} file. ${cid} component does not exist`);
+                                  this.error(`Error while processing ${url} module in ${prev}. ${cid} component does not exist`);
                                   return done({
                                       contents: '@function exist() {@return false}'
                                   });
@@ -204,27 +270,37 @@ class scssPlugin extends plugin {
                                   file: path.join(this.components, cid)
                               });
                           } else {
-                              let route = parsed.pop();
-                              if(route == 'core') {
-                                  route = '.core';
+                              if(parsed[3] === 'core') {
+                                parsed[3] = '.core';
                               }
+                              let route = parsed.slice(3).join(path.sep);
 
-                              if(route == 'theme') {
-                                  route = '.core/theme';
+                              let getFilePath = async () => {
+                                let exist = await fsp.exists(path.join(this.components, cid, route));
+                                if(exist) {
+                                  return path.join(this.components, cid, route);
+                                }
+                                let existAsFile = await fsp.exists(path.join(this.components, cid, route + '.scss'));
+                                if(existAsFile) {
+                                  return path.join(this.components, cid, route + '.scss');
+                                }
                               }
-
+                              let existPath = await getFilePath();
                               if(componentsMethods[route]) {
                                   return componentsMethods[route].call(this, cid, done);
-
-                              } else if(await fsp.exists(path.join(this.components, cid, route)) || await fsp.exists(path.join(this.components, cid, route + '.scss'))) {
+                              } else if(existPath) {
+                                  let wEx = await fsp.exists(path.join(this.components, cid, route + '.scss'));
                                   return done({
-                                      file: path.join(this.components, cid, route)
+                                      file: existPath
                                   });
                               } else {
+                                let notRequired = ['once', 'properties', 'config'];
                                   if(route == 'render') {
-                                      this.warning(`Warning while processing ${url} module in ${prev} file. ${cid} component has no method for rendering`);
+                                    this.warning(`Warning while processing ${url} module in ${prev}. ${cid} component has no method for rendering`);
                                   } else {
-                                      this.error(`Error while processing ${url} module in ${prev} file. ${route} handler not found for routing component`);
+                                    if(!notRequired.includes(route)) {
+                                      this.error(`Error while processing ${url} module in ${prev}. ${route} handler not found for routing component`);
+                                    }
                                   }
                                   return done({
                                       contents: ''
@@ -238,7 +314,7 @@ class scssPlugin extends plugin {
                               file: path.join(this.root, 'project', 'themes', theme)
                           });
                       } else {
-                          this.error(`Error while processing ${url} module in ${prev} file. ${url} route not exists`);
+                          this.error(`Error while processing ${url} module in ${prev}. ${url} route not exists`);
                           return done({
                               contents: ''
                           });
@@ -279,7 +355,7 @@ class scssPlugin extends plugin {
               }
           } catch(e) {
             let message = e.stack;
-            this.error(`Error while processing ${url} module in ${prev} file. Sass compilation error: ${message}`);
+            this.error(`Error while processing ${url} module in ${prev}. Sass compilation error: ${message}`);
             if(message.indexOf("NoSuchMethodError: method not found: 'call'") != -1) {
               this.error('Attempt to use an unknown "'+url+'" component. Error in '+ prev);
             }
@@ -325,9 +401,9 @@ class scssPlugin extends plugin {
         let renderConfig = _.extend({
           data,
           importer: function() {
-                let args = [...arguments];
-                args.push(this);
-                self._importer.call(self, ...args);
+              let args = [...arguments];
+              args.push(this);
+              self._importer.call(self, ...args);
           },
           outputStyle: "expanded",
           functions,
@@ -450,10 +526,11 @@ class scssPlugin extends plugin {
         let renderTemplate = path.join(this.framework, 'render.hbs.scss');
         renderTemplate = await fsp.readFile(renderTemplate, 'UTF-8');
         let config = this.config;
-        let source = {components: await this.getComponents(), render: components, advancedExport: config.advancedExport};
+        let source = {components: await this.getComponents(), render: components};
 
         this.internalSassRulesRequired.clean(e => components.indexOf(e.cid) != -1);
         this.iconsSaveStorage.clean(e => components.indexOf(e.cid) != -1);
+        this.componentsDepends.clean(e => components.indexOf(e.cid) != -1);
         let toRemove = this.exports.filter(exp => ['project'].concat(components).indexOf(exp.get('cid')) != -1);
         this.exports.remove(toRemove, {silent: true});
         let build = this.builder.config;
@@ -641,6 +718,7 @@ class scssPlugin extends plugin {
         let config = this.config;
         let prjConfig = this.project.config;
         for(let event of events) {
+           //console.log(event);
             try {
                 await this._renderComponents(event.components);
             } catch(e) {
@@ -691,7 +769,6 @@ class scssPlugin extends plugin {
 
         if(!await fsp.exists(path.join(this.root, 'project'))) {
             await fse.copy(path.join(this.framework, 'project'), path.join(this.root, 'project'));
-            await fse.outputFile(path.join(this.root, 'README.txt'), 'If you are just starting to work with Ungic then to get started, you should open the following files:\n * project/config.scss\n * project/properties.scss\n * project/reassignment.scss \n and read the comments at the beginning of the files.\n\nNote! In order to start writing your own styles, you need to create components!\nYou need to run the ungic project (> ungic run) and go to the scss plugin menu (> scss), use the "create <cid>" command to create a new component!\nAfter that, study the files that will appear in the components directory! Good luck!');
         }
 
         if(this.project.config.build.plugins[this.id]) {
@@ -710,6 +787,7 @@ class scssPlugin extends plugin {
                 components = await this.getComponents();
                 break
             }
+
             for(let ev of events[event]) {
                 let cid = this.cidByPath(ev.dirname);
                 component_phs.push({
@@ -726,6 +804,8 @@ class scssPlugin extends plugin {
         if(components.length) {
             for(let cid of components) {
                 let deps = this.getDepsFor(cid);
+                //console.log('cid', cid);
+                //console.log('deps', deps);
                 if(deps.length) {
                     for(let dep of deps) {
                         if(components.indexOf(dep) == -1 && _.find(component_phs, e => (e.cid == cid && path.basename(path.relative(path.join(this.components, e.cid), e.path), path.extname(e.path)) != 'render' && path.dirname(path.relative(path.join(this.components, e.cid), e.path)) != 'render'))) {
@@ -825,21 +905,12 @@ class scssPlugin extends plugin {
             components: [cid]
         });
     }
-    getDepsFor(cid) {
-        let deps = [];
-        for(let compID in this.depends) {
-            if(this.depends[compID].indexOf(cid) != -1) {
-                deps.push(compID);
-            }
-        }
-        return _.uniq(deps);
-    }
     async removeComponent(cid) {
         let toPath = path.join(this.components, cid);
         if(await fsp.exists(toPath)) {
             let deps = this.getDepsFor(cid);
             if(deps.length) {
-                throw new Error(`"${deps.join(', ')}" components depend on this component.`);
+                throw new Error(`This component is used by other components (${deps.join(', ')}).`);
             }
             let watched = this.unwatched;
             this.unwatch();

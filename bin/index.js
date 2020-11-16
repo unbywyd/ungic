@@ -68,6 +68,9 @@ class app extends skeleton {
 
         let introPluginsSettings = (key, env) => {
             let getConfig = (ph) => {
+                if(!ph) {
+                    return {}
+                }
                 try {
                     let data = fs.readFileSync(ph, 'UTF-8');
                     data = JSON.parse(data);
@@ -78,6 +81,7 @@ class app extends skeleton {
                 return {}
             }
             let configs = [getConfig(packagePath), getConfig(configPath)];
+
             if(!PLUGINS_SETTINGS[key]) {
                 PLUGINS_SETTINGS[key] = {}
             }
@@ -97,12 +101,14 @@ class app extends skeleton {
             config.name = packageData.name;
             config.version = packageData.version;
             config.author = packageData.author;
-            introPluginsSettings('browserslist', 'BROWSERSLIST');
-            introPluginsSettings('cleancss');
-            introPluginsSettings('htmlminifier');
-            introPluginsSettings('cheerio');
-            introPluginsSettings('beautify');
         }
+
+        introPluginsSettings('browserslist', 'BROWSERSLIST');
+        introPluginsSettings('cleancss');
+        introPluginsSettings('htmlminifier');
+        introPluginsSettings('cheerio');
+        introPluginsSettings('beautify');
+
         if(configPath) {
             config = Object.assign(config, require(configPath), config_cmd);
         } else {
@@ -294,7 +300,6 @@ class app extends skeleton {
         this.project.on('plug_rendered', id => {
             this.finishController.releaseTask(id);
         });
-
 
         try {
             await this.project.initialize({run: true});

@@ -5,16 +5,11 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
   opts = opts || {}
   return function (root, result) {
     let regexp = /^\.un-inverse|^\.un-theme/;
-    //let selectors = new Map();
 
-    root.walkRules(function(rule) {
+    let parseRule = rule => {
         let props = {
             'background': 'background-color',
             'border': 'border-color',
-            //'border-top': 'border-top-color',
-            //'border-right': 'border-right-color',
-            //'border-bottom': 'border-bottom-color',
-            //'border-left': 'border-left-color',
             'outline': 'outline-color'
         };
 
@@ -40,16 +35,16 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
             'text-shadow',
             'box-shadow'
         ]
-        if('string' == typeof rule.selector && regexp.test(rule.selector)) { // (rule.selector.indexOf('.un-inverse') != -1 || rule.selector.indexOf('.un-theme') != -1)
+        if('string' == typeof rule.selector && regexp.test(rule.selector)) {
             let saveProps, saveInverseProps;
 
             // +
             if(rule.selector.indexOf('[un-save-props]') != -1) {
-                rule.selector = rule.selector.replace('[un-save-props]', '');
+                rule.selector = rule.selector.replace(/\[un-save-props\]/gm, '');
                 saveProps = true;
             }
             if(rule.selector.indexOf('[un-save-inverse-props]') != -1) {
-                rule.selector = rule.selector.replace('[un-save-inverse-props]', '');
+                rule.selector = rule.selector.replace(/\[un-save-inverse-props\]/gm, '');
                 saveInverseProps = true;
             }
 
@@ -57,25 +52,27 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
                 if(rule.selector.indexOf('.un-inverse') != -1) {
                     rule.remove();
                 } else {
-                    rule.selector = rule.selector.replace('[un-inverse-ignore]', '');
+                    rule.selector = rule.selector.replace(/\[un-inverse-ignore\]/gm, '');
                 }
                 return
             }
 
             if(rule.selector.indexOf('[un-prefix') != -1) {
-                let regexp = /\[un-prefix=(?:'|")([^\]]+)(?:'|")\]/;
-                let search = rule.selector.match(regexp);
-                let regexpTheme = /(^\.un-theme-[^\s]+)\s+\[un-prefix=(?:'|")([^'"]+)(?:'|")\]/;
-                if(regexpTheme.test(rule.selector)) {
-                    search = rule.selector.match(regexpTheme);
-                    let selector = search[2];
-                    if(selector.indexOf(':') != -1) {
-                        selector = ':' + selector.split(':')[1];
+                rule.selector = rule.selector.split(/,\s+/).map(s => {
+                    let regexp = /\[un-prefix=(?:'|")?\{\{(.+)\}\}(?:'|")?\]/;
+                    let search = s.match(regexp);
+                    let regexpTheme =  /(^\.un-theme-[^\s]+)\s+\[un-prefix=(?:'|")?\{\{(.+)\}\}(?:'|")?\]/;
+                    if(regexpTheme.test(s)) {
+                        search = s.match(regexpTheme);
+                        let selector = search[2];
+                        if(selector.indexOf(':') != -1) {
+                            selector = ':' + selector.split(':')[1];
+                        }
+                        s = s.replace(search[0], search[1] + selector);
+                    } else {
+                        s = s.replace(regexp, search[1]);
                     }
-                    rule.selector = rule.selector.replace(search[0], search[1] + selector);
-                } else {
-                    rule.selector = rule.selector.replace(regexp, search[1]);
-                }
+                }).join(',');
             }
 
             /*  is-theme
@@ -104,8 +101,6 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
             }
 
             rule.walkDecls(decl => {
-                //console.log(rule.selector);
-                let originSelector = rule.selector.replace(/\.un-inverse\s*|\.un-theme-[^\s]+\s+|^[^:]+:not\(.un-inverse\)\s+/gm, '').trim();
                 if (decl.prop) {
                     let prop = decl.prop;
                     let colors = extractor.fromDecl(decl);
@@ -113,21 +108,7 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
                         if(propertiesToSave.indexOf(prop) == -1 && prop.indexOf('color') == -1) {
                             decl.remove();
                         }
-                    } //else {
-                        /*if(selectors.has(originSelector + '-' + decl.prop)) {
-                            let originValue = selectors.get(originSelector + '-' + decl.prop);
-                            if(originValue == decl.value) {
-                                //decl.remove();
-                                return
-                            }
-                        }*/
-                        //selectors.set(originSelector + '-' + decl.prop, decl.value);
-
-                        /*if(props[prop] && colors.length === 1) {
-                            decl.prop = props[prop];
-                            decl.value = colors[0];
-                        }*/
-                    //}
+                    }
                 }
                 if(!rule.nodes.length) {
                     rule.remove();
@@ -136,27 +117,44 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
 
         } else {
             if(rule.selector.indexOf('[un-save-props]') != -1) {
-                rule.selector = rule.selector.replace('[un-save-props]', '');
+                rule.selector = rule.selector.replace(/\[un-save-props\]/gm, '');
             }
             if(rule.selector.indexOf('[un-inverse-ignore]') != -1) {
-                rule.selector = rule.selector.replace('[un-inverse-ignore]', '');
+                rule.selector = rule.selector.replace(/\[un-inverse-ignore\]/gm, '');
             }
             if(rule.selector.indexOf('[un-prefix') != -1) {
-                let regexp = /\[un-prefix=(?:'|")+?([^\]]+)(?:'|")+?\]/;
-                let search = rule.selector.match(regexp);
-
-                rule.selector = rule.selector.replace(regexp, search[1]);
+                let regexp = /\[un-prefix=(?:'|")?\{\{(.+)\}\}(?:'|")?\]/;
+                rule.selector = rule.selector.split(/,\s+/).map(selector => {
+                    let search = selector.match(regexp);
+                    return selector.replace(regexp, search[1]);
+                }).join(',');
             }
-            /*rule.walkDecls(decl => {
-                if(decl.prop && propertiesToSave.indexOf(decl.prop) != -1) {
-                    let originSelector = rule.selector.replace(/^[^:]+:not\(.un-inverse\)\s+/gm, '').trim();
-                    selectors.set(originSelector + '-' + decl.prop, decl.value);
-                }
-            });*/
+        }
+    }
+    root.walkRules(function(rule) {
+        parseRule(rule);
+        let regexp = /^.un-(theme|inverse)([^\s]+)?\s+html/gm;
+        if(regexp.test(rule.selector)) {
+            rule.selector = rule.selector.split(/,\s+/).map(s => {
+                return s.replace(regexp, function(m) {
+                    if(/^html/.test(m)) {
+                        return m.replace(/html$/gm, '');
+                    } else {
+                        return 'html' + m.replace(/html$/, '');
+                    }
+                });
+            }).join(', ');
+        }
+
+        if(/html:not/gm.test(rule.selector)) {
+            rule.selector = rule.selector.split(/,\s+/).map(function(s) {
+                return s.replace(/(?!^)\s+?html:not/gm, ':not');
+            }).join(',');
         }
     });
+
     root.walkAtRules(function(rule) {
-        if(rule.parent && ('string' == typeof rule.parent.selector && regexp.test(rule.parent.selector))) { // (rule.selector.indexOf('.un-inverse') != -1 || rule.selector.indexOf('.un-theme') != -1))
+        if(rule.parent && ('string' == typeof rule.parent.selector && regexp.test(rule.parent.selector))) {
             rule.remove();
         }
     });

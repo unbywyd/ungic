@@ -1,19 +1,8 @@
 @use "functions" as *;
 @use "init" as config;
 @use "sass:map";
+@use "ungic.meta"as un-meta;
 
-@mixin _wrap($prepend) {
-    $output: ();
-    @if(&) {
-        @at-root #{$prepend} & {
-            @content;
-        }
-    } @else {
-        @at-root #{$prepend} {
-            @content;
-        }
-    }
-}
 
 /*
 *  Generate css rules for theme inversion only
@@ -22,11 +11,11 @@
     $inverse: get(inverse);
     $inverse-mode: get(inverse-mode);
     @if $inverse and not $inverse-mode {
-        @include _wrap('[un-prefix="html:not(.un-inverse)"]') {
+        @include un-meta.wrapsys('[un-prefix="{{html:not(.un-inverse)}}"]') {
             @content;
         }
     } @else if $inverse {
-        @include _wrap('[un-save-inverse-props]') {
+        @include un-meta.wrapsys('[un-save-inverse-props]') {
             @content;
         }
     }
@@ -39,11 +28,11 @@
     $inverse: get(inverse);
     $inverse-mode: get(inverse-mode);
     @if get(theme-type) == $type and not $inverse-mode {
-        @include _wrap('[un-prefix="html:not(.un-inverse)"]') {
+        @include un-meta.wrapsys('[un-prefix="{{html:not(.un-inverse)}}"]') {
             @content;
         }
     } @else if $inverse-mode and get(theme-type) == $type {
-        @include _wrap('[un-save-inverse-props]') {
+        @include un-meta.wrapsys('[un-save-inverse-props]') {
             @content;
         }
     }
@@ -66,8 +55,14 @@
     $theme-prefix: map.get(config.$project, theme-prefix);
     $active-name: get(name);
     @if $theme-name == $active-name {
-        @include _wrap('[un-save-props]') {
-            @content;
+        @if $theme-name == 'default' {
+            @include un-meta.wrapsys('[un-save-props] html:not(.un-theme)') {
+                @content;
+            }
+        } @else {
+            @include un-meta.wrapsys('[un-save-props]') {
+                @content;
+            }
         }
     }
 }
@@ -76,7 +71,7 @@
 *   Ignore inversion
 */
 @mixin ignore-inverse {
-    @include _wrap('[un-inverse-ignore]') {
+    @include un-meta.wrapsys('[un-inverse-ignore]') {
         @content;
     }
 }
@@ -85,7 +80,7 @@
 *   Custom method for manual inversion control
 */
 @mixin is($prefix) {
-    @include _wrap("[un-prefix='#{$prefix}']") {
+    @include un-meta.wrapsys("[un-prefix='{{#{$prefix}}}']") {
         @content;
     }
 }

@@ -9,12 +9,13 @@ module.exports = function(plugin, build_name) {
 	}
 	let hasBuildName = !!(releaseBuilds[build_name]);
 	if (hasBuildName) {
-	  config = _.extend(config, releaseBuilds[build_name]);
+	  config = _.extend(config, (releaseBuilds.default || {}), releaseBuilds[build_name]);
+
 	  let configId = releaseBuilds[build_name].configId;
 	  if (!releaseConfigs[configId]) {
 	    this.logger.warning(`${configId} config is not specified in release configs for ${plugin.id} plugin. Default configuration will be used.`, 'CLI');
 	  } else {
-	    config = _.extend(config, releaseConfigs[configId]);
+	    config = _.extend(config, releaseConfigs[configId], releaseBuilds[build_name]);
 	  }
 	} else {
 		this.logger.warning(`${build_name} release is not specified for ${plugin.id} plugin. Default configuration will be used.`, 'CLI');

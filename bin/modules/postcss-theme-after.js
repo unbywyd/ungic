@@ -7,11 +7,13 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
     let regexp = /((\[dir[^\s]+)\s+)(.un-inverse|.un-theme)/;
     root.walkRules(function(rule) {
         let toReplace = (selector) => {
-          let search = selector.match(regexp);
-          if(search) {
-              return toReplace(selector.replace(search[1], search[2]));
-          }
-          return selector;
+          return selector.split(/,\s+/).map(selector => {
+            let search = selector.match(regexp);
+            if(search) {
+                return toReplace(selector.replace(search[1], search[2]));
+            }
+            return selector;
+          }).join(',');
         }
         rule.selector = toReplace(rule.selector);
     });

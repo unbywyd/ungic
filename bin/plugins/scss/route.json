@@ -1,19 +1,21 @@
 {
     "ungic.default-theme": {
         "root": "root",
-        "path": "project/themes/default"
+        "path": "project/themes/default.scss"
     },
     "ungic.project": {
-        "root": "root",
-        "path": "project/"
+        "root": "framework",
+        "path": "ungic/project/index.scss"
     },
     "ungic.project.properties": {
         "root": "root",
-        "path": "project/properties"
+        "default": "",
+        "path": "project/properties.scss"
     },
     "ungic.project.config": {
         "root": "root",
-        "path": "project/config"
+        "default": "$available-theme-colors:(extra)",
+        "path": "project/config.scss"
     },
     "ungic.project.functions": {
         "root": "framework",

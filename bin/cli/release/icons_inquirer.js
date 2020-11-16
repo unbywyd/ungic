@@ -108,6 +108,25 @@ module.exports = async function(args, defaultConfig={}, overlayConfig={}) {
     return iconsChoosed;
   }
 
+  let parseDefaultValues = async () => {
+    if(release.sprites) {
+      let _icons = await getDefaultIcons(false);
+      if(!_icons.length) {
+        release.sprites = false;
+      } else {
+        release.sprites = _icons;
+      }
+    }
+    if(release.svgIcons) {
+      let _icons = await getDefaultIcons(true);
+      if(!_icons.length) {
+        release.svgIcons = false;
+      } else {
+        release.svgIcons = _icons;
+      }
+    }
+  }
+
   if(response && response.reconfig) {
     if(args.requestVersion) {
       response = await prompts.call(this, [{
@@ -203,6 +222,10 @@ module.exports = async function(args, defaultConfig={}, overlayConfig={}) {
     if(hasSvg) {
       if(!args.commonRelease) {
         await iconsRequest(true);
+      } else {
+        if((release.sprites && !Array.isArray(release.sprites)) || (release.svgIcons && !Array.isArray(release.svgIcons))) {
+          await parseDefaultValues();
+        }
       }
       if(release.svgIcons) {
         response = await prompts.call(this, [{
@@ -237,22 +260,7 @@ module.exports = async function(args, defaultConfig={}, overlayConfig={}) {
       this.logger.system(`No resources provided (icons, images), icons release will not be implemented.`);
     }
   } else {
-    if(release.sprites) {
-      let icons = await getDefaultIcons(false);
-      if(!icons.length) {
-        release.sprites = false;
-      } else {
-        release.sprites = icons;
-      }
-    }
-    if(release.svgIcons) {
-      let icons = await getDefaultIcons(true);
-      if(!icons.length) {
-        release.svgIcons = false;
-      } else {
-        release.svgIcons = icons;
-      }
-    }
+    await parseDefaultValues();
     if(!release.sprites && !release.svgIcons) {
       this.logger.system(`No resources provided (icons, images), icons release will not be implemented.`);
     }

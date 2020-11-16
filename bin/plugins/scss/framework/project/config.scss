@@ -1,15 +1,6 @@
 /*
 *   Here you can set global variables for the entire project
-*		you can access them from components in the following ways:
-*		1. Use module "ungic.project.config"
-*				@use "ungic.project.config" as config;
-*				@debug meta.module-variables(config);
-*		2. Get access from component:
-*			@use ".core"as this;
-*			@debug this.project-config();
-*		3. Get access to $project from component and extract config from it:
-*			@use ".core"as this;
-*			@debug map.get(this.$project, 'config');
 */
-$available-theme-colors: (primary, secondary, extra, info, system, danger, success, warning, text-color, background-color);
+
+$available-theme-colors: (extra);
 

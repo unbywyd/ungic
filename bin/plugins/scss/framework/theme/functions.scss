@@ -10,10 +10,12 @@
 
 $theme: meta.module-variables(theme);
 
-
-@function has-palette($color-name, $tint-name) {
-    @if $color-name == gray or $color-name == grey or $color-name == "gray" or $color-name == "grey" {
-        @return true;
+/*
+*   check if the color has a palette
+*/
+@function has-palette($color-name, $tint-name, $silent: false) {
+    @if type-of($color-name) != string {
+        $color-name: meta.inspect($color-name);
     }
     @if type-of($color-name) != string {
         @warn '#{$color-name} must be a registered color-name';
@@ -23,36 +25,59 @@ $theme: meta.module-variables(theme);
         @return false;
     }
     $palettes: get(palettes);
-
+    $theme-name: map.get(map.get($theme, settings), theme-name);
     @if(type-of($palettes) != map) {
-        @warn 'No palettes. Requires #{$tint-name} tint of palette for #{$color-name} color.';
+        @if not $silent {
+            @warn '#{$theme-name} theme is no palette. #{$tint-name} tint palette is required for #{$color-name} color.';
+        }
         @return false;
     }
     @if not map.has-key($palettes, $color-name) {
-        @warn 'No palette for #{$color-name} color. Requires #{$tint-name} tint of palette for #{$color-name} color.';
+        @if not $silent {
+            @warn 'The palette for #{$color-name} color was not specified. #{$tint-name} tint palette is required for #{$color-name} color.';
+        }
         @return false;
     }
     @if type-of(map.get($palettes, $color-name)) != map {
-        @warn 'Palette of #{$color-name} color must be a map. Requires #{$tint-name} tint of palette for #{$color-name} color.';
+         @if not $silent {
+            @warn 'The palette of #{$color-name} color must be a map. #{$tint-name} tint palette is required for #{$color-name} color.';
+        }
         @return false;
     }
     @return true;
 }
 
+/*
+*   check if a tint exists in the palette
+*/
+@function has-palette-tint($color-name, $tint-name, $silent: false) {
+    $palettes: get(palettes);
+    $palette: map.get($palettes, $color-name);
+    @if not map.has-key($palette, $tint-name) {
+        @if not $silent {
+            @warn '#{$tint-name} tint palette for #{$color-name} color not specified';
+        }
+        @return false;
+    } @else {
+        @return true;
+    }
+}
 
 /*
 *   Get color from palette
 */
 @function palette($color-name, $tint-name, $hue-offset: 0) {
-
-    @if $color-name == gray or $color-name == grey or $color-name == "gray" or $color-name == "grey" {
+    @if type-of($color-name) != string {
+        $color-name: meta.inspect($color-name);
+    }
+    @if $color-name == "grey" {
         $color-name: "gray";
     }
     @if has-palette($color-name, $tint-name) {
         $palettes: get(palettes);
         $palette: map.get($palettes, $color-name);
         @if not map.has-key($palette, $tint-name) {
-            @warn '#{$tint-name} tint for #{$color-name} color not exist';
+            @warn '#{$tint-name} tint palette for #{$color-name} color not specified';
             @return colors($color-name);
         }
         $color: map.get($palette, $tint-name);
@@ -289,8 +314,6 @@ $theme: meta.module-variables(theme);
     $color: color.adjust(lighten($color, $percent), $hue: $offset);
     $hsl: un-meta.hsl($color);
 
-    //$s: ((100 - list.nth($hsl, 2)) * strip-unit($percent) / 100) + list.nth($hsl, 2);
-    //$result: hsl(list.nth($hsl, 1), $s, list.nth($hsl, 3));
     $result: hsl(list.nth($hsl, 1), list.nth($hsl, 2), list.nth($hsl, 3));
 
     $change-saturation: $saturation;
@@ -430,7 +453,10 @@ $theme: meta.module-variables(theme);
 *   Get theme colors or specific color
 */
 @function colors($color: '') {
-    @if $color == gray or $color == grey or $color == "gray" or $color == "grey" {
+    @if type-of($color) != string {
+        $color: meta.inspect($color);
+    }
+    @if $color == "gray" or $color == "grey" {
         @return gray();
     }
     $colors: get(colors);
@@ -481,7 +507,6 @@ $theme: meta.module-variables(theme);
         $hue: list.nth(un-meta.hsl($hue), 1);
     }
 
-
     $color: color.adjust(
         color.grayscale(color.mix(colors(background-color), colors(text-color))),
         $saturation: $saturation
@@ -500,17 +525,22 @@ $theme: meta.module-variables(theme);
 */
 
 @function color($color-name, $color-tint: 0, $hue-offset: 0, $saturation: 0) {
+    @if type-of($color-name) != string {
+        $color-name: meta.inspect($color-name);
+    }
     @if type-of($color-tint) == string {
         @return palette($color-name, $color-tint, $hue-offset);
     }
     @if type-of($color-tint) == list {
         $tint-id: nth($color-tint, 1);
-        @if(has-palette($color-name, $tint-id)) {
-            @return palette($color-name, $tint-id, $hue-offset);
+        @if(has-palette($color-name, $tint-id, true)) {
+            @if(has-palette-tint($color-name, $tint-id, true)) {
+                @return palette($color-name, $tint-id, $hue-offset);
+            }
         }
         $color-tint: nth($color-tint, 2);
     }
-    @if $color-name == gray or $color-name  == grey or $color-name == "gray" or $color-name == "grey" {
+    @if $color-name == "gray" or $color-name == "grey" {
         @return gray($color-tint);
     }
     @if type-of($color-name) != string {

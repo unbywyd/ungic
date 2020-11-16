@@ -1,182 +1,29 @@
 /*
-	 The main component file that is responsible for the generation of css styles (rules).
-	 This file may include everything that is required to write the rules.
-	 A quick tip on existing modules:
-
-				// STRUCTURE OF COMPONENT
-				_____________________________________
-
-						* // CORE OF COMPONENT
-						@Module ".core" - Get access to the main functionality of the component (Example: @use ".core" as this)
-							You can access to:
-									@Variables
-										this.$config or this.config() method  - component configuration (processed variables after overrides)
-										this.$project - get access to source project variables, but it is better to use the ungic.project module, see below
-
-									@Functions:
-										this.config($key:'')					//	Get processed config of component
-										this.exist()									//	Checks if the component exists in project
-										this.export($oid, $data)			//	Export data to JSON (Can be included in html templates as data in real time)
-										this.this($selector)					//	Generates a selector class based on the component name
-										this.cid($as_selector:null)		//	Get current component id
-										this.properties() 						//  Get all properties as map
-										this.prop($prop, $args...)		// 	Get final property value (the default value is overwritten by the project value and then by the value of component itself)
-										this.is-prop-changed($prop)		//  Checks if the property value is different from the default (default properties are exclusively in the core of the framework)
-
-									@Mixins:
-										this.component
-										this.this
-										this.wrap($suffix: null, $merge: true)
-										this.and($suffix: null)
-										this.nest($suffix: null)
-
-						* // FUNCTIONS AND MIXINS OF COMPONENT
-						@Module "functions" as functions -  get access to personal functions
-						@Module "mixins" as mixins -  get access to personal mixins
-						// You can also attach any newly created files in the component
-
-						* // CROSS-USE OF COMPONENTS
-						@Module "ungic.components" - get all components id of this project (Example: @use "ungic.components" as cids; $cids: cids.$cids)
-						// Get core of another component
-						@Module "ungic.components.{CID}" - get other component as module (Full access to the core of the component)
-						// Get theme of another component
-						@Module "ungic.components.{CID}.theme - get theme module of component
-						@Module "ungic.components.{CID}.render" - get component rules. Example for use: @include meta.load-css("ungic.components.grid.render");
-						@Module "ungic.components.{CID}.mixins - get personal mixins of component
-						@Module "ungic.components.{CID}.functions - get personal functions of component
-
-				* // THEME
-				_____________________________________
-				@Module "ungic.theme" -  get theme module
-						@use "ungic.theme" as theme;
-						You can access to:
-							@Functions:
-								theme.has-palette($color-name, $tint-name)
-								theme.palette($color-name, $tint-name, $hue-offset: 0)
-								theme.lighten($color, $percent)
-								theme.darken($color, $percent)
-								theme.lightness($color, $percent)
-								theme.brightness($color, $percent, $hue-offset: null)
-								theme.dim($color, $percent, $hue-offset: null)
-								theme.brighten($color, $percent, $hue-offset: null)
-								theme.tint($color, $amount)
-								theme.theme-config($key:'')
-								theme.get($key:'')
-								theme.subs($light, $dark)
-								theme.subs-theme($theme_name, $value, $default: null)
-								theme.colors($color: '')
-								theme.gray($offset:0)
-								theme.color($color-name, $color-tint: 0, $hue-offset: 0)
-
-							@Mixins:
-								theme.is-inverse
-								theme.is-dark()
-								theme.is-light()
-								theme.is-type($type)
-								theme.is-theme($theme-name)
-								theme.ignore-inverse
-								theme.is($prefix)
-
-				// ICONS
-				_____________________________________
-						@Module "ungic.sprites" -  get sprites module from icons plugin
-								You can access to:
-										@Functions:
-											exist() - Check if this component is activated in the project (In the configuration of the plugin icons, you can disable the generation of sprites, then this function will be available and will return false)
-											get-icons() - Get all icons
-											get-icon($icon_name) - Get data map of icon by $icon_name
-											icon-exist($icon_name) or has-icon($icon_name) - Check if icon exist
-											get-icons-list() - Get icons list
-
-										@Mixins:
-											render() - to render all icons
-											icon-core() - ro render core styles of icon
-											icon($icon-name) - to render specific icon
-											icon-label() - to render label of icon
-
-										@Variables:
-											$url - Get URL to sprite
-											$className	- Get className of sprite
-
-						@Module "ungic.font-icons" - get font icons module from icons plugin
-								You can access to:
-										@Functions:
-											exist() - Check if this component is activated in the project (In the configuration of the plugin icons, you can disable the generation of sprites, then this function will be available and will return false)
-											get-icons() - Get all icons
-											get-icon($icon_name) - Get data map of icon by $icon_name
-											icon-exist($icon_name) or has-icon($icon_name) - Check if icon exist
-											get-icons-list() - Get icons list
-
-										@Mixins:
-											render() - to render all icons
-											icon-core() - ro render core styles of icon
-											icon($icon-name) - to render specific icon
-											icon-label() - to render label of icon
-
-										@Variables:
-											$url - Get URL to fonts
-											$fontFamily	- Get font-family of icons
-											$className	- Get className of icons
-
-				// PROJECT
-				_____________________________________
-						@Module "ungic.project" as project - get access to project
-								You can access to:
-									@Variables:
-										project.$config - Get project configuration
-										project.$properties - Get project properties
-									@Functions:
-										project.prop($prop); Get project property value
-										project.config($key); Get project config, without an argument will return the entire config.
-
-						@Module "ungic.project.config" - get project configuration
-						@Module "ungic.project.functions" - get project functions
-
-				// SYSTEM AND HELPERS
-				_____________________________________
-						@Module "ungic.default-properties"
-						@Module "ungic.default-theme"
-						@Module "ungic.meta" - System methods
-						@Module "ungic.utils" as utils - Various tools:
-
-							// UTILS
-							@Functions:
-								utils.str-replace($string, $search, $replace: '', $global: true)
-								utils.deep-merge($source-map, $secondary-map)
-								utils.merge($maps...)
-								utils.negative($number)
-								utils.unit-merge($number, $unit)
-								utils.strip-unit($number)
-								utils.remove-nth($list, $index)
-								utils.replace-nth($list, $index, $replaceable_value)
-								utils.char($character-code)
-
-								// RTL tools
-								utils.dir($ltr, $rtl) // get value relative to direction
-								utils.rtli($val) // rtl ignore or @function rtl-ignore($val)
-								utils.rtl-prepend($ltr, $rtl-prepend, $sep:' ')
-								utils.rtl-append($ltr, $rtl-append, $sep: ' ')
-
-							// META (Contains mostly internal methods of the framework)
-								@use "ungic.meta"as unmeta;
-									@Functions:
-										unmeta.default-prop($prop)			//	Returns the default property value (From core of framework)
-
+*		This file should contain the final CSS style rules that will be generated in CSS!
 */
 
-
-@use ".core"as this;
-@use "ungic.theme"as theme;
-
-@use "functions"as *;
-@use "mixins"as *;
-@use "ungic.meta"as un-meta;
-@use "ungic.utils"as un-utils;
-
+// SASS native modules
 @use "sass:meta"as meta;
 @use "sass:map"as map;
 
+// Component core
+@use ".core"as this;
+
+// Theme module
+@use "ungic.theme"as theme;
+
+// Ungic framework modules
+@use "ungic.meta"as un-meta;
+@use "ungic.utils"as un-utils;
+
+// Custom
+@use "functions"as *;
+@use "mixins"as *;
+
+// you must include any style files here
+// or write them in this file
 
 @include this.component {
-    // rules
+  // here you can write rules based on the component selector
 }
+

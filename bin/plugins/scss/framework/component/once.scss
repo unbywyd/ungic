@@ -1,6 +1,6 @@
 /*
-*   Any actions that need to be performed only once when compiling this component
-*   For example, export of options
+*   This is the file that is processed once per compilation cycle.
+*   The main task of this file is to export data from sass
 */
 
 @use ".core" as this;

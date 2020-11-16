@@ -666,3 +666,101 @@ $project_props: project.$properties;
     }
     @return $output;
 }
+
+
+
+@function _outline-handler($outline, $properties) {
+    @if map.has-key($properties, "outline") {
+        $_outline: map.get($properties, "outline");
+        @if type-of($_outline) == map {
+            $outline: map.merge($outline, $_outline);
+        } @else if($_outline == inherit) {
+            $outline: map.merge($outline, (
+                width: inherit,
+                style: inherit
+            ));
+        } @else if type-of($_outline) != list {
+            $_outline: ($_outline, );
+        }
+
+        $styles: (dotted, dashed, solid, double, groove, ridge, inset, outset, none, hidden);
+        @each $value in $_outline {
+            @if type-of($value) == number {
+                $outline: map.merge($outline, (
+                    width: $value
+                ));
+            }
+            @if list.index($styles, $value) {
+                $outline: map.merge($outline, (
+                    style: $value
+                ));
+            }
+            @if type-of($value) == color {
+                $outline: map.merge($outline, (
+                    color: $value
+                ));
+            }
+        }
+    }
+    @if map.has-key($properties, outline-width) {
+        $outline: map.merge($outline, (
+            width: map.get($properties, outline-width)
+        ));
+    }
+    @if map.has-key($properties, outline-style) {
+        $outline: map.merge($outline, (
+            style: map.get($properties, outline-style)
+        ));
+    }
+    @if map.has-key($properties, outline-color) {
+        $outline: map.merge($outline, (
+            color: map.get($properties, outline-color)
+        ));
+    }
+    @return $outline;
+}
+@function outline($component, $param: false) {
+    $properties: map.get($component, properties);
+    $private_properties: map.get($component, private-properties);
+    $outline: (
+        width: default-props.$outline-width,
+        style: default-props.$outline-style,
+        color: default-props.$outline-color
+    );
+
+    $outline: _outline-handler($outline, $properties);
+    $outline: _outline-handler($outline, $private_properties);
+
+    @if type-of($param) == bool and $param {
+        @return $outline;
+    }
+
+    @if type-of($param) == string and map.has-key($outline, $param) {
+        @return map.get($outline, $param);
+    }
+    $outline-width: map.get($outline, width);
+    $outline-style: map.get($outline, style);
+    $outline-color: map.get($outline, color);
+    $output: ();
+
+    @if($outline-style == none) {
+        @return none;
+    }
+    @if($outline-width == 0) {
+        @return 0;
+    }
+
+    @if $outline-width != inherit {
+        $output: list.append($output, $outline-width);
+    }
+    @if $outline-style != inherit {
+        $output: list.append($output, $outline-style);
+    }
+    @if $outline-color != inherit {
+        $output: list.append($output, $outline-color);
+    }
+    @if list.length($output) == 0 {
+        @return inherit;
+    }
+    @return $output;
+}

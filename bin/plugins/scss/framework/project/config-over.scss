@@ -1,0 +1,15 @@
+/* --------------------------------------------------*/
+//	Don't change this part
+@use "sass:map";
+$cid: null !default;
+$config: () !default;
+/* ------------------------------------------------ */
+
+/*
+*   This file is used to override the configuration of components
+*   To redefine a specific component, check the $cid (Component ID) variable.
+*/
+
+@if($cid == mycomponent) {
+  $config: map.merge($config, ());
+}

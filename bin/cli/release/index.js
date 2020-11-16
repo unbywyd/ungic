@@ -17,9 +17,11 @@ module.exports = async function(args) {
   let iconsPlugin = this.app.project.plugins.get('icons');
 
   let buildConfig = this.app.config.build.releases.default;
-  if(this.app.config.build.releases[args.build_name]) {
-    buildConfig = this.app.config.build.releases[args.build_name];
+  let buildName = args.build_name || args.release_name;
+  if(this.app.config.build.releases[buildName]) {
+    buildConfig = _.extend({}, buildConfig, this.app.config.build.releases[buildName]);
   }
+
 
   let release = _.extend({
   	version: args.version ? args.version : this.app.config.version,
@@ -29,6 +31,7 @@ module.exports = async function(args) {
   args.scss_build_name = buildConfig.scssBuildName;
   args.html_build_name = buildConfig.htmlBuildName;
   args.icons_build_name = buildConfig.iconsBuildName;
+
   let pages = htmlPlugin.collection.findAllWhere({ type: 'page' });
   if(!pages.length) {
     return this.logger.system(`This project has no pages.`, 'CLI', 'warning');
@@ -44,7 +47,11 @@ module.exports = async function(args) {
 
   let reconfig = response && response.reconfig;
   args.silently = reconfig === false;
-  args.commonRelease = true;
+
+  // если включать только то, что используется
+  if(buildConfig.includeOnlyUsedComponents) {
+    args.commonRelease = true;
+  }
 
   if(reconfig) {
     response = await prompts.call(this, [{
@@ -110,7 +117,7 @@ module.exports = async function(args) {
     }
 
     let generateScssRelease = true
-    if(scssComponents.length && reconfig && buildConfig.IncludeOnlyUsedComponents) {
+    if(scssComponents.length && reconfig && buildConfig.includeOnlyUsedComponents) {
       response = await prompts.call(this, [{
         type: 'confirm',
         name: 'scss',
@@ -124,7 +131,7 @@ module.exports = async function(args) {
 
     let scssRelease;
     if(generateScssRelease) {
-      if(!buildConfig.IncludeOnlyUsedComponents) {
+      if(!buildConfig.includeOnlyUsedComponents) {
         scssRelease = await scssInquirer.call(this, args, release);
       } else if(scssComponents.length) {
         scssRelease = await scssInquirer.call(this, args, release, {
@@ -138,7 +145,7 @@ module.exports = async function(args) {
     }
 
     let generateIconsRelease = true;
-    if(commonIcons.length && reconfig && buildConfig.IncludeOnlyUsedComponents) {
+    if(commonIcons.length && reconfig && buildConfig.includeOnlyUsedComponents) {
       response = await prompts.call(this, [{
         type: 'confirm',
         name: 'icons',
@@ -152,7 +159,7 @@ module.exports = async function(args) {
 
     let iconsRelease;
     if(generateIconsRelease) {
-      if(!buildConfig.IncludeOnlyUsedComponents) {
+      if(!buildConfig.includeOnlyUsedComponents) {
         iconsRelease = await iconsInquirer.call(this, args, release);
         let allIcons = [];
         if(Array.isArray(iconsRelease.svgIcons) && iconsRelease.svgIcons.length) {
@@ -170,11 +177,10 @@ module.exports = async function(args) {
       }
     }
     let originSvgIconsMode = iconsPlugin.buildConfig.svgIconsMode;
-
     let combineIcons = buildConfig.combineIcons;
     let combineScssComponents = buildConfig.combineScssComponents;
 
-    if(reconfig && iconsRelease && pages.length) {
+    if(reconfig && iconsRelease && pagesChosen.length > 1) {
       response = await prompts.call(this, [{
         type: 'confirm',
         name: 'combineIcons',
@@ -185,7 +191,7 @@ module.exports = async function(args) {
         combineIcons = response.combineIcons;
       }
     }
-    if(reconfig && scssRelease && pages.length) {
+    if(reconfig && scssRelease && pagesChosen.length > 1) {
       response = await prompts.call(this, [{
         type: 'confirm',
         name: 'combineScssComponents',
@@ -205,8 +211,9 @@ module.exports = async function(args) {
         }
       }
     }
-
     let commonScssRelease;
+
+    // Общий релиз для стилей
     if(scssRelease) {
         try {
           commonScssRelease = await scssPlugin.release(_.extend({}, scssRelease));
@@ -214,39 +221,41 @@ module.exports = async function(args) {
           this.logger.system(`CSS release completed with an error: ${e.message}`, 'CLI', 'error');
         }
     }
-    //console.log(scssRelease);
     let scssReleasesByPage = {};
-    for(let page in releaseByPage) {
-      let data = releaseByPage[page];
-      let filename = scssRelease.releaseName + '-' + path.basename(page, path.extname(page));
-      if(!combineScssComponents) {
-        if(Array.isArray(data.pipes) && data.pipes.length && scssRelease) {
-          try {
-            let release = await scssPlugin.release(_.extend({}, scssRelease, {components: data.pipes, filename}));
-            scssReleasesByPage[page] = release;
-            this.logger.system(`${filename}.css successfully generated for the ${page} page.`);
-          } catch(e) {
-            this.logger.system(`CSS release completed with an error: ${e.message}`, 'CLI', 'error');
+
+    // Если в релизе несколько страниц и включен режим индивидуального билда.
+    if(pagesChosen.length > 1) {
+      for(let page in releaseByPage) {
+        let data = releaseByPage[page];
+        let filename = scssRelease.releaseName + '-' + path.basename(page, path.extname(page));
+        if(!combineScssComponents) {
+          if(Array.isArray(data.pipes) && data.pipes.length && scssRelease) {
+            try {
+              let release = await scssPlugin.release(_.extend({}, scssRelease, {components: data.pipes, filename}));
+              scssReleasesByPage[page] = release;
+              this.logger.system(`${filename}.css successfully generated for the ${page} page.`);
+            } catch(e) {
+              this.logger.system(`CSS release completed with an error: ${e.message}`, 'CLI', 'error');
+            }
+          }
+        }
+        if(!combineIcons && page != 'ungic-icons.html') {
+          if(Array.isArray(data.icons_ids) && data.icons_ids.length && iconsRelease) {
+            let svgIcons = _.filter(data.icons_ids, id => iconsPlugin.collection.get(id).has('svg'));
+            let sprites = _.reject(data.icons_ids, id => iconsPlugin.collection.get(id).has('svg'));
+            try {
+              let release = await iconsPlugin.release(_.extend({}, iconsRelease, {
+                svgIcons,
+                sprites,
+                filename
+              }));
+              data.iconsReleases = release.releases;
+            } catch(e) {
+              this.logger.system(`ICONS release completed with an error: ${e.message}`, 'CLI', 'error');
+            }
           }
         }
       }
-      if(!combineIcons && page != 'ungic-icons.html') {
-        if(Array.isArray(data.icons_ids) && data.icons_ids.length && iconsRelease) {
-          let svgIcons = _.filter(data.icons_ids, id => iconsPlugin.collection.get(id).has('svg'));
-          let sprites = _.reject(data.icons_ids, id => iconsPlugin.collection.get(id).has('svg'));
-          try {
-            let release = await iconsPlugin.release(_.extend({}, iconsRelease, {
-              svgIcons,
-              sprites,
-              filename
-            }));
-            data.iconsReleases = release.releases;
-          } catch(e) {
-            this.logger.system(`ICONS release completed with an error: ${e.message}`, 'CLI', 'error');
-          }
-        }
-      }
-      // Иконки
     }
 
     let commonIconsRelease;
@@ -265,10 +274,12 @@ module.exports = async function(args) {
     for(let page in releaseByPage) {
       try {
         let release = releaseByPage[page];
-        if(commonIconsRelease) {
+
+        if((combineIcons && commonIconsRelease) || (commonIconsRelease && pagesChosen.length == 1)) {
           release.iconsReleases = commonIconsRelease.releases;
         }
-        if(combineScssComponents && commonScssRelease) {
+
+        if((combineScssComponents && commonScssRelease) || (commonScssRelease && pagesChosen.length == 1)) {
           release.scssURLS = commonScssRelease;
         } else if(scssReleasesByPage[page]) {
           release.scssURLS = scssReleasesByPage[page];
@@ -315,6 +326,6 @@ module.exports = async function(args) {
   Author: ${this.app.config.author}`), { name: 'README.txt' });
         archive.finalize();
     });
-    this.logger.system(`${releaseDist} release successfully generated!`, 'CLI', 'success');
+    this.logger.system(`${release.releaseName} release successfully generated to ${releaseDist}`, 'CLI', 'success');
   }
 }

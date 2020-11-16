@@ -991,6 +991,7 @@ class htmlPlugin extends plugin {
                         let script = `<script src="${this.project.fastify.address + '/ungic/js/dist/pipe.min.js'}" data-connect="${this.project.fastify.address}" data-src="${path.relative(this.dist, path.join(this.dist, attrs.path)).replace(/\\+/g, '/')}"></script>`;
                         $body.append(script);
                         $head.append(`<link rel="stylesheet" href="${this.project.fastify.address + '/ungic/css/devtools.css'}">`);
+
                         if(this.iconsStorage.fonts && this.iconsStorage.fonts.data && this.iconsStorage.fonts.data.icons.length) {
                             $head.append(`<link rel="stylesheet" href="${this.project.fastify.address + '/ungic/font-icons'}">`);
                         }
@@ -1385,7 +1386,7 @@ class htmlPlugin extends plugin {
         scssPlugin.on('exports', (event, models) => {
             if(Array.isArray(models)) {
                 let storage = this.sassUsed.storage;
-                let ids = _.map(models, m => m.model.id);
+                let ids = _.map(models, m => m.model ? m.model.id : m.id);
                 let expOptions = _.filter(storage, e => ids.indexOf(e.oid) != -1);
                 if(expOptions.length) {
                     let models = this.collection.filter(model => _.find(expOptions, e => e.page_id == model.id));
@@ -1399,8 +1400,29 @@ class htmlPlugin extends plugin {
                 }
             }
         });
+        let iconsPlugin = this.project.plugins.get('icons');
+
+        iconsPlugin.on('changeSvgMode', async e => {
+            if(e == 'fonts') {
+                delete this.iconsStorage.svgSprite
+            } else {
+                delete this.iconsStorage.fonts
+            }
+            if(this.iconsUsed.storage.length) {
+                let pages = _.groupBy(this.iconsUsed.storage, 'page_id');
+                for(let pageId in pages) {
+                    let page = this.collection.findByID(pageId);
+                    if(page) {
+                        this.collection.remove(pageId, {silent: true});
+                        await this.setEntityByPath('add', page.get('path'));
+                    }
+                }
+            }
+        });
+
         this.project.on('icons', async e => {
             try {
+                let pagesReady = [];
                 let ids;
                 this.iconsStorage[e.type] = e;
                 if(this.iconsDataUsed.storage.length) {
@@ -1408,7 +1430,33 @@ class htmlPlugin extends plugin {
                         let page = this.collection.findByID(data.page_id);
                         if(page) {
                             this.collection.remove(page.id, {silent: true});
+                            pagesReady.push(page.id);
                             await this.setEntityByPath('add', page.get('path'));
+                        }
+                    }
+                }
+                if(this.iconsUsed.storage.length) {
+                    let pagesToRebuild = [];
+                    let pages = _.groupBy(this.iconsUsed.storage, 'page_id');
+                    for(let pageId in pages) {
+                        if(e.models && e.models.length) {
+                            for(let model of e.models) {
+                                let iconID = model.id;
+                                for(let icon of pages[pageId]) {
+                                    if(icon.icon_id == iconID && !pagesToRebuild.includes(pageId) && !pagesReady.includes(pageId)) {
+                                        pagesToRebuild.push(pageId);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if(pagesToRebuild.length) {
+                        for(let pageId of pagesToRebuild) {
+                            let page = this.collection.findByID(pageId);
+                            if(page) {
+                                this.collection.remove(pageId, {silent: true});
+                                await this.setEntityByPath('add', page.get('path'));
+                            }
                         }
                     }
                 }

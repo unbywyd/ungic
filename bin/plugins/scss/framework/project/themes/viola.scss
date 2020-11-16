@@ -11,7 +11,6 @@ $colors: ( // List type possible for all colors (is_light_theme, is_dark_theme)
 );
 
 $config: (
-    inverse: false,
     brightness: (
         offset-brighten: 0,            // List type possible (is_light_theme, is_dark_theme)
         offset-dim: 0,                 // List type possible (is_light_theme, is_dark_theme)

@@ -3,23 +3,19 @@ const _ = require('underscore');
 const fg = require('fast-glob');
 const fse = require('fs-extra');
 const fs = require('fs');
+const colors = require('colors');
 const prompts = require('../modules/prompt.js');
 const iconsInquirer = require('./release/icons_inquirer');
 const intro = require('../modules/add-files-to-project');
 
 module.exports = function (yargs, done) {
   yargs
-    .command('export', 'export all svg to json', args => {
+    .command('export [path]', 'export all svg icons to json', args => {
       args.option('ids', {
         alias: 'i',
         describe: 'ids of icons',
         type: 'array',
         default: []
-      });
-      args.option('path', {
-        alias: 'p',
-        describe: 'file path relative to dist directory',
-        type: 'string'
       });
     }, args => {
       done(async () => {
@@ -32,24 +28,77 @@ module.exports = function (yargs, done) {
         }
       });
     })
-    .command('switch <mode>', "Switch dev build mode of icons (Temporary switching, does not affect configuration)", args => {
+    .command('svgmode [mode]', "Switch the mode of generating svg icons (svgIconsMode). This is a temporary action that will work until the project is restarted.", args => {
     }, args => {
       done(async () => {
-        let allow = ['fonts', 'svgSprite'];
-        if(!allow.includes(args.mode)) {
-          return this.logger.system(`${args.mode} mode not supported, supported modes: fonts or svgSprite`);
-        }
         try {
           let iconsPlugin = this.app.project.plugins.get('icons');
+          if(!args.mode) {
+            return this.logger.system(`Active mode: ${iconsPlugin.buildConfig.svgIconsMode}`);
+          }
+          let allow = ['fonts', 'svgSprite'];
+          if(!allow.includes(args.mode)) {
+            return this.logger.system(`${args.mode} mode not supported, supported modes: fonts or svgSprite`);
+          }
           if(iconsPlugin.buildConfig.svgIconsMode == args.mode) {
             return this.logger.system(`${args.mode} is a real mode`);
           }
           iconsPlugin.buildConfig.svgIconsMode = args.mode;
+          let finish = () => {
+            iconsPlugin.off('rendered', finish);
+            iconsPlugin.emit('changeSvgMode', args.mode);
+          }
+          iconsPlugin.on('rendered', finish);
           iconsPlugin.rebuild();
-          this.logger.system(`Icons generation mode switched to ${args.mode}!`);
+          this.logger.system(`SVG icons generation mode switched to ${args.mode}!`);
         } catch(e) {
           console.log(e);
         }
+      });
+    })
+    .command('search <params>', 'Get icon data', args => {
+    }, args => {
+      done(() => {
+        const argv = require('yargs-parser')(args.params);
+        let iconsPlugin = this.app.project.plugins.get('icons');
+        let icons = iconsPlugin.collection;
+        if(!icons.size()) {
+          return this.logger.system(`This project has no icons.`, 'CLI', 'warning');
+        }
+        let support = ['path', 'name', 'id', 'codepoint'];
+        icons = icons.toJSON();
+
+        let searchBy = _.pick(argv, ...support);
+
+        let found = _.where(icons, searchBy);
+        this.logger.system(`${colors.green.bold(found.length)} icons found for your request`, 'CLI');
+
+        if(found.length) {
+          return this.logger.system(_.map(found, i => (i.svg ? '[SVG]' : '[Image]') + ' ' + i.name + ', ' + i.id + ' - ' + i.path).sort().join('\n'), 'Icons list');
+        }
+      });
+    })
+    .command('icons [type]', 'Get list of icons. [type] = image|svg|*, * - by default', args => {
+    }, args => {
+      done(() => {
+        let iconsPlugin = this.app.project.plugins.get('icons');
+        let icons = iconsPlugin.collection;
+        if(!icons.size()) {
+          return this.logger.system(`This project has no icons.`, 'CLI', 'warning');
+        }
+        icons = icons.toJSON();
+        if(args.type == 'svg') {
+          icons = iconsPlugin.getIconsList(true);
+        } else if(args.type == 'image') {
+          icons = iconsPlugin.getIconsList(false);
+        } else if(args.type) {
+          this.logger.system(`${args.type} type not supported. Type must be image or svg.`, 'CLI', 'warning');
+        }
+        if(!icons.length) {
+          return this.logger.system(`This project has no ${args.type} icons.`, 'CLI', 'warning');
+        }
+
+        return this.logger.system(_.map(icons, i => (i.svg ? '[SVG]' : '[Image]') + ' ' + i.name + ', ' + i.id + ' - ' + i.path).sort().join('\n'), 'Icons list');
       });
     })
     .command('icons_page', 'Create page with all icons', args => {

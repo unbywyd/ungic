@@ -59,8 +59,7 @@ module.exports = async function(args, defaultConfig={}, overlayConfig={}) {
     this.logger.system(`To create a CSS release, the default theme is required`, 'CLI', 'warning');
     return
   }
-
-  if(themes > 1) {
+  if(themes.length > 1) {
   	/*
   	*		Если в проекте больше чем одна тема.
   	*/
@@ -315,8 +314,23 @@ module.exports = async function(args, defaultConfig={}, overlayConfig={}) {
             message: `Opposite direction?`,
             default: release.oppositeDirection
           }]);
+          if(response) {
+            release.oppositeDirection = response.oppositeDirection;
+          }
         }
       }
+
+      response = await prompts.call(this, [{
+        type: 'confirm',
+        name: 'autoprefixer',
+        message: `autoprefixer?`,
+        default: release.autoprefixer
+      }]);
+
+      if(response) {
+        release.autoprefixer = response.autoprefixer;
+      }
+
     }
   } else {
     /*
