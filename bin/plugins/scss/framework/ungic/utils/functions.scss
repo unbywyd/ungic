@@ -40,6 +40,7 @@
 @function em($px, $def) {
     @return (strip-unit($px) / strip-unit($def)) + 0em;
 }
+
 @function merge($maps...) {
     $result: ();
 
@@ -54,6 +55,16 @@
     }
 
     @return $result;
+}
+
+/*
+*   Inverts the number
+*/
+@function inv($val) {
+    @if type-of($val) != number {
+        @warn '#{$val} is not number';
+    }
+    @return $val * -1;
 }
 
 @function negative($number) {

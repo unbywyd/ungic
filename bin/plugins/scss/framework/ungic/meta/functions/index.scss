@@ -109,6 +109,7 @@
     $hsl-color2: list.nth(hsl($than-this-color), 3);
     @return $hsl-color1 < $hsl-color2;
 }
+
 @function get-all-available-сolors() {
     $available-colors: config.$available-theme-colors;
     $required-colors: (primary, secondary, system, info, danger, success, warning, text-color, background-color);
@@ -119,6 +120,7 @@
     }
     @return $available-colors;
 }
+
 @function is-color-available($color-name) {
     @if type-of($color-name) != string {
         $color-name: meta.inspect($color-name);

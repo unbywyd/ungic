@@ -112,10 +112,8 @@ class scssPlugin extends plugin {
         });
     }
     getDepsFor(cid) {
-        let deps = this.componentsDepends.get({
-          usedCID: cid
-        });
-        return _.uniq(_.pluck(deps, 'cid'));
+      let deps = _.filter(this.componentsDepends.storage, s => s.usedCID == cid);
+      return _.uniq(_.pluck(deps, 'cid'));
     }
     regComponentRouter(url, cid) {
         //this.componentsDepends
@@ -804,8 +802,6 @@ class scssPlugin extends plugin {
         if(components.length) {
             for(let cid of components) {
                 let deps = this.getDepsFor(cid);
-                //console.log('cid', cid);
-                //console.log('deps', deps);
                 if(deps.length) {
                     for(let dep of deps) {
                         if(components.indexOf(dep) == -1 && _.find(component_phs, e => (e.cid == cid && path.basename(path.relative(path.join(this.components, e.cid), e.path), path.extname(e.path)) != 'render' && path.dirname(path.relative(path.join(this.components, e.cid), e.path)) != 'render'))) {
