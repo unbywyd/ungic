@@ -4,12 +4,17 @@
 @use "ungic.project.config" as config;
 @use "./functions" as *;
 
-@mixin check-color-names($colors) {
+@mixin check-colors($colors) {
     $available-colors: get-all-available-сolors();
     $keys: map.keys($colors);
-    @each $color-name in $keys {
+    @each $color-name, $color in $colors {
         @if not is-color-available($color-name) {
             @error '#{$color-name} is not available color!';
+        } @else {
+            $error: is-valid-color-value($color-name, $color, true);               
+            @if $error {
+                @error $error; 
+            }
         }
     }
     @each $color-name in $available-colors {

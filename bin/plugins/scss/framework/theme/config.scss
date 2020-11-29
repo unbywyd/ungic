@@ -2,6 +2,7 @@
 @use "sass:meta";
 @use "sass:map";
 @use "sass:color";
+@use "sass:list";
 
 /*
 *   Retrieves configuration from configuration file of active theme by path project/themes/THEME_NAME.css
@@ -32,52 +33,35 @@ $name: map.get($settings, 'theme-name');
 }
 
 /*
-*   The lightest and darkest default colors
-*/
-$lightest: white;
-$darkest: dark;
-
-/*
 *   Generate a missing third (extra) color
 */
 @if un-meta.is-color-available(extra) and (not map.has-key($colors, extra) and map.has-key($colors, primary) and map.has-key($colors, secondary)) {
-  $primary: map.get($colors, primary);
+  $_primary: map.get($colors, primary);
 
-  @if(type-of($primary) == list) {
+  @if(type-of($_primary) == list) {
     @if($inverse) {
-      $primary: nth($primary, 2);
+      $_primary: nth($_primary, 2);
     } @else {
-      $primary: nth($primary, 1);
+      $_primary: nth($_primary, 1);
     }
   }
-  $secondary: map.get($colors, secondary);
-  @if(type-of($secondary) == list) {
+  $_secondary: map.get($colors, secondary);
+  @if(type-of($_secondary) == list) {
     @if($inverse) {
-      $secondary: nth($secondary, 2);
+      $_secondary: nth($_secondary, 2);
     } @else {
-      $secondary: nth($secondary, 1);
+      $_secondary: nth($_secondary, 1);
     }
   }
 
-  $colors: map.merge($colors, (extra: color.mix($primary, $secondary)));
+  $colors: map.merge($colors, (extra: color.mix($_primary, $_secondary)));
 }
+
+
 /*
 *   Checking theme colors
 */
-@include un-meta.check-color-names($colors);
-
-/*
-*   If the background and the font are not a list, swaps the colors during inversion
-*/
-$background-color: map.get($colors, 'background-color');
-$text-color: map.get($colors, 'text-color');
-
-@if(type-of($background-color) == 'color' and type-of($text-color) == 'color' and $inverse) {
-    $colors: map.merge($colors, (
-        background-color: $text-color,
-        text-color: $background-color
-    ));
-}
+@include un-meta.check-colors($colors);
 
 /*
 *   Colors can be in the form of a list, it is required for inversion, then such colors will be substituted by swapping
@@ -87,25 +71,12 @@ $text-color: map.get($colors, 'text-color');
     @if(type-of($color) == list) {
         $color: nth($_color, 1);
         @if($inverse) {
-            $color: nth($_color, 2);
+          $color: nth($_color, 2);
         }
     }
-    @if(type-of($color) != 'color') {
-        @error '#{$color} is not a color!';
-    } @else {
-        $colors: map.merge($colors, (
-            #{$color-name}: $color
-        ));
-    }
-}
-
-/*
-*   Determines the lightest and darktest colors relative to the background and text color
-*/
-
-@if(map.get($config, relative-main-colors)) {
-    $lightest: un-meta.lightest(map.get($colors, 'text-color'), map.get($colors, 'background-color'));
-    $darkest: un-meta.darkest(map.get($colors, 'text-color'), map.get($colors, 'background-color'));
+    $colors: map.merge($colors, (
+      #{$color-name}: $color
+    ));
 }
 
 /*

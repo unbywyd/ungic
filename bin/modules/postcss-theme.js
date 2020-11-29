@@ -3,16 +3,10 @@ const _ = require('underscore');
 const extractor = require('css-color-extractor');
 module.exports = postcss.plugin('ungic-theme', function (opts) {
   opts = opts || {}
-  return function (root, result) {
-    let regexp = /^\.un-inverse|^\.un-theme/;
+  return function (root) {
+    let regexp = /(?<![(\["'])\.(un-inverse|un-theme)/;
 
-    let parseRule = rule => {
-        let props = {
-            'background': 'background-color',
-            'border': 'border-color',
-            'outline': 'outline-color'
-        };
-
+    let clearRules = (rule) => {
         let propertiesToSave = [
             'background',
             'background-image',
@@ -35,10 +29,27 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
             'text-shadow',
             'box-shadow'
         ]
-        if('string' == typeof rule.selector && regexp.test(rule.selector)) {
-            let saveProps, saveInverseProps;
+        rule.walkDecls(decl => {
+            if (decl.prop) {
+                let prop = decl.prop;
+                let colors = extractor.fromDecl(decl);
+                if(!colors.length) {
+                    if(propertiesToSave.indexOf(prop) == -1 && prop.indexOf('color') == -1) {
+                        decl.remove();
+                    }
+                }
+            }
+            if(!rule.nodes.length) {
+                rule.remove();
+            }
+        });
+        return rule;
+    }
 
-            // +
+    let parseRule = rule => {      
+        if('string' == typeof rule.selector && regexp.test(rule.selector)) {
+            let saveProps, saveInverseProps, hasInverse = /(?<![(\["'])\.un-inverse/.test(rule.selector), customPrefix;
+
             if(rule.selector.indexOf('[un-save-props]') != -1) {
                 rule.selector = rule.selector.replace(/\[un-save-props\]/gm, '');
                 saveProps = true;
@@ -48,18 +59,21 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
                 saveInverseProps = true;
             }
 
-            if(rule.selector.indexOf('[un-inverse-ignore]') != -1) {
-                if(rule.selector.indexOf('.un-inverse') != -1) {
+            if(rule.selector.indexOf('[un-inverse-skip]') != -1) {
+                if(hasInverse) {
                     rule.remove();
                 } else {
-                    rule.selector = rule.selector.replace(/\[un-inverse-ignore\]/gm, '');
+                    rule.selector = rule.selector.replace(/\[un-inverse-skip\]/gm, '');
                 }
                 return
             }
 
             if(rule.selector.indexOf('[un-prefix') != -1) {
+                //let customPrefix;
                 rule.selector = rule.selector.split(/,\s+/).map(s => {
-                    let regexp = /\[un-prefix=(?:'|")?\{\{(.+)\}\}(?:'|")?\]/;
+                    customPrefix = /un-custom-prefix-/.test(s);
+                    s = s.replace(/un-custom-prefix-/gm, '');
+                    let regexp = /\[un-prefix=(?:'|")?\{\{(.*)\}\}(?:'|")?\]/;
                     let search = s.match(regexp);
                     let regexpTheme =  /(^\.un-theme-[^\s]+)\s+\[un-prefix=(?:'|")?\{\{(.+)\}\}(?:'|")?\]/;
                     if(regexpTheme.test(s)) {
@@ -69,70 +83,61 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
                             selector = ':' + selector.split(':')[1];
                         }
                         s = s.replace(search[0], search[1] + selector);
-                    } else {
+                    } else {                        
                         s = s.replace(regexp, search[1]);
                     }
+                    if(customPrefix) {
+                        //clearRules(rule);
+                        s = s.replace(/(?<![(\["'])\.un-inverse/gm, '');
+                    }
+                    return s;
                 }).join(',');
             }
 
-            /*  is-theme
+            /* 
             *   Сохраняем все проперти если нет инверсии
-            *   Но если есть инверсия то удалятся проперти которые не относятся к цвету
+            *   Но если есть инверсия то удаляются проперти которые не относятся к цвету
             */
 
-            if(saveProps && rule.selector.indexOf('.un-inverse') == -1) {
+            if(saveProps && !hasInverse) {
                 return
             }
 
-            /*
-            *   is-inverse
-            *   Сохранить все проперти если инверсия, но не тема
-            */
-            if(saveInverseProps && rule.selector.indexOf('.un-inverse') === 0 && (rule.selector.indexOf('.un-theme-') == -1)) {
-                return
+                  
+            // Если тема выносится в отдельный файл, тогда сохраняем пропертис (не цветовые), иначе удаляем
+            if(saveInverseProps && hasInverse) {                
+                if(rule.selector.indexOf('.un-theme-') == -1 || opts.inverseMode == 'external') {
+                    return
+                }
             }
-            /**************************/
 
-            /*
-            *   Если is-inverse и is-theme, то сохраняем все
-            */
             if(saveProps && saveInverseProps) {
                 return
             }
 
-            rule.walkDecls(decl => {
-                if (decl.prop) {
-                    let prop = decl.prop;
-                    let colors = extractor.fromDecl(decl);
-                    if(!colors.length) {
-                        if(propertiesToSave.indexOf(prop) == -1 && prop.indexOf('color') == -1) {
-                            decl.remove();
-                        }
-                    }
-                }
-                if(!rule.nodes.length) {
-                    rule.remove();
-                }
-            });
+            clearRules(rule);
 
         } else {
             if(rule.selector.indexOf('[un-save-props]') != -1) {
                 rule.selector = rule.selector.replace(/\[un-save-props\]/gm, '');
             }
-            if(rule.selector.indexOf('[un-inverse-ignore]') != -1) {
-                rule.selector = rule.selector.replace(/\[un-inverse-ignore\]/gm, '');
+            if(rule.selector.indexOf('[un-inverse-skip]') != -1) {
+                rule.selector = rule.selector.replace(/\[un-inverse-skip\]/gm, '');
             }
             if(rule.selector.indexOf('[un-prefix') != -1) {
-                let regexp = /\[un-prefix=(?:'|")?\{\{(.+)\}\}(?:'|")?\]/;
+                let regexp = /\[un-prefix=(?:'|")?\{\{(.*)\}\}(?:'|")?\]/;
                 rule.selector = rule.selector.split(/,\s+/).map(selector => {
+                    selector = selector.replace(/un-custom-prefix-/gm, '');
                     let search = selector.match(regexp);
                     return selector.replace(regexp, search[1]);
-                }).join(',');
+                }).join(',');                
             }
         }
     }
+  
     root.walkRules(function(rule) {
         parseRule(rule);
+        
         let regexp = /^.un-(theme|inverse)([^\s]+)?\s+html/gm;
         if(regexp.test(rule.selector)) {
             rule.selector = rule.selector.split(/,\s+/).map(s => {
@@ -150,6 +155,19 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
             rule.selector = rule.selector.split(/,\s+/).map(function(s) {
                 return s.replace(/(?!^)\s+?html:not/gm, ':not');
             }).join(',');
+        }
+
+        if(/(?<![(\["'])\.(un-inverse|un-theme-\w+)\s+:not/.test(rule.selector)) {
+            rule.selector = rule.selector.split(/,\s+/).map(function(s) {
+                return s.replace(/(?<![(\["'])\.(un-inverse|un-theme-\w+)\s+:not/, function(match) {                    
+                    return match.replace(/\s+\:not/, ':not');
+                })
+            }).join(',');
+        }
+
+        if(rule.selector.indexOf('\.un-merge-method') != -1) {
+            let regexp = /\s*\.un-merge-method/gmi;
+            rule.selector = rule.selector.replace(regexp, '');
         }
     });
 

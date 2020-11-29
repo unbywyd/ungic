@@ -149,6 +149,8 @@ class htmlPlugin extends plugin {
         this.pipes = new Storage;
         this.iconsUsed = new Storage;
         this.iconsDataUsed = new Storage;
+        this.slotsStorage = new Storage;
+
         this.typeHandlers.set('json', async attrs => {
             try {
                 attrs.body = JSON.parse(attrs.body);
@@ -255,14 +257,20 @@ class htmlPlugin extends plugin {
                     dir: ("dir" in attributes && ['ltr', 'rtl'].indexOf(attributes.dir) != -1) ? attributes.dir : ''
                 }
                 let config = this.config;
+               
+                if("sass" in attributes && attributes.sass.trim() != '') {
+                    attrs.css = attributes.sass;
+                    attributes.css = attributes.sass;
+                }
+               
                 if("css" in attributes && attributes.css.trim() != '') {
                     attrs.css = attributes.css.split(',').map(e=>e.replace(/^\s+|\s+$/, ''));
-                }
+                }           
+
                 attrs.css = _.reject(attrs.css, e => e.trim() == '');
                 if("release" in attributes) {
                     attrs.release = attributes.release;
-                }
-
+                }                
                 args.pipe = attrs;
                 let output = '';
                 if(attrs.css && attrs.css.length) {
@@ -932,28 +940,44 @@ class htmlPlugin extends plugin {
                 const $ = cheerio.load(output, configCheerio);
                 let $body = $('body'), $head =  $('head');
                 scssPlugin.cleanHtmlInternalSass(model.id);
-                let sassInternalRules = [];
+                let sassInternalRulesChanged = [], sassInternalRules = [];
+                let hasSlots = [];
                 let scssProms = [];
                 let self = this;
+
                 $('style[scss], style[sass]').each(function() {
                     let attr = $(this).attr('sass') ? 'sass' : 'scss';
                     let cid = $(this).attr(attr);
-                    scssProms.push(new Promise(async(res, rej) => {
+                    scssProms.push(new Promise(async(res) => {
                         try {
                             if('string' == typeof cid && cid.trim() != '') {
                                 let cids = await scssPlugin.getComponents();
                                 if(cids.indexOf(cid) != -1) {
-                                    let lid = $(this).attr('lid');
-                                    if(!lid || (lid && lid.trim() == '')) {
-                                        self.log(`To transfer sass internal styles to sass component you need specify Load ID in "lid" attribute, example: lid="part1"`, 'warning');
+                                    let slot = $(this).attr('slot') || false;
+                                    if(!slot || (slot && slot.trim() == '')) {
+                                        self.log(`To transfer sass internal styles to sass component you need specify "slot" attribute, example: slot="part1"`, 'warning');
                                         return res();
                                     }
-                                    sassInternalRules.push({
-                                        htmlModelId: model.id,
-                                        cid,
-                                        lid: $(this).attr('lid') ? $(this).attr('lid') : false,
-                                        rules: $(this).html()
-                                    });
+                                    if(slot) {
+                                        hasSlots.push(slot);
+                                    }
+                                    let content = $(this).html();
+                                    let prev = _.find(self.slotsStorage.storage, r => r.cid == cid && r.slot == slot && r.rules == content);
+                                   
+                                    if(!prev) {   
+                                        // Удалить старое значение этого слота  
+                                        self.slotsStorage.clean(r => r.cid == cid && r.slot == slot && r.htmlModelId == model.id);    
+                                        prev = {
+                                            htmlModelId: model.id,
+                                            cid,
+                                            slot,
+                                            rules: content
+                                        }                                                         
+                                        self.slotsStorage.set(prev);
+                                        sassInternalRulesChanged.push(prev);
+                                    }                     
+                                    
+                                    sassInternalRules.push(prev);
                                     $(this).remove();
                                     return res();
                                 } else {
@@ -963,7 +987,7 @@ class htmlPlugin extends plugin {
                             try {
                                 var result = sass.renderSync({data: $(this).html()});
                                 $(this).html(result.css.toString());
-                                $(this).removeAttr(attr).removeAttr('lid');
+                                $(this).removeAttr(attr).removeAttr('slot');
                             } catch(e) {
                                 self.log('Compilation error of internal sass styles', 'error');
                                 self.log(e);
@@ -975,14 +999,21 @@ class htmlPlugin extends plugin {
                     }));
                 });
 
+                // Проверить не изменилось ли кол-во слотов, и имеются ли вообще слоты
                 if(scssProms.length) {
                     await Promise.all(scssProms);
-                    if(sassInternalRules.length) {
-                        let mixCssLink = await scssPlugin.setHtmlInternalSass(sassInternalRules);
 
-                        if('string' == typeof mixCssLink && !this.release) {
+                    let prevCount = _.size(_.filter(self.slotsStorage.storage, r => r.htmlModelId == model.id));
+                    let activeCount = sassInternalRules.length;
+                    if(hasSlots.length) {
+                        self.slotsStorage.clean(r => !hasSlots.includes(r.slot) && r.htmlModelId == model.id);    
+                    }          
+                    //console.log(prevCount, activeCount);
+                    if(sassInternalRulesChanged.length || prevCount != activeCount) {                      
+                        await scssPlugin.setHtmlInternalSass(sassInternalRules);                        
+                        /*if('string' == typeof mixCssLink && !this.release) {
                             $head.append(`<link rel="stylesheet" href="${this.project.fastify.address}/${mixCssLink}">`);
-                        }
+                        }*/
                     }
                 }
 

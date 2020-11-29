@@ -1,10 +1,13 @@
 @use "ungic.project.config" as config;
 @use "ungic.project.properties" as properties;
+@use "ungic.default-properties" as def_properties;
+@use "ungic.utils" as utils;
 @use "sass:meta";
 @use "sass:map";
 
 $config: meta.module-variables(config);
 $properties: meta.module-variables(properties);
+$default_properties: meta.module-variables(def_properties);
 
 /*
 *   Get project config
@@ -28,21 +31,13 @@ $properties: meta.module-variables(properties);
   @return $config;
 }
 
-/*
-*   Get project property value
-*/
-@function prop($prop) {
-  $props: $properties;
-  @if not map.has-key($props, $prop) {
-    @return null;
+@function properties($defaults: false) {
+  @if $defaults {
+    @return utils.merge($default_properties, $properties);
   }
-  @return map.get($props, $prop);
-}
-
-@function properties() {
   @return $properties;
 }
 
-@function props() {
-  @return $properties;
+@function props($defaults: false) {
+  @return properties($defaults);
 }

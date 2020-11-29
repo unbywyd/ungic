@@ -2,15 +2,122 @@
 *   Functions for calculating various project and component properties
 */
 
-@use "ungic.meta" as un-meta;
 @use "ungic.default-properties" as default-props;
 @use "sass:map";
 @use "sass:string" as str;
 @use "sass:meta";
 @use "sass:math";
 @use "sass:list";
+@use "ungic.utils" as *;
 @use "ungic.project" as project;
 $project_props: project.$properties;
+$default-properties: meta.module-variables(default-props);
+
+@function parse-pm($options:()) {
+    $data: (top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0);
+
+    @if(list.length($options) == 1) {
+        $data: merge($data, (top: list.nth($options, 1),
+            right: list.nth($options, 1),
+            bottom: list.nth($options, 1),
+            left: list.nth($options, 1)));
+    }
+
+    @else if(list.length($options) == 2) {
+        $data: merge($data, (top: list.nth($options, 1),
+            right: list.nth($options, 2),
+            bottom: list.nth($options, 1),
+            left: list.nth($options, 2)));
+    }
+
+    @else if(list.length($options) == 3) {
+        $data: merge($data, (top: list.nth($options, 1),
+            right: list.nth($options, 2),
+            bottom: list.nth($options, 3),
+            left: list.nth($options, 2)));
+    }
+
+    @else if(list.length($options) == 4) {
+        $data: merge($data, (top: list.nth($options, 1),
+            right: list.nth($options, 2),
+            bottom: list.nth($options, 3),
+            left: list.nth($options, 4)));
+    }
+
+    @return $data;
+}
+
+@function handler($prop, $component, $args...) {
+  $properties: map.get($component, properties);
+
+  $all_props: merge($default-properties, $properties);
+  $props: map.keys($all_props);
+  @if meta.function-exists($prop) {
+    @if list.length($args) == 0 {
+      @return meta.call(meta.get-function($prop), $component);
+    }
+    @return meta.call(meta.get-function($prop), $component, $args...);
+  } @else {
+    @if not list.index($props, $prop) {
+      @if str.index($prop, '-') {
+        $property: str.slice($prop, str.index($prop, "-") + 1, -1);
+        @if not list.index($props, $property) {
+          @warn '#{$prop} property not specified';
+          @return "";
+        }
+      } @else {
+        @warn '#{$prop} property not specified';
+        @return "";
+      }
+    } @else {
+      @if str.index($prop, line-height) == 1 {
+        @return prop(font, line-height);
+      }
+      @if str.index($prop, border) and str.index($prop, radius) {
+        $stripped: str.slice($prop, str.index($prop, "-") + 1, -1);
+        $stripped: str.slice($stripped, 1, str.index($stripped, "radius") - 2);
+        @return prop(border-radius, $stripped);
+      } @else if str.index($prop, border) == 1 {
+        $methods: (color, width, style);
+        $method: str.slice($prop, str.index($prop, "-") + 1, -1);
+        @if (list.index($methods, $method)) {
+          @return prop(border, $method);
+        }
+      }
+      @if str.index($prop, padding) == 1 {
+        @return prop(padding, str.slice($prop, str.index($prop, "-") + 1, -1));
+      }
+      @if str.index($prop, margin) == 1 {
+        @return prop(margin, str.slice($prop, str.index($prop, "-") + 1, -1));
+      }
+      @if str.index($prop, font) == 1 {
+        $methods: (family, style, size, variant, weight);
+        $method: str.slice($prop, str.index($prop, "-") + 1, -1);
+        @if (list.index($methods, $method)) {
+          @return prop(font, $method);
+        }
+      }
+      @if str.index($prop, background) == 1 {
+        $methods: (attachment, color, position, image, repeat);
+        $method: str.slice($prop, str.index($prop, "-") + 1, -1);
+        @if (list.index($methods, $method)) {
+          @return prop(background, $method);
+        }
+      }
+      @if str.index($prop, list-style) == 1 {
+        $methods: (type, position, image);
+        $method: str.slice($prop, str.length("list-style-") + 1, -1);
+        @if (list.index($methods, $method)) {
+          @return prop(list-style, $method);
+        }
+      }
+    }
+  }
+  @return map.get($all_props, $prop);
+}
 
 @function _pm-parse($props, $prop) {
   $storage: (top:0, right:0, bottom:0, left:0);
@@ -19,7 +126,7 @@ $project_props: project.$properties;
       @if type-of(map.get($props, $prop)) == map {
         $storage: map.merge($storage, map.get($props, $prop));
       } @else {
-        $storage: un-meta.parse-pm(map.get($props, $prop));
+        $storage: parse-pm(map.get($props, $prop));
       }
   }
   @return $storage;
@@ -667,8 +774,6 @@ $project_props: project.$properties;
     @return $output;
 }
 
-
-
 @function _outline-handler($outline, $properties) {
     @if map.has-key($properties, "outline") {
         $_outline: map.get($properties, "outline");
@@ -719,6 +824,7 @@ $project_props: project.$properties;
     }
     @return $outline;
 }
+
 @function outline($component, $param: false) {
     $properties: map.get($component, properties);
     $private_properties: map.get($component, private-properties);

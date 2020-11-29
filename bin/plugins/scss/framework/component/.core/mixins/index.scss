@@ -23,9 +23,17 @@
 /*
 *   Wraps content in a component selector
 */
-@mixin this {
-    #{cid(true)} {
-        @content;
+@mixin this($suffix: null) {
+    @if $suffix {
+        $suffix: str-replace($suffix, '___this', cid());
+        $suffix: str-replace($suffix, '__this', cid(true));
+        #{this($suffix)} {
+            @content;
+        }
+    } @else {
+        #{cid(true)} {
+            @content;
+        }
     }
 }
 
@@ -35,15 +43,16 @@
 @mixin wrap($suffix: null, $merge: true) {
     @if $suffix {
         $output: ();
+        $suffix: str-replace($suffix, '___this', cid());
         $suffix: str-replace($suffix, '__this', cid(true));
-        $fs: str.slice($suffix, 0, 1);
         $lsts: (':', '-', '+', '~', '_');
-        @if list.index($lsts, $fs) and $merge {
-            $suffix: selector.append(cid(true), $suffix);
-        }
         @each $selector in & {
             $replacements:  selector.parse($suffix);
             @each $replacement in $replacements {
+                $fs: str.slice(inspect($replacement), 0, 1);
+                @if list.index($lsts, $fs) and $merge {
+                    $replacement:  selector.append(cid(true), $replacement);
+                }
                 $output: list.append($output, str-replace(inspect($selector), cid(true), #{$replacement cid(true)}, false), comma);
             }
         }
@@ -64,6 +73,7 @@
 @mixin and($suffix: null) {
     @if $suffix {
         $output: ();
+        $suffix: str-replace($suffix, '___this', cid());
         $suffix: str-replace($suffix, '__this', cid(true));
         @each $selector in & {
             $replacements:  selector.append(cid(true), $suffix);
@@ -87,6 +97,7 @@
 @mixin nest($suffix: null) {
     @if $suffix {
         $output: ();
+        $suffix: str-replace($suffix, '___this', cid());
         $suffix: str-replace($suffix, '__this', cid(true));
         @each $selector in & {
             $replacements:  selector.nest(cid(true), $suffix);
@@ -104,3 +115,56 @@
     }
 }
 
+@mixin before($suffix: null) {
+    @if $suffix {
+        $output: ();
+        $suffix: str-replace($suffix, '___this', cid());
+        $suffix: str-replace($suffix, '__this', cid(true));
+        @each $selector in & {
+            $replacements:  selector.parse($suffix);
+            @each $replacement in $replacements {
+               $output: list.append($output, insert-nth($selector, list.length($selector), $replacement), comma);
+            }
+        }
+        @at-root #{$output} {
+          @content;
+        }
+    } @else {
+        &#{cid(true)} {
+          @content;
+        }
+    }
+}
+
+@mixin prev($suffix: null, $merge: true) {
+    @if $suffix {
+        $output: ();
+        $suffix: str-replace($suffix, '___this', cid());
+        $suffix: str-replace($suffix, '__this', cid(true));
+        $lsts: (':', '-', '+', '~', '_');
+        @each $selector in & {
+            $lng: list.length($selector);
+            $last: list.nth($selector, list.length($selector));
+            $replacements:  selector.parse($suffix);
+            @each $replacement in $replacements {
+                 @if $lng > 1 {
+                    $output: append($output, #{selector.append(remove-nth($selector, list.length($selector)), $replacement) $last}, comma);
+                } @else {
+                    $fs: str.slice(inspect($replacement), 0, 1);
+                    @if list.index($lsts, $fs) and $merge {
+                        $output: append($output, #{selector.append(cid(true), $suffix) $last}, comma);
+                    } @else {
+                        $output: append($output, #{$suffix $last}, comma);
+                    }
+                }
+            }
+        }
+        @at-root #{$output} {
+          @content;
+        }
+    } @else {
+        &#{cid(true)} {
+          @content;
+        }
+    }
+}

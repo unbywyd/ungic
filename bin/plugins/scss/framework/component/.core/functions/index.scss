@@ -30,16 +30,16 @@
 }
 
 /*
-*   Adds a selector with the component class name
+*   Method for creating a selector by adding a suffix to the component class name using an [append]() sass method
 */
-@function this($selector) {
-  @return inspect(nth(selector.append(cid(true), $selector), 1));
+@function this($suffix) {
+  @return inspect(nth(selector.append(cid(true), $suffix), 1));
 }
 
 /*
 *   Get component CID or selector with true param
 */
-@function cid($as_selector: null) {
+@function cid($as_selector: false) {
   $cid: this.$cid;
   @if $as_selector {
     @return ".#{$cid}";

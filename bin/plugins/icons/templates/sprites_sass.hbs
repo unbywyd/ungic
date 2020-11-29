@@ -7,7 +7,7 @@
 
 $_icons: ({{#each icons}}{{id}}: (name: {{name}}, height: {{coordinates.height}}, width: {{coordinates.width}}, x: {{coordinate coordinates.x}}, y: {{coordinate coordinates.y}}),{{/each}});
 $url: "{{path}}";
-$className: "{{config.className}}";
+$class-name: "{{config.className}}";
 
 @function get-icon($icon-name) {
     $result: null;
@@ -43,10 +43,7 @@ $className: "{{config.className}}";
 }
 
 @function has-icon($icon-name) {
-    @if(not map.has-key($_icons, $icon-name)) {
-        @return false;
-    }
-    @return true;
+    @return icon-exist($icon-name);
 }
 
 @function get-icons() {

@@ -22,43 +22,6 @@
     @return to-export($cid, $oid, json-encode($data));
 }
 
-@function parse-pm($options:()) {
-    $data: (top: 0,
-        right: 0,
-        bottom: 0,
-        left: 0);
-
-    @if(list.length($options) == 1) {
-        $data: merge($data, (top: list.nth($options, 1),
-            right: list.nth($options, 1),
-            bottom: list.nth($options, 1),
-            left: list.nth($options, 1)));
-    }
-
-    @else if(list.length($options) == 2) {
-        $data: merge($data, (top: list.nth($options, 1),
-            right: list.nth($options, 2),
-            bottom: list.nth($options, 1),
-            left: list.nth($options, 2)));
-    }
-
-    @else if(list.length($options) == 3) {
-        $data: merge($data, (top: list.nth($options, 1),
-            right: list.nth($options, 2),
-            bottom: list.nth($options, 3),
-            left: list.nth($options, 2)));
-    }
-
-    @else if(list.length($options) == 4) {
-        $data: merge($data, (top: list.nth($options, 1),
-            right: list.nth($options, 2),
-            bottom: list.nth($options, 3),
-            left: list.nth($options, 4)));
-    }
-
-    @return $data;
-}
-
 @function hsl($color, $strip-unit: true, $asmap: false) {
     @if('color' != type-of($color)) {
         @warn '#{$color} is not a color';
@@ -130,6 +93,50 @@
         @return false;
     }
     @return true;
+}
+
+@function is-valid-color-value($color-name, $color, $return_error: false) {
+    $error: '#{$color-name} has incorrect value. The theme color value must be of type color or a list of two color values: (color-by-default, color-in-inversion-mode)';
+
+    @if type-of($color) == list {
+        @if list.length($color) != 2 {
+            @if $return_error {
+                @return $error;
+            } @else {
+                @return false;
+            }
+        } @else {
+            @each $_color in $color {
+                @if type-of($_color) != color {
+                    @if $return_error {
+                        @return $error;
+                    } @else {
+                        @return false;
+                    }
+                }
+            }
+        }
+    } @else if type-of($color) != color {
+        @if $return_error {
+            @return $error;
+        } @else {
+            @return false;
+        }
+    }
+    
+    @if ($color-name == 'text-color' or $color-name == 'background-color') and type-of($color) != list {
+        @if $return_error {
+            @return '#{$color-name} has incorrect value. The theme color value for text-color or background-color must be a list of two color values: (color-by-default, color-in-inversion-mode)';
+        } @else {
+            @return false;
+        }
+    }
+
+    @if $return_error {
+        @return false;
+    } @else {
+        @return true;
+    }
 }
 
 @function check-color-name($color-name) {

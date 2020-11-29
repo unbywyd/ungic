@@ -60,11 +60,11 @@
 /*
 *   Inverts the number
 */
-@function inv($val) {
-    @if type-of($val) != number {
-        @warn '#{$val} is not number';
+@function inv($number) {
+    @if type-of($number) != number {
+        @warn '#{$number} is not number';
     }
-    @return $val * -1;
+    @return $number * -1;
 }
 
 @function negative($number) {
@@ -94,6 +94,31 @@
     }
 
     @return $number;
+}
+
+
+@function insert-nth($list, $index, $value) {
+  $result: null;
+
+  @if type-of($index) != number {
+    @warn "$index: #{quote($index)} is not a number for `insert-nth`.";
+  } @else if $index < 1 {
+    @warn "List index 0 must be a non-zero integer for `insert-nth`";
+  } @else if $index > length($list) {
+    @warn "List index is #{$index} but list is only #{length($list)} item long for `insert-nth'.";
+  } @else {
+    $result: ();
+
+    @for $i from 1 through length($list) {
+      @if $i == $index {
+        $result: append($result, $value);
+      }
+
+      $result: append($result, nth($list, $i));
+    }
+  }
+
+  @return $result;
 }
 
 @function remove-nth($list, $index) {
@@ -183,10 +208,10 @@
     @return rtli($val);
 }
 
-@function rtl-prepend($ltr, $rtl-prepend, $sep:' ') {
-    @return #{$ltr + '/*rtl:prepend:' + $rtl-prepend + $sep + '*/'};
+@function rtl-prepend($value, $rtl-prepend, $sep:' ') {
+    @return #{$value + '/*rtl:prepend:' + $rtl-prepend + $sep + '*/'};
 }
 
-@function rtl-append($ltr, $rtl-append, $sep: ' ') {
-    @return #{$ltr + '/*rtl:append:' + $sep + $rtl-append + '*/'};
+@function rtl-append($value, $rtl-append, $sep: ' ') {
+    @return #{$value + '/*rtl:append:' + $sep + $rtl-append + '*/'};
 }

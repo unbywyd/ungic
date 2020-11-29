@@ -187,8 +187,8 @@ class scssPlugin extends plugin {
                           file: path.join(this.components, cid, '.core', 'props')
                         });
                       }
-                      if(/^ungic\.from-html/.test(url)) {
-                          let lid = url.split('.')[2];
+                      if(/^ungic\.from-html/.test(url) || /^ungic\.slots/.test(url)) {
+                          let slot = url.split('.')[2];
                           let cid = 'stdin';
                           if(prev != 'stdin') {
                               cid = this.cidByPath(prev);
@@ -196,11 +196,11 @@ class scssPlugin extends plugin {
                           if(url.split('.').length == 3) {
                               let allRulesByCID = _.filter(this.internalSassRules.storage, el => el.cid == cid);
                               this.internalSassRulesRequired.set({
-                                  cid, lid
+                                  cid, slot
                               });
-                              let rulesByLID = _.filter(allRulesByCID, el => el.lid == lid);
+                              let rulesByLID = _.filter(allRulesByCID, el => el.slot == slot);
                               if(!rulesByLID) {
-                                  this.log(`Attention! ${cid} component expects sass rules from html by ${lid} LID. Please note that styles will be included only after processing of html plugin!.`, 'warning');
+                                  this.log(`Attention! ${cid} component expects sass rules from html ${slot} slot. Please note that styles will be included only after processing of html plugin!.`, 'warning');
                               } else {
                                   let rules = _.pluck(rulesByLID, 'rules').join(' ');
                                   return done({
@@ -208,10 +208,10 @@ class scssPlugin extends plugin {
                                   });
                               }
                           } else {
-                              this.log(`Warning while processing ${url} module in ${prev} file. To include sass styles for scss components from HTML plugin you need specify Load ID, example: sass.from-html.part1.`, 'warning');
+                              this.log(`Warning while processing ${url} module in ${prev} file. To include sass styles for scss components from HTML plugin you need specify slot, example: sass.slots.part1.`, 'warning');
                           }
                           return done({
-                              contents: ''
+                              contents: '@function exist() {@return false}'
                           });
                       }
                       if(/^ungic\.sprites/.test(url)) {
@@ -231,7 +231,7 @@ class scssPlugin extends plugin {
                               contents: '@function exist() {@return false}'
                           });
                       }
-                      if(/^ungic\.font-icons/.test(url)) {
+                      if(/^ungic\.font-icons/.test(url) || /^ungic\.ficons/.test(url)) {
                           if(this.iconsStorage.fonts) {
                               let cid = 'stdin';
                               if(prev != 'stdin') {
@@ -292,16 +292,12 @@ class scssPlugin extends plugin {
                                       file: existPath
                                   });
                               } else {
-                                let notRequired = ['once', 'properties', 'config'];
-                                  if(route == 'render') {
-                                    this.warning(`Warning while processing ${url} module in ${prev}. ${cid} component has no method for rendering`);
-                                  } else {
-                                    if(!notRequired.includes(route)) {
-                                      this.error(`Error while processing ${url} module in ${prev}. ${route} handler not found for routing component`);
-                                    }
+                                let notRequired = ['once', 'properties', 'config', 'render'];
+                                  if(!notRequired.includes(route)) {
+                                    this.error(`Error while processing ${url} module in ${prev}. ${url} route not exists`);
                                   }
                                   return done({
-                                      contents: ''
+                                      contents: '@function exist() {@return false}'
                                   });
                               }
                           }
@@ -314,7 +310,7 @@ class scssPlugin extends plugin {
                       } else {
                           this.error(`Error while processing ${url} module in ${prev}. ${url} route not exists`);
                           return done({
-                              contents: ''
+                              contents: '@function exist() {@return false}'
                           });
                       }
                   }
@@ -324,7 +320,7 @@ class scssPlugin extends plugin {
                     this.error('node_modules directory not found in current project');
                     this.system(`Are you trying to include ${url} from node_modules directory of current project, but this directory was not found in your project. You should install the required package into your project, please use npm install command.`, 'warning');
                     done({
-                      contents: ''
+                      contents: '@function exist() {@return false}'
                     });
                   } else {
                     let phToFile = path.join(appPaths.node_modules, url.replace('@', ''));
@@ -343,12 +339,14 @@ class scssPlugin extends plugin {
                       this.error(origin + ' package not found in your project');
                       this.system(`Are you trying to include ${url} from node_modules directory of current project, but this package was not found in your project. You should install the required package into your project, please use npm install command.`, 'warning');
                       done({
-                        contents: ''
+                        contents: '@function exist() {@return false}'
                       });
                     }
                   }
                 } else {
-                  done();
+                  done({
+                    contents: '@function exist() {@return false}'
+                  });
                 }
               }
           } catch(e) {
@@ -358,7 +356,7 @@ class scssPlugin extends plugin {
               this.error('Attempt to use an unknown "'+url+'" component. Error in '+ prev);
             }
             done({
-              contents: ''
+              contents: '@function exist() {@return false}'
             });
           }
         })();
@@ -450,7 +448,7 @@ class scssPlugin extends plugin {
             }
         }
 
-        plugins.push(postcssTheme());
+        plugins.push(postcssTheme(release));
 
         if(release) {
           let releasePath = path.join(this.dist, 'releases', release.releaseName + '-v' + release.version, config.fs.dist.css);
@@ -520,7 +518,27 @@ class scssPlugin extends plugin {
         }));
         return Promise.all(events);
     }
+    async componentHasRender(cid) {
+      let hasRender = await fsp.exists(path.join(this.components, cid, 'render.scss'));
+      if(!hasRender) {
+        return false
+      }
+      let content = await fsp.readFile(path.join(this.components, cid, 'render.scss'), 'UTF-8');
+      if(content.trim() == '') {
+        return false
+      }
+      return true
+    }
     async _renderComponents(components, release) {
+        for(let cid of components) {
+          if(!await this.componentHasRender(cid)) {
+            components = _.without(components, cid);
+            this.log(`${cid} component does not have a render file, or it is empty, this component will be skipped.`, 'warning');
+          }
+        }
+        if(!components.length) {
+          return
+        }
         let renderTemplate = path.join(this.framework, 'render.hbs.scss');
         renderTemplate = await fsp.readFile(renderTemplate, 'UTF-8');
         let config = this.config;
@@ -536,7 +554,6 @@ class scssPlugin extends plugin {
         if(!await fsp.exists(this.root, 'project', 'themes', source.theme) && !await fsp.exists(this.root, 'project', 'themes', source.theme + '.scss')) {
             this.error(`${source.theme} theme in the project does not exist`, {exit: true});
         }
-        //source.topSelector = config.topSelector;
 
         if(!release) {
             source.theme = buildConfig.theme;
@@ -562,6 +579,9 @@ class scssPlugin extends plugin {
                 if(!buildConfig.oppositeDirection) {
                     dir = '.' + buildConfig.direction;
                 }
+                if(result.trim() == '') {
+                  result = '/* This component has no rules :( */'
+                }
                 await fse.outputFile(path.join(this.dist, config.fs.dist.css, components.join('-') + dir + '.css'), result);
                 this.emit('ready', components);
                 return true;
@@ -583,8 +603,6 @@ class scssPlugin extends plugin {
                 dir = (releaseData.direction ? '.' + releaseData.direction : '');
             }
             let res = await this._sassRender(hbs.compile(renderTemplate)(source), components, {release});
-            //await fse.outputFile(path.join(this.dist, 'test.scss'), res.css);
-
             if(res && res.css) {
                 data.push(res.css);
                 source.inverse = releaseData.inverse;
@@ -637,8 +655,6 @@ class scssPlugin extends plugin {
                         let output = await this.getReleseLabel(releaseData, r);
                         let url = path.join(config.fs.dist.css, 'v' + moment().unix() + '-' +  (releaseData.filename ? releaseData.filename : releaseData.releaseName)  + dir + '.css');
                         await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
-                        //console.log(output);
-                        //console.log('outputFile', path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url));
                         this.releaseResults.push(url);
                     } else {
                         for(let e of r) {
@@ -648,7 +664,6 @@ class scssPlugin extends plugin {
                                 try {
                                     let url = path.join(config.fs.dist.css, 'v' + moment().unix() + '-' +  (releaseData.filename ? releaseData.filename : releaseData.releaseName) + '.theme-' + theme + dir + '.css');
                                     await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
-                                    //console.log('outputFile', path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url));
                                     this.releaseResults.push(url);
                                 } catch(e) {
                                     this.log(e, 'error');
@@ -693,15 +708,25 @@ class scssPlugin extends plugin {
     }
     async release(release) {
       let components = release.components;
-      this.activeRelease = release;
-      if(!components.length) {
-          return this.error('At least one component is required to implement the release.', {exit: true});
+      for(let cid of release.components) {
+        if(!await this.componentHasRender(cid)) {
+          components = _.without(components, cid);
+          release.components = components;
+          this.log(`${cid} component does not have a render file, or it is empty, this component will be skipped.`, 'warning');
+        }
       }
-      let releasePath = path.join(this.dist, 'releases', release.releaseName + '-v' + release.version);
+      if(!components.length) {
+          return this.system('To create a release, you must select at least one component that has a render file', 'warning');
+      }
 
+      this.activeRelease = release;
+
+      let releasePath = path.join(this.dist, 'releases', release.releaseName + '-v' + release.version);
       try {
-          await this._renderComponents(components, release);
-          this.system(`${release.releaseName} release successfully generated to ${releasePath}`, true);
+          let success = await this._renderComponents(components, release);
+          if(success) {
+            this.system(`${release.releaseName} release successfully generated to ${releasePath}`, true);
+          }
       } catch(e) {
           this.system(`${release.releaseName} release not generated.`, false);
           this.system(e, 'error');
@@ -716,13 +741,14 @@ class scssPlugin extends plugin {
         let config = this.config;
         let prjConfig = this.project.config;
         for(let event of events) {
-           //console.log(event);
             try {
-                await this._renderComponents(event.components);
+              let success = await this._renderComponents(event.components);
+              if(success) {
+                this.log(`Styles for ${event.components.join(',')} component(s) were successfully generated!`, 'success');
+              }
             } catch(e) {
                 console.log(e);
             }
-            this.log(`Styles for ${event.components.join(',')} component(s) were successfully generated!`, 'success');
         }
         this.emit('rendered');
     }
@@ -853,6 +879,7 @@ class scssPlugin extends plugin {
     }
     setHtmlInternalSass(data) {
         for (let d of data) {
+            d.rules = d.rules.replace(/@use\s+("|')((ungic.component)?\.core)("|')/gm, `@use "ungic.components.${d.cid}"`);
             this.internalSassRules.set(d);
         }
         // Group by CID
@@ -861,16 +888,17 @@ class scssPlugin extends plugin {
         // Получить все требуемые части для одного из компонентов
         let lidsWithCids = _.filter(this.internalSassRulesRequired.storage, el => cidsToRebuild.indexOf(el.cid) != -1);
 
-
+        //console.log(lidsWithCids);
         if(lidsWithCids.length) {
             // Отфильтровать до используемых лидов
-            let cids = _.uniq(_.pluck(_.filter(lidsWithCids, c => _.find(data, d => d.lid == c.lid && d.cid == c.cid)), 'cid'));
+            let cids = _.uniq(_.pluck(_.filter(lidsWithCids, c => _.find(data, d => d.slot == c.slot && d.cid == c.cid)), 'cid'));
 
+            //console.log('cids', cids);
             this.renderMaster.add({
                 description: `${cids.join(', ')} components`,
                 components: cids
             });
-            if(cids.length > 1) {
+            /*if(cids.length > 1) {
                 let config = this.config;
                 let buildConfig = this.builder.config.dev.config;
                 let dir = '';
@@ -878,7 +906,7 @@ class scssPlugin extends plugin {
                     dir = '.' + buildConfig.direction;
                 }
                 return path.join(config.fs.dist.css, cids.join('-')  + dir + '.css').replace(/\\+/g, '/');
-            }
+            }*/
         }
     }
     getComponents() {
@@ -906,7 +934,7 @@ class scssPlugin extends plugin {
         if(await fsp.exists(toPath)) {
             let deps = this.getDepsFor(cid);
             if(deps.length) {
-                throw new Error(`This component is used by other components (${deps.join(', ')}).`);
+                throw new Error(`This component cannot be removed because it is used in other components! First, remove its use in the following components: ${deps.join(', ')}`);
             }
             let watched = this.unwatched;
             this.unwatch();

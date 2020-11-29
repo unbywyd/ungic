@@ -56,7 +56,7 @@ logger.prototype.system = function (message, target, status) {
   let label = target ? 'System: ' + target : 'System';
   let color = 'cyan';
   if (message instanceof Error) {
-    message = message.stack;
+    message = message.message;
     color = 'red';
   } else {
     if(status === false || status === 'error') {

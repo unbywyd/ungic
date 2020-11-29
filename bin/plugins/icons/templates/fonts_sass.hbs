@@ -1,9 +1,9 @@
 @use "sass:map";
 @use "sass:meta";
 
-$fontFamily: "{{config.font.name}}";
+$font-family: "{{config.font.name}}";
 $url: "{{fonts_path}}";
-$className: "{{config.font.class}}";
+$class-name: "{{config.font.class}}";
 
 $_icons: (
     {{#each icons}}{{id}}:(
@@ -13,7 +13,7 @@ $_icons: (
     ),{{/each}}
 );
 
-@function char($character-code) {
+@function _char($character-code) {
     @if function-exists("selector-append") {
         @return unquote("\"\\#{$character-code}\"");
     }
@@ -54,10 +54,7 @@ $_icons: (
 }
 
 @function has-icon($icon-name) {
-    @if(not map.has-key($_icons, $icon-name)) {
-        @return false;
-    }
-    @return true;
+    @return icon-exist($icon-name);
 }
 
 
@@ -67,7 +64,7 @@ $_icons: (
     $result: null;
     @if(map.has-key($_icons, $icon-name)) {
         $icon: map.get($_icons, $icon-name);
-        $result:char(map.get($icon, unicode));
+        $result:_char(map.get($icon, unicode));
         @if meta.variable-exists("cid") {
             $save: use-icon($cid, $icon-name);
         }
@@ -135,7 +132,7 @@ $_icons: (
         @each $icon-name, $icon in $_icons {
             .{{config.font.class}}-#{$icon-name} {
                 &:before {
-                    content: char(map.get($icon, unicode));
+                    content: _char(map.get($icon, unicode));
                 }
             }
             @if meta.variable-exists("cid") {

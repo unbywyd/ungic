@@ -1,0 +1,5 @@
+@mixin merge {
+	.un-merge-method {
+		@content;
+	}
+}

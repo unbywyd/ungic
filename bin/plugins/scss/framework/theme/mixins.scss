@@ -25,7 +25,6 @@
 *   To make css rules by theme type (dark / light)
 */
 @mixin is-type($type) {
-    $inverse: get(inverse);
     $inverse-mode: get(inverse-mode);
     @if get(theme-type) == $type and not $inverse-mode {
         @include un-meta.wrapsys('[un-prefix="{{html:not(.un-inverse)}}"]') {
@@ -37,11 +36,13 @@
         }
     }
 }
+
 @mixin is-dark() {
     @include is-type(dark) {
         @content
     }
 }
+
 @mixin is-light() {
     @include is-type(light) {
         @content
@@ -56,7 +57,7 @@
     $active-name: get(name);
     @if $theme-name == $active-name {
         @if $theme-name == 'default' {
-            @include un-meta.wrapsys('[un-save-props] html:not(.un-theme)') {
+            @include un-meta.wrapsys('[un-save-props] html:not([class*="un-theme"])') {
                 @content;
             }
         } @else {
@@ -70,8 +71,8 @@
 /*
 *   Ignore inversion
 */
-@mixin ignore-inverse {
-    @include un-meta.wrapsys('[un-inverse-ignore]') {
+@mixin skip-inverse {
+    @include un-meta.wrapsys('[un-inverse-skip]') {
         @content;
     }
 }
@@ -79,8 +80,8 @@
 /*
 *   Custom method for manual inversion control
 */
-@mixin is($prefix) {
-    @include un-meta.wrapsys("[un-prefix='{{#{$prefix}}}']") {
+@mixin custom-inverse-prefix($prefix) {
+    @include un-meta.wrapsys("[un-prefix='{{un-custom-prefix-#{$prefix}}}']") {
         @content;
     }
 }

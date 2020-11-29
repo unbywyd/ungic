@@ -161,14 +161,16 @@ module.exports = async function(args) {
     if(generateIconsRelease) {
       if(!buildConfig.includeOnlyUsedComponents) {
         iconsRelease = await iconsInquirer.call(this, args, release);
-        let allIcons = [];
-        if(Array.isArray(iconsRelease.svgIcons) && iconsRelease.svgIcons.length) {
-          allIcons = iconsRelease.svgIcons;
+        if(iconsRelease) {
+          let allIcons = [];
+          if(Array.isArray(iconsRelease.svgIcons) && iconsRelease.svgIcons.length) {
+            allIcons = iconsRelease.svgIcons;
+          }
+          if(Array.isArray(iconsRelease.sprites) && iconsRelease.sprites.length) {
+            allIcons = allIcons.concat(iconsRelease.sprites);
+          }
+          commonIcons = allIcons;
         }
-        if(Array.isArray(iconsRelease.sprites) && iconsRelease.sprites.length) {
-          allIcons = allIcons.concat(iconsRelease.sprites);
-        }
-        commonIcons = allIcons;
       } else if(commonIcons.length) {
         iconsRelease = await iconsInquirer.call(this, args, release, {
           svgIcons: commonSvgIcons.length ? commonSvgIcons : false,
