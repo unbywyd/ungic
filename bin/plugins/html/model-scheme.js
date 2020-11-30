@@ -13,6 +13,33 @@ module.exports = {
             decodeEntities: false
         }
     },
+    customTypeHandlers: {
+        type: 'object',
+        patternProperties: {
+          "^[A-z_]+\w*$": {
+            type: "object",
+            required: ["transformer"],
+            properties: {
+                transformer: {
+                    type: "string"
+                },
+                dev: {
+                    type: "boolean",
+                    default: false
+                },
+                includeHandler: {
+                    "anyOf": [{
+                        type: 'string'
+                      },
+                      {
+                        type: 'boolean'
+                      }
+                    ]
+                }
+            }
+          }
+        }
+    },
     replaceAmpToSymbol: {
         type: 'boolean',
         default: true

@@ -11,7 +11,6 @@ const { promisify } = require("util");
 fsp.exists = promisify(fs.exists);
 const path = require('path');
 const Handlebars = require('handlebars');
-const Mustache = require('mustache');
 const {extend: Collection} = require('../../modules/collection');
 const {extend: Model} = require('../../modules/model');
 const renderMaster = require('../../modules/render-master');
@@ -23,11 +22,10 @@ const MD = new(require('markdown-it'));
 const yaml = require('js-yaml');
 const validate = require('html5-validator');
 const amphtmlValidator = require('amphtml-validator');
-const pug = require('pug');
+//const pug = require('pug');
 const minify = require('html-minifier').minify;
 const cheerio = require('cheerio');
 const appPaths = require('../../modules/app-paths')();
-const cleanCss = require('clean-css');
 const postcss = require('postcss');
 const clean = require('../../modules/postcss-clean');
 const Stream = require('stream');
@@ -43,7 +41,7 @@ class builder extends skeleton {
     }
 }
 
-let jsOptimaze = source => {
+let jsOptimaze = (source) => {
     return new Promise((res, rej) => {
         var vFile = new Stream.Readable();
         if(Array.isArray(source)) {
@@ -52,13 +50,19 @@ let jsOptimaze = source => {
         vFile.push(source, 'utf8')
         vFile.push(null);
 
-        let brow = browserify(vFile);
-
+        let brow = browserify([vFile], {
+            basedir: __dirname,
+            paths: [appPaths.root]
+        });   
+        
         brow.transform(babelify.configure({
             cwd: __dirname,
             presets: [['@babel/preset-env', {
                 corejs: 3,
                 useBuiltIns: 'entry'
+            }]],
+            plugins: [["@babel/plugin-transform-runtime", {
+                regenerator: true
             }]]
         }));
 
@@ -71,6 +75,7 @@ let jsOptimaze = source => {
                 return rej(err);
             }
             try {
+                //console.log(output);
                 let output = terser.minify(data.toString(), {
                     toplevel: true,
                     mangle: {
@@ -150,6 +155,7 @@ class htmlPlugin extends plugin {
         this.iconsUsed = new Storage;
         this.iconsDataUsed = new Storage;
         this.slotsStorage = new Storage;
+        this.customTypeStorage = new Storage;
 
         this.typeHandlers.set('json', async attrs => {
             try {
@@ -176,7 +182,7 @@ class htmlPlugin extends plugin {
             attrs.body = await this.ungicParser.parse(attrs.body, attrs);
             let body = attrs.body, sourceBody = body;
             body = body.replace(/<!-{1,}[\w\W]+?-{2,}>/gm, '');
-            if((/<html/g.test(body) && /<\/html/g.test(body)) || (/<body/g.test(body) && /<\/body/g.test(body)) || /UNGIC\:PAGE/.test(sourceBody)) {
+            if(((/(?<!(<\!--\s*))<html/gi.test(body) && /<\/html>(?!(\s*-->))/gi.test(body)) || /UNGIC\:PAGE/i.test(sourceBody)) && !/UNGIC\:PART/i.test(sourceBody)) { // || (/<body/g.test(body) && /<\/body/g.test(body))
                 attrs.type = 'page';
                 if(/<html\s+.+\s(amp|⚡)\s?.*>/g.test(attrs.body)) {
                     attrs.amp = true;
@@ -186,6 +192,70 @@ class htmlPlugin extends plugin {
         });
 
         config = this.config;
+
+        if(typeof this.config.customTypeHandlers == 'object') {
+            for(let type in this.config.customTypeHandlers) {
+                let pathToScript = path.join(appPaths.root, this.config.customTypeHandlers[type].transformer);
+                try {
+                    if(_.keys(systemConfig.supportedTypes).includes(type)) {
+                        throw new Error(`${type} type already exists!`);
+                    }
+                    if(_.values(systemConfig.supportedTypes).includes(type)) {
+                        throw new Error(`${type} type already system reserved!`);
+                    }
+                    let handler = require(pathToScript);
+                           
+                    if (typeof handler != "function") {
+                        throw new Error("transformer for custom type should return a async function");
+                    } else {
+                        let data = {
+                            type,
+                            transformer: handler,
+                            dev: !!this.config.customTypeHandlers[type].dev
+                        }
+                        if(typeof this.config.customTypeHandlers[type].includeHandler == 'string') {
+                            let includeHandlerPath = path.join(appPaths.root, this.config.customTypeHandlers[type].includeHandler);
+                            if(path.extname(includeHandlerPath) == "") {
+                                includeHandlerPath = includeHandlerPath + '.js';
+                            }
+                            let includeHandler = require(includeHandlerPath);
+                            if (typeof includeHandler != "function") {
+                                throw new Error("includeHandler for custom type should return a function");
+                            } else {
+                                data.includeHandler = includeHandlerPath
+                            }                            
+                        } else if(typeof this.config.customTypeHandlers[type].includeHandler === "boolean") {
+                            data.includeHandler = this.config.customTypeHandlers[type].includeHandler;
+                        } else {
+                            data.includeHandler = true;
+                        }
+                        this.customTypeStorage.set(data);
+                    }
+                } catch(e) {       
+                    let errorMessage = () => {
+                        this.error(`Custom ${type} File Type Handler Error: ${e.message}`);
+                        this.off('rendered', errorMessage);
+                    }                    
+                    this.on('rendered', errorMessage);                             
+                }
+            }
+        }
+        
+        if(this.customTypeStorage.storage.length) {
+            systemConfig.supportedIncludeTypes =  _.uniq(systemConfig.supportedIncludeTypes.concat(_.pluck(this.customTypeStorage.storage, "type")));
+            let types = {};
+            for(let type of this.customTypeStorage.storage) {
+                types[type.type] = type.type;
+                let message = () => {
+                    this.log(`${type.type} custom file handler has been successfully added to HTML plugin, you can use *.${type.type} files.`, "success");
+                    this.off('rendered', message);
+                }                   
+                this.on('rendered', message);               
+                this.typeHandlers.set(type.type, type.transformer);
+            }
+            systemConfig.supportedTypes =  _.extend(systemConfig.supportedTypes, types);
+        }
+
         let enums = _.uniq(_.values(systemConfig.supportedTypes));
         enums.push('page');
         let model = Model({
@@ -218,6 +288,8 @@ class htmlPlugin extends plugin {
                         }
                         return;
                     }
+                    this.slotsStorage.clean(r => r.htmlModelId == model.id); 
+                    this.pipes.clean(m => m.page_id == model.id);
                 }
                 if(event == 'updated' || event == 'added') {
                     if(model.get('type') == 'page') {
@@ -252,6 +324,10 @@ class htmlPlugin extends plugin {
         });
 
         this.ungicParser.add('pipe', async (attributes, args, body) => {
+            let pipes = _.findWhere(this.pipes.storage, {page_id: args.id});
+            if(pipes) {
+                return
+            }
             try {
                 let attrs = {
                     dir: ("dir" in attributes && ['ltr', 'rtl'].indexOf(attributes.dir) != -1) ? attributes.dir : ''
@@ -262,7 +338,11 @@ class htmlPlugin extends plugin {
                     attrs.css = attributes.sass;
                     attributes.css = attributes.sass;
                 }
-               
+
+                if("main" in attributes) {
+                    attrs.main = attributes.main;
+                }
+                
                 if("css" in attributes && attributes.css.trim() != '') {
                     attrs.css = attributes.css.split(',').map(e=>e.replace(/^\s+|\s+$/, ''));
                 }           
@@ -276,7 +356,8 @@ class htmlPlugin extends plugin {
                 if(attrs.css && attrs.css.length) {
                     this.pipes.set({
                         page_id: args.id,
-                        css: attrs.css
+                        css: attrs.css,
+                        main: attrs.main || ""
                     });
                     for(let css of attrs.css) {
                         if(path.extname(css) != '') {
@@ -308,7 +389,7 @@ class htmlPlugin extends plugin {
             this._dist_handler(event, path.relative(this.dist, ph));
         });
         let self = this;
-        this.MustacheHelpers = {
+        /*this.MustacheHelpers = {
             debug_it: function() {
                 return function(searchBy) {
                     if(self.release) {
@@ -333,7 +414,7 @@ class htmlPlugin extends plugin {
                 }
                 return JSON.stringify(this, null, 4);
             }
-        }
+        }*/
         Handlebars.registerHelper("debug", function(searchBy) {
             if(self.release) {
                 return '';
@@ -485,7 +566,6 @@ class htmlPlugin extends plugin {
                     if(supportedIncludeTypes.indexOf(model.get('type')) == -1) {
                         return this.log(`${model.get('type')} type not supported for including. Error building ${rootData.ungic.page.path} page in ${activeModel.get('path')} entity`, 'error');
                     }
-                    //source.ungic.dirname = path.dirname(path.relative(this.root, templatePath));
                     source.ungic.model = {
                         id: model.id,
                         path: model.get('path')
@@ -528,7 +608,6 @@ class htmlPlugin extends plugin {
                         let sass_options = options.sass.replace(/\s/g, '').split(',');
                         if(scssPlugin && scssPlugin.exports.size()) {
                             for(let o of sass_options) {
-
                                 let res = exportSearch(o);
                                 if(res) {
                                     for(let r of res) {
@@ -553,40 +632,44 @@ class htmlPlugin extends plugin {
                             this.log(e);
                         }
                     }
-                    if(model.get('type') == 'template' || model.get('type') == 'mustache_template' || model.get('type') == 'underscore_template' || model.get('type') == 'pug_template') {
+                    let handlebarsPreprocess = () => {
                         source = _.extend(source, inlineData);
                         if('object' == typeof options.extend) {
                             source = _.extend(source, options.extend);
                         }
+                        content = Handlebars.compile(content)(source);
+                        return content;
                     }
                     if(model.get('type') == 'template') {
-                        content = Handlebars.compile(content)(source);
+                        handlebarsPreprocess();
                     }
-                    if(model.get('type') == 'mustache_template') {
-                        source = _.extend({}, this.MustacheHelpers, source);
-                        content = Mustache.render(content, source);
-                    }
+                    if(this.customTypeStorage.storage.length) {   
+                        if(_.find(this.customTypeStorage.storage, el => el.includeHandler == true && model.get('type') == el.type)) {
+                            handlebarsPreprocess();
+                        } else {
+                            let handler = _.find(this.customTypeStorage.storage, el => typeof el.includeHandler == "string" && model.get('type') == el.type);
+                            if(handler) {
+                                source = _.extend(source, inlineData);
+                                if('object' == typeof options.extend) {
+                                    source = _.extend(source, options.extend);
+                                }   
+                                try {      
+                                    if(handler.dev) {  
+                                        delete require.cache[path.normalize(handler.includeHandler)]; 
+                                    }
 
-                    if(model.get('type') == 'underscore_template') {
-                        let compiled = _.template(content, {
-                            interpolate: /\{\{(.+?)\}\}/g
-                        });
-                        content = compiled(_.extend({}, source, {
-                            debug: '<pre data-path="'+source.ungic.model.path+'" class="un-debug">' + JSON.stringify(source, null, 4) + '</pre>'
-                        }));
-                    }
+                                    let includeHandler = require(handler.includeHandler);                                                     
+                                    content = includeHandler(content, Object.assign({}, source), Handlebars.compile); 
 
-                    let self = this;
-                    if(model.get('type') == 'pug_template') {
-                        content = pug.compile(content)(_.extend({}, source, {
-                            debug: function() {
-                                if(self.release) {
-                                    return '';
+                                    if(typeof content != "string") {
+                                        throw new Error(`includeHandler for custom ${model.get('type')} file type should return the processed content as a string!`);
+                                    }
+                                } catch(e) {        
+                                    this.error(`Content processing error in includeHandler for custom ${model.get('type')} file type: ${e.message}.`);
                                 }
-                                return JSON.stringify(source, null, 4);
                             }
-                        }));
-                    }
+                        }
+                    }                   
                     if(model.get('type') == 'part') {
                         let s = {
                             ungic: source.ungic
@@ -626,12 +709,22 @@ class htmlPlugin extends plugin {
         }
         attrs.type = systemConfig.supportedTypes[handlerID];
         if(this.typeHandlers.has(handlerID)) {
-            try {
-                attrs = await this.typeHandlers.get(handlerID).call(this, attrs);
+            try {          
+                let customType = _.find(this.customTypeStorage.storage, el => el.type == attrs.type), content;               
+                if(customType) {
+                    content = await this.typeHandlers.get(handlerID).call(this, attrs.body, _.omit(Object.assign({}, attrs), 'body'));
+                    if(typeof content != "string") {                   
+                        this.error(`transformer for ${handlerID} file type should return exclusively processed content as a string`);
+                    } else {
+                        attrs.body = content;
+                    }
+                } else {
+                    attrs = await this.typeHandlers.get(handlerID).call(this, attrs);
+                }         
             } catch(e) {
                 console.log(e);
             }
-        }
+        }      
         if(!attrs) {
             return;
         }
@@ -769,6 +862,8 @@ class htmlPlugin extends plugin {
             if(typeof config.beautify == 'object' && Object.keys(config.beautify).length) {
                 beautifyConfig = config.beautify;
             }
+            
+            beautifyConfig = _.extend({unformatted: ["script", "style"]}, beautifyConfig);
             let content = beautify.html(await fsp.readFile(pathDist, 'UTF-8'), _.extend({"indent_size": 4}, beautifyConfig));
             return fse.outputFile(pathDist, content);
         }
@@ -916,7 +1011,7 @@ class htmlPlugin extends plugin {
                             await fse.outputFile(path.join(distPath, path.basename(attrs.path, path.extname(attrs.path)) + '.w3.validation.result.txt'), resultValidation);
                         }
                     }
-                    let templatesModels = this.collection.filter(m => m.has('page_ids') && m.get('page_ids').indexOf(model.id) != -1 && (m.get('type') == 'template' || m.get('type') == 'pug_template'  || m.get('type') == 'mustache_template' || m.get('type') == 'underscore_template'));
+                    let templatesModels = this.collection.filter(m => m.has('page_ids') && m.get('page_ids').indexOf(model.id) != -1 && /*(*/m.get('type') == 'template' /*|| m.get('type') == 'pug_template'  || m.get('type') == 'mustache_template' || m.get('type') == 'underscore_template')*/);
                     if(templatesModels.length) {
                         for(let template of templatesModels) {
                             let output = template.get('body');
@@ -944,6 +1039,30 @@ class htmlPlugin extends plugin {
                 let hasSlots = [];
                 let scssProms = [];
                 let self = this;
+
+                //let pipes = _.findWhere(this.pipes.storage, {page_id: args.id});
+
+                $('[class*="&"]').each(function() {
+                    let pipes = _.findWhere(self.pipes.storage, {page_id: model.id});
+                    let parentClasses = ($(this).parent().attr('class') || "").split(' ').map(e => e.trim()).filter(e => e.trim() != "");
+                    
+                    let classes = $(this).attr('class').split(' ').map(e => e.trim()).filter(e => e.trim() != "");
+                    classes = classes.map(e => {
+                        if(/&(&|\d+)/.test(e)) {                            
+                            e = e.replace(/&(&|\d+)/, function(match, num) {
+                                num = num == "&" ? 1 : parseInt(num);  
+                                if(num != 0) {
+                                    num = num - 1;
+                                }                                                                          
+                                return parentClasses[num] ? parentClasses[num] : pipes.main;
+                            });
+                        } else {
+                           e = e.replace(/\&/gm, pipes.main);
+                        }
+                        return e;
+                    });                   
+                    $(this).attr('class', classes.join(' '));
+                });
 
                 $('style[scss], style[sass]').each(function() {
                     let attr = $(this).attr('sass') ? 'sass' : 'scss';
@@ -1228,7 +1347,7 @@ class htmlPlugin extends plugin {
                                             if(self.release.optimizeInternalScripts) {
                                                 try {
                                                     let result = await jsOptimaze($(this).html());
-                                                    $(this).html(result);
+                                                    $(this).text(result);
                                                 } catch(e) {
                                                     self.log('An error occurred while optimizing the script', 'error');
                                                     self.log(e);
@@ -1321,8 +1440,9 @@ class htmlPlugin extends plugin {
 
                 if(build.formatting === 'beautify') {
                     let configBeautify = typeof config.beautify == 'object' ? config.beautify : {};
-                        configBeautify = _.extend(this.project.app.PLUGINS_SETTINGS.beautify, configBeautify);
-
+                        configBeautify = _.extend({unformatted: ["script", "style"]}, this.project.app.PLUGINS_SETTINGS.beautify, configBeautify);
+                    
+                       
                     output = beautify.html(output, _.extend({"indent_size": 4}, configBeautify));
                 }
                 if(build.formatting === 'minifier') {

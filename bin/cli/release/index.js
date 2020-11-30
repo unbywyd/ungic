@@ -75,14 +75,16 @@ module.exports = async function(args) {
 
     for(let pagePath of pagesChosen) {
       let releaseData = Object.assign({}, _.omit(htmlRelease, 'pages', 'excludePages'));
+       
       let data = await htmlPlugin.getReleaseInfo(_.find(pages, page => page.path == pagePath));
 
       let pageIcons = data.icons && data.icons.length ? data.icons : [];
       if (pageIcons.length) {
-        let icons_ids = _.pluck(pageIcons, 'icon_id');
-        releaseData.icons_ids = icons_ids;
+        let icons_ids = _.pluck(pageIcons, 'icon_id');       
+        releaseData.icons_ids = icons_ids;    
         commonIcons = _.uniq(commonIcons.concat(icons_ids));
-      }
+      }     
+
       if (data.pipes && data.pipes.length) {
         let iconsSassUsed = scssPlugin.iconsSaveStorage.storage;
         let icons = [];
@@ -96,17 +98,16 @@ module.exports = async function(args) {
           }
         }
         if (icons.length) {
-          let icons_ids = _.uniq(_.pluck(icons, 'icon_id').concat(releaseData.icons_ids));
+          let icons_ids = _.uniq(_.pluck(icons, 'icon_id').concat(releaseData.icons_ids || []));         
           releaseData.icons_ids = icons_ids;
           commonIcons = _.uniq(commonIcons.concat(icons_ids));
         }
         scssComponents = _.uniq(scssComponents.concat(data.pipes));
       }
       releaseByPage[pagePath] = releaseData;
-    }
-
+    }  
     if(commonIcons.length) {
-      for(let id of commonIcons) {
+      for(let id of commonIcons) {      
         let icon = iconsPlugin.collection.get(id);
         if(icon.has('svg')) {
           commonSvgIcons.push(id);
