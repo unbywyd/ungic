@@ -177,12 +177,16 @@ class ungicProject extends skeleton {
             processes.push(new Promise((res, rej) => {
                 iconsPlugin.on('begined', async(icons) => {
                     try {
-                        await scssPlugin.begin({icons});
-                        await htmlPlugin.begin({icons});
+                        let toHTML = async () => {
+                            scssPlugin.off("rendered", toHTML);
+                            await htmlPlugin.begin({icons});
+                            res();
+                        } 
+                        scssPlugin.on("rendered", toHTML);
+                        await scssPlugin.begin({icons});                                                              
                     } catch(e) {
                         console.log(e);
-                    }
-                    res();
+                    }                    
                 });
             }));
             processes.push(iconsPlugin.begin());

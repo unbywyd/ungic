@@ -74,6 +74,9 @@ class scssPlugin extends plugin {
         this.watchController.on('ready', events => {
             this.fileChanged(events);
         });
+        this.on("rendered", () => {
+            this.ready = true;
+        });
         this.depends = {};
         this.internalSassRules = new Storage;
         this.internalSassRulesRequired = new Storage;
@@ -378,7 +381,7 @@ class scssPlugin extends plugin {
                 try {
                     data = JSON.parse(data);
                     exportsStorage.push({
-                        oid, cid, data, id: cid + '.' + oid
+                        oid, cid, data, id: cid + '__' + oid
                     });
                 } catch(e) {
                     this.log(`${oid} exported option of ${cid} component has invalid json format.`, 'error');

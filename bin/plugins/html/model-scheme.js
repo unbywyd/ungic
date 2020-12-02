@@ -6,7 +6,7 @@ module.exports = {
     minifier: {
         type: 'object',
         default: {}
-    },
+    },    
     cheerio: {
         type: 'object',
         default: {

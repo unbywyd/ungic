@@ -1,7 +1,19 @@
 import JSONTreeView from "json-tree-view";
 import io from 'socket.io-client';
 
+function reload() {
+    var doc = document.documentElement;
+    var x = (window.pageXOffset || doc.scrollLeft) - (doc.clientLeft || 0);
+    var y = (window.pageYOffset || doc.scrollTop)  - (doc.clientTop || 0);
+    window.localStorage.setItem('wp-last-scroll-position', `${x},${y}`);
+    window.location.reload();   
+}
 document.addEventListener("DOMContentLoaded", function() {
+    if(window.localStorage.getItem('wp-last-scroll-position')) {
+        let [x, y] = window.localStorage.getItem('wp-last-scroll-position').split(',');
+        window.scrollTo(x, y);
+        window.localStorage.removeItem('wp-last-scroll-position');
+    }
     let debugs = document.querySelectorAll('.un-debug');
     if(debugs.length) {
         for(let debug of debugs) {
@@ -34,7 +46,7 @@ document.addEventListener("DOMContentLoaded", function() {
         for(let e of events) {
             let {events, relative, url}  = e;
             if(relative == pagesrc) {
-                window.location.reload();
+                reload();                
                 return
             }
             let skips = [];
@@ -59,7 +71,7 @@ document.addEventListener("DOMContentLoaded", function() {
                             }
                         }
                     } else {
-                        window.location.reload();
+                        reload();
                     }
                 }
             }

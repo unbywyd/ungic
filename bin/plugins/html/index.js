@@ -152,6 +152,7 @@ class htmlPlugin extends plugin {
 
         this.sassUsed = new Storage;
         this.pipes = new Storage;
+        this.mainScssPipes = new Storage;
         this.iconsUsed = new Storage;
         this.iconsDataUsed = new Storage;
         this.slotsStorage = new Storage;
@@ -290,6 +291,7 @@ class htmlPlugin extends plugin {
                     }
                     this.slotsStorage.clean(r => r.htmlModelId == model.id); 
                     this.pipes.clean(m => m.page_id == model.id);
+                    this.mainScssPipes.clean(m => m.page_id == model.id);
                 }
                 if(event == 'updated' || event == 'added') {
                     if(model.get('type') == 'page') {
@@ -325,6 +327,7 @@ class htmlPlugin extends plugin {
 
         this.ungicParser.add('pipe', async (attributes, args, body) => {
             let pipes = _.findWhere(this.pipes.storage, {page_id: args.id});
+        
             if(pipes) {
                 return
             }
@@ -338,9 +341,14 @@ class htmlPlugin extends plugin {
                     attrs.css = attributes.sass;
                     attributes.css = attributes.sass;
                 }
+                let output = '';
 
                 if("main" in attributes) {
-                    attrs.main = attributes.main;
+                    this.mainScssPipes.set({
+                        page_id: args.id,
+                        main: attributes['main']                 
+                    });
+                    output += `<!-- app:${attributes['main']} -->`;
                 }
                 
                 if("css" in attributes && attributes.css.trim() != '') {
@@ -351,13 +359,11 @@ class htmlPlugin extends plugin {
                 if("release" in attributes) {
                     attrs.release = attributes.release;
                 }                
-                args.pipe = attrs;
-                let output = '';
+                args.pipe = attrs;              
                 if(attrs.css && attrs.css.length) {
                     this.pipes.set({
                         page_id: args.id,
-                        css: attrs.css,
-                        main: attrs.main || ""
+                        css: attrs.css                       
                     });
                     for(let css of attrs.css) {
                         if(path.extname(css) != '') {
@@ -500,17 +506,30 @@ class htmlPlugin extends plugin {
         Handlebars.registerHelper('raw', function(options) {
             return options.fn();
         });
-        Handlebars.registerHelper('include', (template, context) => {
+        Handlebars.registerHelper('include', (template, context) => {           
             let rootData = context.data.root;
             let source = {ungic: _.clone(rootData.ungic)};
             source.ungic.UID = '_' + Math.random().toString(36).substr(2, 9);
-            let activeModel = this.collection.findByID(source.ungic.model ? source.ungic.model.id : source.ungic.page.id);
+            let pageModel = this.collection.findByID(source.ungic.page.id); // source.ungic.model ? source.ungic.model.id : 
+
             let options = context.hash ? context.hash: {};
             //let dirname = source.ungic.dirname ? source.ungic.dirname : path.dirname(source.ungic.page.path);
             let cwd = this.root; // config.relative_include ? path.join(this.root, dirname) :
-           // console.log(source);
+
+           let handlebarsCompile = (content, source) => {
+                try {
+                    content = Handlebars.compile(content)(source);
+                } catch(e) {
+                    this.log(`Handlebars compile error: ${e.message}. Error while assembling ${rootData.ungic.page.path} page`, 'error');
+                }
+                return content;
+            }
+
             if(options.cwd) {
                 cwd = path.join(this.root, options.cwd);
+            }
+            if(options.move === 'true' || options.move === true) {
+                source = _.extend({}, rootData, source);
             }
             if(options.data) {
                 if(options.data == 'icons') {
@@ -527,44 +546,53 @@ class htmlPlugin extends plugin {
                     }
                     source.icons = iconsData;
                 } else {
-                    let dataPath = path.join(cwd, options.data);
-                    if(!fs.existsSync(dataPath)) {
-                        this.log(`Data file by path ${dataPath} not exists. Error building ${rootData.ungic.page.path} page in ${activeModel.get('path')} entity`, 'error');
-                    } else {
-                        let model = this.collection.findWhere({path: path.relative(this.root, dataPath)}, false);
-                        if(model) {
-                            if(_.keys(rootData).length == 1 || (options.extend === 'true' || options.extend === true)) {
-                                source = _.extend(rootData, model.get('body'));
+                    if(typeof options.data == "string") {                       
+                        if(!/=/.test(options.data) && path.extname(options.data) != "" && [".json", ".yaml"].includes(path.extname(options.data).toLowerCase())) {
+                            let dataPath = path.join(cwd, options.data);
+                            if(!fs.existsSync(dataPath)) {
+                                this.log(`Data file by path ${dataPath} not exists. Error while assembling ${pageModel.get('path')} page.`, 'error');
                             } else {
-                                source = _.extend(source, model.get('body'));
+                                let model = this.collection.findWhere({path: path.relative(this.root, dataPath)}, false);
+                                if(model) {
+                                    source = _.extend(source, model.get('body'));
+                                    let page_ids = [];
+                                    if(model.has('page_ids')) {
+                                        page_ids = model.get('page_ids');
+                                    }
+                                    page_ids.push(rootData.ungic.page.id);
+                                    model.set('page_ids', page_ids, {silent: true});
+                                } else {
+                                    this.log(`Unknown data file ${dataPath}. Error while assembling ${rootData.ungic.page.path} page.`, 'error');
+                                }
                             }
-                            let page_ids = [];
-                            if(model.has('page_ids')) {
-                                page_ids = model.get('page_ids');
+                        } else if(path.extname(options.data) == "" || /=/.test(options.data)) {
+                            let inlineData = options.data.replace(/\&amp;/g, '&');
+                            try {
+                                inlineData = queryString.parse(inlineData);
+                                source = _.extend(source, inlineData);
+                            } catch(e) {
+                                this.log(`Error processing queryString: ${e.message}`);
                             }
-                            page_ids.push(rootData.ungic.page.id);
-                            model.set('page_ids', page_ids, {silent: true});
-                        }
+                        } else if(path.extname(options.data) != "") {
+                            this.log(`Unknown data file ${options.data}. Error while assembling ${rootData.ungic.page.path} page.`, 'error');
+                        }            
+                    } else if (typeof options.data == 'object') {
+                        source = _.extend(source, options.data);
                     }
                 }
             }
             let templatePath = path.join(cwd, template);
             let content = '';
             if(!fs.existsSync(templatePath)) {
-                this.log(`File by path ${templatePath} not exists. Error building ${rootData.ungic.page.path} page`, 'error');
+                this.log(`File by path ${templatePath} not exists. Error while assembling ${rootData.ungic.page.path} page`, 'error');
             } else {
                 let model = this.collection.findWhere({path: path.relative(this.root, templatePath)}, false);
-                /*delete source.ungic.dirname;
-                delete source.ungic.model;*/
                 if(model) {
-                    if(activeModel.get('type') == 'template' && model.get('type') != 'template') {
-                        return this.log(`Templates can include only templates. Error building ${rootData.ungic.page.path} page in ${activeModel.get('path')} entity`, 'error');
-                    }
                     let supportedTypes = systemConfig.supportedTypes;
                     let supportedIncludeTypes = systemConfig.supportedIncludeTypes;
                     supportedIncludeTypes = supportedIncludeTypes.map(type => supportedTypes[type]);
                     if(supportedIncludeTypes.indexOf(model.get('type')) == -1) {
-                        return this.log(`${model.get('type')} type not supported for including. Error building ${rootData.ungic.page.path} page in ${activeModel.get('path')} entity`, 'error');
+                        return this.log(`${model.get('type')} type not supported for including. Error while assembling ${rootData.ungic.page.path} page`, 'error');
                     }
                     source.ungic.model = {
                         id: model.id,
@@ -578,25 +606,25 @@ class htmlPlugin extends plugin {
                     page_ids.push(rootData.ungic.page.id);
                     model.set('page_ids', page_ids, {silent: true});
 
-                    let sass;
-                    if(options.sass) {
+                    let sass;                  
+                    if(options.sass != undefined) {
                         sass = {};
-                        let scssPlugin = this.project.plugins.get('scss');
+                        let scssPlugin = this.project.plugins.get('scss');                        
                         let exportSearch = function(str) {
                             let spl = str.split('.');
-                            let data;
-                            let search = function(id, data={}) {
-                                let res = scssPlugin.exports.chain().filter(model => model.id.indexOf(id) == 0).map(m => m.toJSON()).value();
+                            let data = [];
+                            let search = function(id, data=[]) {
+                                let res = scssPlugin.exports.chain().filter(model => model.id.indexOf(id) == 0).map(m => m.toJSON()).value();                               
                                 if(res.length) {
                                     if(!spl.length) {
                                         return res;
                                     }
-                                    return search(id + '.' + spl.shift(), res);
-                                } else {
+                                    return search(id + '__' + spl.shift(), res);
+                                } else {                                    
                                     if(!spl.length) {
                                         return data;
-                                    } else {
-                                        return search(id + '.' + spl.shift(), res);
+                                    } else {                                        
+                                        return search(id + '__' + spl.shift(), res);
                                     }
                                 }
                             }
@@ -605,11 +633,12 @@ class htmlPlugin extends plugin {
                             }
                             return data;
                         }
-                        let sass_options = options.sass.replace(/\s/g, '').split(',');
+                        let sass_options = options.sass.replace(/\s/g, '').split(',');     
+                                
                         if(scssPlugin && scssPlugin.exports.size()) {
                             for(let o of sass_options) {
-                                let res = exportSearch(o);
-                                if(res) {
+                                let res = exportSearch(o);                                                         
+                                if(res.length) {
                                     for(let r of res) {
                                         sass[r.id] = r.data;
                                         this.sassUsed.set({
@@ -620,25 +649,17 @@ class htmlPlugin extends plugin {
                                 }
                             }
                         }
+                        if(Object.keys(sass).length == 1 && options.single) {
+                            sass = sass[Object.keys(sass)[0]];
+                        }
                         source.sass = sass;
                     }
 
-                    let inlineData = {}
-                    if(options.inline) {
-                        options.inline = options.inline.replace(/\&amp;/g, '&');
-                        try {
-                            inlineData = queryString.parse(options.inline);
-                        } catch(e) {
-                            this.log(e);
-                        }
-                    }
                     let handlebarsPreprocess = () => {
-                        source = _.extend(source, inlineData);
-                        if('object' == typeof options.extend) {
-                            source = _.extend(source, options.extend);
+                        if('object' == typeof options.move) {
+                            source = _.extend({}, source, options.move);
                         }
-                        content = Handlebars.compile(content)(source);
-                        return content;
+                        content = handlebarsCompile(content, source); 
                     }
                     if(model.get('type') == 'template') {
                         handlebarsPreprocess();
@@ -649,9 +670,9 @@ class htmlPlugin extends plugin {
                         } else {
                             let handler = _.find(this.customTypeStorage.storage, el => typeof el.includeHandler == "string" && model.get('type') == el.type);
                             if(handler) {
-                                source = _.extend(source, inlineData);
-                                if('object' == typeof options.extend) {
-                                    source = _.extend(source, options.extend);
+                                //source = _.extend(source, inlineData);
+                                if('object' == typeof options.move) {
+                                    source = _.extend({}, source, options.move);
                                 }   
                                 try {      
                                     if(handler.dev) {  
@@ -677,7 +698,8 @@ class htmlPlugin extends plugin {
                         if(sass) {
                             s.sass = source.sass;
                         }
-                        content = Handlebars.compile(content)(s);
+                        content = handlebarsCompile(content, s);
+                        //content = Handlebars.compile(content)(s);
                     }
                     if(model.get('type') == 'page') {
                         this.log(`${model.get('path')} page cannot be included in the ${rootData.ungic.page.path} page! Any page cannot be included in another page!`, 'error');
@@ -766,6 +788,7 @@ class htmlPlugin extends plugin {
         let model = this.collection.find(model=>model.get('path') == path.normalize(ph));
         if(model) {
             this.pipes.clean(m => m.page_id == model.id);
+            this.mainScssPipes.clean(m => m.page_id == model.id);
         }
         await this.collection.add(entityData, options);
     }
@@ -995,9 +1018,7 @@ class htmlPlugin extends plugin {
                         ungic: source
                     });
                 } catch(e) {
-                    console.log(e);
-                    this.log(e);
-                    this.log(`An error occurred while rendering the ${attrs.path} page. Origin: ${e.message}`, 'error');
+                    this.log(`Handlebars compile error in ${attrs.path} page: ${e.message}`, 'error');
                 }
                 let distPath = this.dist;
                 if(this.release) {
@@ -1032,463 +1053,489 @@ class htmlPlugin extends plugin {
                 let configCheerio = typeof config.cheerio == 'object' ? config.cheerio : {};
                 configCheerio = _.extend({decodeEntities: false}, this.project.app.PLUGINS_SETTINGS.cheerio, configCheerio);
 
-                const $ = cheerio.load(output, configCheerio);
-                let $body = $('body'), $head =  $('head');
-                scssPlugin.cleanHtmlInternalSass(model.id);
-                let sassInternalRulesChanged = [], sassInternalRules = [];
-                let hasSlots = [];
-                let scssProms = [];
-                let self = this;
-
-                //let pipes = _.findWhere(this.pipes.storage, {page_id: args.id});
-
-                $('[class*="&"]').each(function() {
-                    let pipes = _.findWhere(self.pipes.storage, {page_id: model.id});
-                    let parentClasses = ($(this).parent().attr('class') || "").split(' ').map(e => e.trim()).filter(e => e.trim() != "");
-                    
-                    let classes = $(this).attr('class').split(' ').map(e => e.trim()).filter(e => e.trim() != "");
-                    classes = classes.map(e => {
-                        if(/&(&|\d+)/.test(e)) {                            
-                            e = e.replace(/&(&|\d+)/, function(match, num) {
-                                num = num == "&" ? 1 : parseInt(num);  
-                                if(num != 0) {
-                                    num = num - 1;
-                                }                                                                          
-                                return parentClasses[num] ? parentClasses[num] : pipes.main;
-                            });
-                        } else {
-                           e = e.replace(/\&/gm, pipes.main);
-                        }
-                        return e;
-                    });                   
-                    $(this).attr('class', classes.join(' '));
-                });
-
-                $('style[scss], style[sass]').each(function() {
-                    let attr = $(this).attr('sass') ? 'sass' : 'scss';
-                    let cid = $(this).attr(attr);
-                    scssProms.push(new Promise(async(res) => {
-                        try {
-                            if('string' == typeof cid && cid.trim() != '') {
-                                let cids = await scssPlugin.getComponents();
-                                if(cids.indexOf(cid) != -1) {
-                                    let slot = $(this).attr('slot') || false;
-                                    if(!slot || (slot && slot.trim() == '')) {
-                                        self.log(`To transfer sass internal styles to sass component you need specify "slot" attribute, example: slot="part1"`, 'warning');
-                                        return res();
-                                    }
-                                    if(slot) {
-                                        hasSlots.push(slot);
-                                    }
-                                    let content = $(this).html();
-                                    let prev = _.find(self.slotsStorage.storage, r => r.cid == cid && r.slot == slot && r.rules == content);
-                                   
-                                    if(!prev) {   
-                                        // Удалить старое значение этого слота  
-                                        self.slotsStorage.clean(r => r.cid == cid && r.slot == slot && r.htmlModelId == model.id);    
-                                        prev = {
-                                            htmlModelId: model.id,
-                                            cid,
-                                            slot,
-                                            rules: content
-                                        }                                                         
-                                        self.slotsStorage.set(prev);
-                                        sassInternalRulesChanged.push(prev);
-                                    }                     
-                                    
-                                    sassInternalRules.push(prev);
-                                    $(this).remove();
-                                    return res();
-                                } else {
-                                    self.log(`${cid} sass components not exist, styles will be generated as internal styles`, 'warning');
-                                }
-                            }
-                            try {
-                                var result = sass.renderSync({data: $(this).html()});
-                                $(this).html(result.css.toString());
-                                $(this).removeAttr(attr).removeAttr('slot');
-                            } catch(e) {
-                                self.log('Compilation error of internal sass styles', 'error');
-                                self.log(e);
-                            }
-                        } catch(e) {
-                            console.log(e);
-                        }
-                        res();
-                    }));
-                });
-
-                // Проверить не изменилось ли кол-во слотов, и имеются ли вообще слоты
-                if(scssProms.length) {
-                    await Promise.all(scssProms);
-
-                    let prevCount = _.size(_.filter(self.slotsStorage.storage, r => r.htmlModelId == model.id));
-                    let activeCount = sassInternalRules.length;
-                    if(hasSlots.length) {
-                        self.slotsStorage.clean(r => !hasSlots.includes(r.slot) && r.htmlModelId == model.id);    
-                    }          
-                    //console.log(prevCount, activeCount);
-                    if(sassInternalRulesChanged.length || prevCount != activeCount) {                      
-                        await scssPlugin.setHtmlInternalSass(sassInternalRules);                        
-                        /*if('string' == typeof mixCssLink && !this.release) {
-                            $head.append(`<link rel="stylesheet" href="${this.project.fastify.address}/${mixCssLink}">`);
-                        }*/
-                    }
-                }
-
+                let $;
                 try {
-                    if(!this.release) {
-                        let script = `<script src="${this.project.fastify.address + '/ungic/js/dist/pipe.min.js'}" data-connect="${this.project.fastify.address}" data-src="${path.relative(this.dist, path.join(this.dist, attrs.path)).replace(/\\+/g, '/')}"></script>`;
-                        $body.append(script);
-                        $head.append(`<link rel="stylesheet" href="${this.project.fastify.address + '/ungic/css/devtools.css'}">`);
+                    $ = cheerio.load(output, configCheerio);
+                } catch(e) {
+                    this.log(`HTML Syntax processing error in ${attrs.path} page`);
+                }
+                if($) {
+                    let $body = $('body'), $head =  $('head');
+                    scssPlugin.cleanHtmlInternalSass(model.id);
+                    let sassInternalRulesChanged = [], sassInternalRules = [];
+                    let hasSlots = [];
+                    let scssProms = [];
+                    let self = this;
 
-                        if(this.iconsStorage.fonts && this.iconsStorage.fonts.data && this.iconsStorage.fonts.data.icons.length) {
-                            $head.append(`<link rel="stylesheet" href="${this.project.fastify.address + '/ungic/font-icons'}">`);
-                        }
-                        if(this.iconsStorage.sprite && this.iconsStorage.sprite.data && this.iconsStorage.sprite.data.icons.length) {
-                            $head.append(`<link rel="stylesheet" href="${this.project.fastify.address + '/ungic/sprites'}">`);
-                        }
-                        if(this.iconsStorage.svgSprite  && this.iconsStorage.svgSprite.data && this.iconsStorage.svgSprite.data.icons.length && !this.iconsStorage.svgSprite.data.external) {
-                            $body.append(this.iconsStorage.svgSprite.data.sprite);
-                        }
+                    //let pipes = _.findWhere(this.pipes.storage, {page_id: args.id});
 
-                    } else {
-                        let styles = [];
-                        let distPath = path.join(this.dist, 'releases', this.release.releaseName + '-v' + this.release.version);
-                        let self = this;
-
-
-                        let cleancssConfig = typeof config.cleancss == 'object' ? config.cleancss : {};
-                            cleancssConfig = _.extend({level: 2}, this.project.app.PLUGINS_SETTINGS.cleancss, cleancssConfig);
-
-                        let postcssPlugins = [];
-
-                        if(this.release.iconsReleases && this.release.iconsReleases.length) {
-                            let svgSprite = _.find(this.release.iconsReleases, {type: 'svgSprite'});
-                            if(svgSprite) {
-                                $body.append(svgSprite.sprite);
+                    $('[class*="@"]').each(function() {
+                        let pipes = _.findWhere(self.mainScssPipes.storage, {page_id: model.id});
+                        let cid = $(this).parents('[cid]').attr('cid');                        
+                        cid = cid ? cid : (pipes && pipes.main ? pipes.main : "");
+                        let currentComponent; 
+                        if($(this).attr('cid')) {
+                            cid = $(this).attr('cid');
+                            currentComponent = true;
+                        }              
+                        let parentClasses = ($(this).parent().attr('class') || "").split(' ').map(e => e.trim()).filter(e => e.trim() != "");                        
+                        let classes = $(this).attr('class').split(' ').map(e => e.trim()).filter(e => e.trim() != "");
+                          
+                        classes = classes.map(e => {                            
+                            if(/@(?!\\)(@|\d+)?/.test(e)) {        
+                                //console.log(e);                      
+                                e = e.replace(/@(?!\\)(@|\d+)?/gm, function(match, num) {                                    
+                                    if(!num) {
+                                        num = 0;
+                                    }
+                                    if(num == "@" || currentComponent) {
+                                        return cid;
+                                    } else {
+                                        num = parseInt(num);  
+                                        if(num > 0) {
+                                            num = num - 1;
+                                        }                                                                
+                                        return parentClasses[num] ? parentClasses[num] : cid;
+                                    }
+                                });
+                            } else {                                                             
+                                e = e.replace(/\@\\*/gm, cid);
                             }
-                        }
-                        postcssPlugins.push(srcReplacer({
-                            release: this.release,
-                            dist: path.join(this.dist, config.fs.dist.css),
-                            distPath
-                        }));
+                            return e;
+                        });                   
+                        $(this).attr('class', classes.join(' '));
+                    });
 
-                        if(this.release.optimizeInternalStyles) {
-                            postcssPlugins.push(clean(cleancssConfig));
-                        }
+                    $('[cid]').each(function() {
+                        $(this).removeAttr('cid');
+                    });
 
-                        if(!this.release.includeExternalStyles) {
-                            /*
-                            *   Подключили все стили из сасс фремворка и иконки
-                            */
-                            if(this.release.scssURLS) {
-                                for(let url of this.release.scssURLS) {
-                                    $head.append(`<link rel="stylesheet" href="${url.replace(/\\+/g, '/')}">`);
-                                }
-                            }
-                            if(this.release.iconsReleases && this.release.iconsReleases.length) {
-                                for(let el of this.release.iconsReleases) {
-                                    if(el.css_url) {
-                                        $head.append(`<link rel="stylesheet" href="${el.css_url}">`); // .replace(/\\+/g, '/')
+
+                    $('style[scss], style[sass]').each(function() {
+                        let attr = $(this).attr('sass') ? 'sass' : 'scss';
+                        let cid = $(this).attr(attr);
+                        scssProms.push(new Promise(async(res) => {
+                            try {
+                                if('string' == typeof cid && cid.trim() != '') {
+                                    let cids = await scssPlugin.getComponents();
+                                    if(cids.indexOf(cid) != -1) {
+                                        let slot = $(this).attr('slot') || false;
+                                        if(!slot || (slot && slot.trim() == '')) {
+                                            self.log(`To transfer sass internal styles to sass component you need specify "slot" attribute, example: slot="part1"`, 'warning');
+                                            return res();
+                                        }
+                                        if(slot) {
+                                            hasSlots.push(slot);
+                                        }
+                                        let content = $(this).html();
+                                        let prev = _.find(self.slotsStorage.storage, r => r.cid == cid && r.slot == slot && r.rules == content);
+                                    
+                                        if(!prev) {   
+                                            // Удалить старое значение этого слота  
+                                            self.slotsStorage.clean(r => r.cid == cid && r.slot == slot && r.htmlModelId == model.id);    
+                                            prev = {
+                                                htmlModelId: model.id,
+                                                cid,
+                                                slot,
+                                                rules: content
+                                            }                                                         
+                                            self.slotsStorage.set(prev);
+                                            sassInternalRulesChanged.push(prev);
+                                        }                     
+                                        
+                                        sassInternalRules.push(prev);
+                                        $(this).remove();
+                                        return res();
+                                    } else {
+                                        self.log(`${cid} sass components not exist, styles will be generated as internal styles`, 'warning');
                                     }
                                 }
+                                try {
+                                    var result = sass.renderSync({data: $(this).html()});
+                                    $(this).html(result.css.toString());
+                                    $(this).removeAttr(attr).removeAttr('slot');
+                                } catch(e) {
+                                    self.log('Compilation error of internal sass styles', 'error');
+                                    self.log(e);
+                                }
+                            } catch(e) {
+                                console.log(e);
                             }
+                            res();
+                        }));
+                    });
+
+                    // Проверить не изменилось ли кол-во слотов, и имеются ли вообще слоты
+                    if(scssProms.length) {
+                        await Promise.all(scssProms);
+
+                        let prevCount = _.size(_.filter(self.slotsStorage.storage, r => r.htmlModelId == model.id));
+                        let activeCount = sassInternalRules.length;
+                        if(hasSlots.length) {
+                            self.slotsStorage.clean(r => !hasSlots.includes(r.slot) && r.htmlModelId == model.id);    
+                        }          
+                        //console.log(prevCount, activeCount);
+                        if(sassInternalRulesChanged.length || prevCount != activeCount) {                      
+                            await scssPlugin.setHtmlInternalSass(sassInternalRules);                        
+                            /*if('string' == typeof mixCssLink && !this.release) {
+                                $head.append(`<link rel="stylesheet" href="${this.project.fastify.address}/${mixCssLink}">`);
+                            }*/
+                        }
+                    }
+
+                    try {
+                        if(!this.release) {
+                            let script = `<script src="${this.project.fastify.address + '/ungic/js/dist/pipe.min.js'}" data-connect="${this.project.fastify.address}" data-src="${path.relative(this.dist, path.join(this.dist, attrs.path)).replace(/\\+/g, '/')}"></script>`;
+                            $body.append(script);
+                            $head.append(`<link rel="stylesheet" href="${this.project.fastify.address + '/ungic/css/devtools.css'}">`);
+
+                            if(this.iconsStorage.fonts && this.iconsStorage.fonts.data && this.iconsStorage.fonts.data.icons.length) {
+                                $head.append(`<link rel="stylesheet" href="${this.project.fastify.address + '/ungic/font-icons'}">`);
+                            }
+                            if(this.iconsStorage.sprite && this.iconsStorage.sprite.data && this.iconsStorage.sprite.data.icons.length) {
+                                $head.append(`<link rel="stylesheet" href="${this.project.fastify.address + '/ungic/sprites'}">`);
+                            }
+                            if(this.iconsStorage.svgSprite  && this.iconsStorage.svgSprite.data && this.iconsStorage.svgSprite.data.icons.length && !this.iconsStorage.svgSprite.data.external) {
+                                $body.append(this.iconsStorage.svgSprite.data.sprite);
+                            }
+
                         } else {
-                            /*
-                            *   Перекидывем все стили в инлайн стили
-                            */
-                            if(this.release.scssURLS) {
-                                for(let url of this.release.scssURLS) {
-                                    let cssRules = await fsp.readFile(path.join(distPath, url), 'UTF-8');
-                                    styles.unshift({
-                                        path: path.join(distPath, url),
-                                        url,
-                                        cssRules
-                                    });
+                            let styles = [];
+                            let distPath = path.join(this.dist, 'releases', this.release.releaseName + '-v' + this.release.version);
+                            let self = this;
+
+
+                            let cleancssConfig = typeof config.cleancss == 'object' ? config.cleancss : {};
+                                cleancssConfig = _.extend({level: 2}, this.project.app.PLUGINS_SETTINGS.cleancss, cleancssConfig);
+
+                            let postcssPlugins = [];
+
+                            if(this.release.iconsReleases && this.release.iconsReleases.length) {
+                                let svgSprite = _.find(this.release.iconsReleases, {type: 'svgSprite'});
+                                if(svgSprite) {
+                                    $body.append(svgSprite.sprite);
                                 }
                             }
-                            if(this.release.iconsReleases && this.release.iconsReleases.length) {
-                                for(let el of this.release.iconsReleases) {
-                                    if(el.css_url) {
-                                        let cssRules = await fsp.readFile(path.join(distPath, el.css_url), 'UTF-8');
+                            postcssPlugins.push(srcReplacer({
+                                release: this.release,
+                                dist: path.join(this.dist, config.fs.dist.css),
+                                distPath
+                            }));
+
+                            if(this.release.optimizeInternalStyles) {
+                                postcssPlugins.push(clean(cleancssConfig));
+                            }
+
+                            if(!this.release.includeExternalStyles) {
+                                /*
+                                *   Подключили все стили из сасс фремворка и иконки
+                                */
+                                if(this.release.scssURLS) {
+                                    for(let url of this.release.scssURLS) {
+                                        $head.append(`<link rel="stylesheet" href="${url.replace(/\\+/g, '/')}">`);
+                                    }
+                                }
+                                if(this.release.iconsReleases && this.release.iconsReleases.length) {
+                                    for(let el of this.release.iconsReleases) {
+                                        if(el.css_url) {
+                                            $head.append(`<link rel="stylesheet" href="${el.css_url}">`); // .replace(/\\+/g, '/')
+                                        }
+                                    }
+                                }
+                            } else {
+                                /*
+                                *   Перекидывем все стили в инлайн стили
+                                */
+                                if(this.release.scssURLS) {
+                                    for(let url of this.release.scssURLS) {
+                                        let cssRules = await fsp.readFile(path.join(distPath, url), 'UTF-8');
                                         styles.unshift({
-                                            path: path.join(distPath, el.css_url),
-                                            url: el.css_url,
+                                            path: path.join(distPath, url),
+                                            url,
                                             cssRules
                                         });
                                     }
                                 }
-                            }
-                        }
-
-                        let linkProms = [];
-                        $('link[rel="stylesheet"]').each(function() {
-                            linkProms.push(new Promise(async(res, rej) => {
-                                try {
-                                   let href = $(this).attr('href');
-                                   if(isRelative(href)) {
-                                        let ph = path.join(self.dist, href);
-                                        if(await fsp.exists(ph)) {
-                                            if(!self.release.includeExternalStyles) {
-                                                await fse.copy(ph, path.join(distPath, href));
-                                            } else {
-                                                let cssRules = await fsp.readFile(ph, 'UTF-8');
-                                                styles.unshift({
-                                                    path: ph,
-                                                    url: href,
-                                                    cssRules
-                                                });
-                                                $(this).remove();
-                                            }
+                                if(this.release.iconsReleases && this.release.iconsReleases.length) {
+                                    for(let el of this.release.iconsReleases) {
+                                        if(el.css_url) {
+                                            let cssRules = await fsp.readFile(path.join(distPath, el.css_url), 'UTF-8');
+                                            styles.unshift({
+                                                path: path.join(distPath, el.css_url),
+                                                url: el.css_url,
+                                                cssRules
+                                            });
                                         }
-                                   }
-                                   if(!self.release.includeExternalStyles && isRelative(href) && !isRelative(self.release.host)) {
-                                        $(this).attr('href', url.resolve(self.release.host, href));
-                                   }
-                                } catch(e) {
-                                    console.log(e);
-                                }
-                                res();
-                            }));
-                        });
-
-
-                        if(linkProms.length) {
-                            await Promise.all(linkProms);
-                        }
-
-                        let proms = [];
-                        $('style').each(function() {
-                            if(self.release.mergeInternalStyles) {
-                                styles.unshift({
-                                    cssRules: $(this).html(),
-                                    url: null,
-                                    path: null
-                                });
-                                $(this).remove();
-                            } else {
-                                /*
-                                *   Добавить постксс плагин для замены срс в случае подмены хоста
-                                */
-                                proms.push(new Promise(async(res, rej)=>{
-                                    try {
-                                        let result = await postcss(postcssPlugins).process($(this).html(), {from: undefined});
-                                        if(result.css) {
-                                            let rules = result.css;
-                                            if(typeof rules != 'string') {
-                                                rules = rules.toString();
-                                            }
-                                            $(this).html(rules);
-                                        }
-                                    } catch(e) {
-                                        self.log('An error occurred while optimizing styles!', 'error');
                                     }
-                                    res();
-                                }));
-                            }
-                        });
-
-                        if(proms.length) {
-                            await Promise.all(proms);
-                        }
-
-                        let cssResult = '';
-                        if(styles.length) {
-                            try {
-                                let result = await postcss(postcssPlugins).process(_.pluck(styles, 'cssRules').join(' '), {from: undefined});
-                                cssResult = result.css;
-                            } catch(e) {
-                                console.log(e);
-                            }
-                        }
-
-                        if(typeof cssResult != 'string') {
-                            cssResult = cssResult.toString();
-                        }
-
-                        if(typeof cssResult == 'string' && cssResult.trim() != '') {
-                            $head.append('<style>' + cssResult +'</style>');
-                        }
-
-                        let scripts = [];
-                        let promsScripts = [];
-                        $('script').each(function() {
-
-                            if($(this).attr('async') || $(this).attr('type') && $(this).attr('type').trim().toLowerCase() != 'text/javascript') {
-                                return
+                                }
                             }
 
-                            promsScripts.push(new Promise(async(res, rej) => {
-                                try {
-                                    if($(this).attr('src')) {
-                                        if(self.release.includeLocalScripts) {
-                                            let src = $(this).attr('src');
-                                            try {
-                                                if(isRelative(src)) {
-                                                    let pathToSource = path.join(self.dist, src);
-                                                    if(await fsp.exists(pathToSource)) {
-                                                        let content = await fsp.readFile(pathToSource, 'UTF-8');
-                                                        scripts.unshift(content);
-                                                        $(this).remove();
-                                                    }
-                                                }
-                                            } catch(e) {
-                                                console.log(e);
-                                            }
-                                        }
-                                        res();
-                                    } else {
-                                        if(self.release.mergeInternalScripts) {
-                                            scripts.unshift($(this).html());
-                                            $(this).remove();
-                                        } else {
-                                            if(self.release.optimizeInternalScripts) {
-                                                try {
-                                                    let result = await jsOptimaze($(this).html());
-                                                    $(this).text(result);
-                                                } catch(e) {
-                                                    self.log('An error occurred while optimizing the script', 'error');
-                                                    self.log(e);
+                            let linkProms = [];
+                            $('link[rel="stylesheet"]').each(function() {
+                                linkProms.push(new Promise(async(res, rej) => {
+                                    try {
+                                    let href = $(this).attr('href');
+                                    if(isRelative(href)) {
+                                            let ph = path.join(self.dist, href);
+                                            if(await fsp.exists(ph)) {
+                                                if(!self.release.includeExternalStyles) {
+                                                    await fse.copy(ph, path.join(distPath, href));
+                                                } else {
+                                                    let cssRules = await fsp.readFile(ph, 'UTF-8');
+                                                    styles.unshift({
+                                                        path: ph,
+                                                        url: href,
+                                                        cssRules
+                                                    });
+                                                    $(this).remove();
                                                 }
                                             }
-                                        }
-                                        res();
                                     }
-                                } catch(e) {
-                                    console.log(e);
-                                }
-                            }));
-                        });
-
-                        if(promsScripts.length) {
-                            await Promise.all(promsScripts);
-                        }
-
-                        if(scripts.length) {
-                            if(this.release.optimizeInternalScripts) {
-                                try {
-                                    let res = await jsOptimaze(scripts);
-                                    if(res.length) {
-                                        if(self.release.internalScriptsInFooter) {
-                                            $body.append('<script>'+res+'</script>');
-                                        } else {
-                                            $head.append('<script>'+res+'</script>');
-                                        }
+                                    if(!self.release.includeExternalStyles && isRelative(href) && !isRelative(self.release.host)) {
+                                            $(this).attr('href', url.resolve(self.release.host, href));
                                     }
-                                } catch(e) {
-                                    this.log('An error occurred while optimizing the script', 'error');
-                                    this.log(e);
-                                }
-                            }
-                        }
-
-                        let promsScriptsToFooter = [];
-                        if(this.release.externalScriptsInFooter) {
-                            $('script').each(function() {
-                                promsScriptsToFooter.push(new Promise(async(res, rej) => {
-                                    try {
-                                        if($(this).attr('src') && !isRelative($(this).attr('src'))) {
-                                            $(this).appendTo('body');
-                                        }
                                     } catch(e) {
-                                        self.log(e);
+                                        console.log(e);
                                     }
                                     res();
                                 }));
                             });
-                        }
 
-                        if(promsScriptsToFooter) {
-                            await Promise.all(promsScriptsToFooter);
-                        }
 
-                        let promsSrcReplacer = [];
-                        $('[src], [href]').each(function() {
-                            let attr = $(this).attr('href') ? 'href' : 'src';
-                            let urlEl = $(this).attr(attr);
-                            if(isRelative(urlEl) && !/^\#/.test(urlEl)) {
-                                let pathToDist = path.join(self.dist, urlEl), pathToRelease = path.join(distPath, urlEl);
-                                promsSrcReplacer.push(new Promise(async(res, rej) => {
+                            if(linkProms.length) {
+                                await Promise.all(linkProms);
+                            }
+
+                            let proms = [];
+                            $('style').each(function() {
+                                if(self.release.mergeInternalStyles) {
+                                    styles.unshift({
+                                        cssRules: $(this).html(),
+                                        url: null,
+                                        path: null
+                                    });
+                                    $(this).remove();
+                                } else {
+                                    /*
+                                    *   Добавить постксс плагин для замены срс в случае подмены хоста
+                                    */
+                                    proms.push(new Promise(async(res, rej)=>{
+                                        try {
+                                            let result = await postcss(postcssPlugins).process($(this).html(), {from: undefined});
+                                            if(result.css) {
+                                                let rules = result.css;
+                                                if(typeof rules != 'string') {
+                                                    rules = rules.toString();
+                                                }
+                                                $(this).html(rules);
+                                            }
+                                        } catch(e) {
+                                            self.log('An error occurred while optimizing styles!', 'error');
+                                        }
+                                        res();
+                                    }));
+                                }
+                            });
+
+                            if(proms.length) {
+                                await Promise.all(proms);
+                            }
+
+                            let cssResult = '';
+                            if(styles.length) {
+                                try {
+                                    let result = await postcss(postcssPlugins).process(_.pluck(styles, 'cssRules').join(' '), {from: undefined});
+                                    cssResult = result.css;
+                                } catch(e) {
+                                    console.log(e);
+                                }
+                            }
+
+                            if(typeof cssResult != 'string') {
+                                cssResult = cssResult.toString();
+                            }
+
+                            if(typeof cssResult == 'string' && cssResult.trim() != '') {
+                                $head.append('<style>' + cssResult +'</style>');
+                            }
+
+                            let scripts = [];
+                            let promsScripts = [];
+                            $('script').each(function() {
+
+                                if($(this).attr('async') || $(this).attr('type') && $(this).attr('type').trim().toLowerCase() != 'text/javascript') {
+                                    return
+                                }
+
+                                promsScripts.push(new Promise(async(res, rej) => {
                                     try {
-                                        if(await fsp.exists(pathToDist) && !await fsp.exists(pathToRelease)) {
-                                            await fse.copy(pathToDist, pathToRelease);
+                                        if($(this).attr('src')) {
+                                            if(self.release.includeLocalScripts) {
+                                                let src = $(this).attr('src');
+                                                try {
+                                                    if(isRelative(src)) {
+                                                        let pathToSource = path.join(self.dist, src);
+                                                        if(await fsp.exists(pathToSource)) {
+                                                            let content = await fsp.readFile(pathToSource, 'UTF-8');
+                                                            scripts.unshift(content);
+                                                            $(this).remove();
+                                                        }
+                                                    }
+                                                } catch(e) {
+                                                    console.log(e);
+                                                }
+                                            }
+                                            res();
+                                        } else {
+                                            if(self.release.mergeInternalScripts) {
+                                                scripts.unshift($(this).html());
+                                                $(this).remove();
+                                            } else {
+                                                if(self.release.optimizeInternalScripts) {
+                                                    try {
+                                                        let result = await jsOptimaze($(this).html());
+                                                        $(this).text(result);
+                                                    } catch(e) {
+                                                        self.log('An error occurred while optimizing the script', 'error');
+                                                        self.log(e);
+                                                    }
+                                                }
+                                            }
+                                            res();
                                         }
                                     } catch(e) {
                                         console.log(e);
                                     }
-                                    if(self.release.host && !isRelative(self.release.host)) {
-                                        $(this).attr(attr, url.resolve(self.release.host, urlEl));
-                                    }
+                                }));
+                            });
 
-                                    res();
-                                }))
+                            if(promsScripts.length) {
+                                await Promise.all(promsScripts);
                             }
-                        });
-                        await Promise.all(promsSrcReplacer);
 
-                    }
-                } catch(e) {
-                    console.log(e);
-                }
+                            if(scripts.length) {
+                                if(this.release.optimizeInternalScripts) {
+                                    try {
+                                        let res = await jsOptimaze(scripts);
+                                        if(res.length) {
+                                            if(self.release.internalScriptsInFooter) {
+                                                $body.append('<script>'+res+'</script>');
+                                            } else {
+                                                $head.append('<script>'+res+'</script>');
+                                            }
+                                        }
+                                    } catch(e) {
+                                        this.log('An error occurred while optimizing the script', 'error');
+                                        this.log(e);
+                                    }
+                                }
+                            }
 
-                output = $.html();
-                if(config.replaceAmpToSymbol) {
-                    output = output.replace(/\&amp\;/gm, '&');
-                }
+                            let promsScriptsToFooter = [];
+                            if(this.release.externalScriptsInFooter) {
+                                $('script').each(function() {
+                                    promsScriptsToFooter.push(new Promise(async(res, rej) => {
+                                        try {
+                                            if($(this).attr('src') && !isRelative($(this).attr('src'))) {
+                                                $(this).appendTo('body');
+                                            }
+                                        } catch(e) {
+                                            self.log(e);
+                                        }
+                                        res();
+                                    }));
+                                });
+                            }
 
-                if(build.formatting === 'beautify') {
-                    let configBeautify = typeof config.beautify == 'object' ? config.beautify : {};
-                        configBeautify = _.extend({unformatted: ["script", "style"]}, this.project.app.PLUGINS_SETTINGS.beautify, configBeautify);
-                    
-                       
-                    output = beautify.html(output, _.extend({"indent_size": 4}, configBeautify));
-                }
-                if(build.formatting === 'minifier') {
-                    let params = typeof config.minifier == 'object' ? config.minifier : {};
-                        params = _.extend(this.project.app.PLUGINS_SETTINGS.htmlminifier, params);
-                        try {
-                            output = minify(output, _.extend({
-                              "caseSensitive": false,
-                              "collapseBooleanAttributes": false,
-                              "collapseInlineTagWhitespace": true,
-                              "collapseWhitespace": true,
-                              "conservativeCollapse": true,
-                              "continueOnParseError": false,
-                              "decodeEntities": false,
-                              "includeAutoGeneratedTags": false,
-                              "keepClosingSlash": false,
-                              "maxLineLength": 0,
-                              "minifyCSS": !(this.release && this.release.optimizeInternalStyles),
-                              "minifyJS": true,
-                              "preserveLineBreaks": true,
-                              "preventAttributesEscaping": false,
-                              "processConditionalComments": true,
-                              "removeAttributeQuotes": false,
-                              "removeComments": true,
-                              "removeEmptyAttributes": false,
-                              "removeEmptyElements": false,
-                              "removeOptionalTags": false,
-                              "removeRedundantAttributes": false,
-                              "removeScriptTypeAttributes": true,
-                              "removeStyleLinkTypeAttributes": true,
-                              "removeTagWhitespace": false,
-                              "sortAttributes": true,
-                              "sortClassName": true,
-                              "trimCustomFragments": true,
-                              "useShortDoctype": true
-                            }, params));
-                        } catch(e) {
-                            this.log(e);
-                            this.log(`An error occurred while rendering the ${attrs.path} page. Origin (minify): ${e.message}`, 'error');
+                            if(promsScriptsToFooter) {
+                                await Promise.all(promsScriptsToFooter);
+                            }
+
+                            let promsSrcReplacer = [];
+                            $('[src], [href]').each(function() {
+                                let attr = $(this).attr('href') ? 'href' : 'src';
+                                let urlEl = $(this).attr(attr);
+                                if(isRelative(urlEl) && !/^\#/.test(urlEl)) {
+                                    let pathToDist = path.join(self.dist, urlEl), pathToRelease = path.join(distPath, urlEl);
+                                    promsSrcReplacer.push(new Promise(async(res, rej) => {
+                                        try {
+                                            if(await fsp.exists(pathToDist) && !await fsp.exists(pathToRelease)) {
+                                                await fse.copy(pathToDist, pathToRelease);
+                                            }
+                                        } catch(e) {
+                                            console.log(e);
+                                        }
+                                        if(self.release.host && !isRelative(self.release.host)) {
+                                            $(this).attr(attr, url.resolve(self.release.host, urlEl));
+                                        }
+
+                                        res();
+                                    }))
+                                }
+                            });
+                            await Promise.all(promsSrcReplacer);
+
                         }
-                }
+                    } catch(e) {
+                        console.log(e);
+                    }
 
-                distPath = path.join(distPath, attrs.path);
-                await fse.outputFile(distPath, output);
-                this.log(`${attrs.path} page successfully compiled to ${distPath}`, 'success');
-                this.emit('one_ready', attrs);
+                    output = $.html();
+                    if(config.replaceAmpToSymbol) {
+                        output = output.replace(/\&amp\;/gm, '&');
+                    }
+
+                    if(build.formatting === 'beautify') {
+                        let configBeautify = typeof config.beautify == 'object' ? config.beautify : {};
+                            configBeautify = _.extend({unformatted: ["script", "style"]}, this.project.app.PLUGINS_SETTINGS.beautify, configBeautify);
+                        
+                        
+                        output = beautify.html(output, _.extend({"indent_size": 4}, configBeautify));
+                    }
+                    if(build.formatting === 'minifier') {
+                        let params = typeof config.minifier == 'object' ? config.minifier : {};
+                            params = _.extend(this.project.app.PLUGINS_SETTINGS.htmlminifier, params);
+                            try {
+                                output = minify(output, _.extend({
+                                "caseSensitive": false,
+                                "collapseBooleanAttributes": false,
+                                "collapseInlineTagWhitespace": true,
+                                "collapseWhitespace": true,
+                                "conservativeCollapse": true,
+                                "continueOnParseError": false,
+                                "decodeEntities": false,
+                                "includeAutoGeneratedTags": false,
+                                "keepClosingSlash": false,
+                                "maxLineLength": 0,
+                                "minifyCSS": !(this.release && this.release.optimizeInternalStyles),
+                                "minifyJS": true,
+                                "preserveLineBreaks": true,
+                                "preventAttributesEscaping": false,
+                                "processConditionalComments": true,
+                                "removeAttributeQuotes": false,
+                                "removeComments": true,
+                                "removeEmptyAttributes": false,
+                                "removeEmptyElements": false,
+                                "removeOptionalTags": false,
+                                "removeRedundantAttributes": false,
+                                "removeScriptTypeAttributes": true,
+                                "removeStyleLinkTypeAttributes": true,
+                                "removeTagWhitespace": false,
+                                "sortAttributes": true,
+                                "sortClassName": true,
+                                "trimCustomFragments": true,
+                                "useShortDoctype": true
+                                }, params));
+                            } catch(e) {
+                                this.log(e);
+                                this.log(`An error occurred while rendering the ${attrs.path} page. Origin (minify): ${e.message}`, 'error');
+                            }
+                    }
+                    distPath = path.join(distPath, attrs.path);
+                    await fse.outputFile(distPath, output);
+                    this.log(`${attrs.path} page successfully compiled to ${distPath}`, 'success');
+                    //this.emit('one_ready', attrs);
+                }
             }
         }
         this.emit('ready', events);
