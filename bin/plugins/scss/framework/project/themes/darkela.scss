@@ -1,3 +1,12 @@
+/*------------------------------------------
+*   Theme file
+--------------------------------------------
+*   Theme: darkela
+*   Desc: This file is part of ungic.theme module
+*   API:  https://ungic.com/guide/api/sass.html#ungic-theme
+*/
+
+// Colors can be specified as a list, where the first value will be applied in normal mode and the second in inversion mode
 $colors: (
     primary: (#1b1b1b, #555555),
     secondary: #202224,
@@ -12,14 +21,14 @@ $colors: (
 
 $config: (
     brightness: (
-        offset-brighten: 0,            // List type possible (is_light_theme, is_dark_theme)
-        offset-dim: 0,                 // List type possible (is_light_theme, is_dark_theme)
-        saturation-brighten: (0%, 0%),    // List type possible (is_light_theme, is_dark_theme)
-        saturation-dim: (0, 0)          // List type possible (is_light_theme, is_dark_theme)
+        offset-brighten: 0,            // List type possible
+        offset-dim: 0,                 // List type possible
+        saturation-brighten: (0%, 0%), // List type possible
+        saturation-dim: (0, 0)         // List type possible
     ),
     relative-light-limit : true,
     gray: (
-        saturation: (0, 0),     // List type possible (is_light_theme, is_dark_theme)
-        hue: #000           // List type possible (is_light_theme, is_dark_theme)
+        saturation: (0, 0),   // List type possible
+        hue: #000           // List type possible
     )
 );

@@ -1,6 +1,9 @@
-/*
+/*---------------------------------------------
 *   Framework system file!
-*   The main functions for working with the component
+-----------------------------------------------
+*   Module: ungic.component.core
+*   Desc: This file is part of ungic.component.core module
+*   API:  https://ungic.com/guide/api/sass.html#ungic-component-core
 */
 
 @use "../config" as this;
@@ -14,30 +17,28 @@
 @use "sass:selector";
 
 /*
-*   Checks if component exists
+*   Check if a component exists in project.
 */
 @function exist() {
   @return true;
 }
+
 /*
-*   Export Options to Json
-*   Params:
-*       $oid - Custom option id
-*       $data - Any data
+*   Export SASS data to JSON
 */
 @function export($oid, $data) {
   @return un-meta.export(this.$cid, $oid, $data);
 }
 
 /*
-*   Method for creating a selector by adding a suffix to the component class name using an [append]() sass method
+*   Method for creating a selector by adding a suffix to the component class name using an append sass method.
 */
 @function this($suffix) {
   @return inspect(nth(selector.append(cid(true), $suffix), 1));
 }
 
 /*
-*   Get component CID or selector with true param
+*   Get component ID
 */
 @function cid($as_selector: false) {
   $cid: this.$cid;
@@ -48,7 +49,8 @@
 }
 
 /*
-*   Get processed config of component
+*   Get access to config of the current component. 
+*   Using without parameters returns the entire configuration of the component.
 */
 @function config($key: "", $subkey: false) {
   @if map.has-key(this.$config, $key) {

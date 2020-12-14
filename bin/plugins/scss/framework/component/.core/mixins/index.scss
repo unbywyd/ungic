@@ -1,5 +1,9 @@
-/*
-*  Framework system file
+/*---------------------------------------------
+*   Framework system file!
+-----------------------------------------------
+*   Module: ungic.component.core
+*   Desc: This file is part of ungic.component.core module
+*   API:  https://ungic.com/guide/api/sass.html#ungic-component-core
 */
 
 @use "../config" as this;
@@ -12,7 +16,7 @@
 @use "ungic.utils" as *;
 
 /*
-*   Component wrapper for writing component rules
+*   This mixin creates a wrapper for component rules with class name of component
 */
 @mixin component {
     #{cid(true)} {
@@ -21,7 +25,7 @@
 }
 
 /*
-*   Wraps content in a component selector
+*   This mixin creates a wrapper for component rules with class name of component
 */
 @mixin this($suffix: null) {
     @if $suffix {
@@ -38,7 +42,9 @@
 }
 
 /*
-*   Wraps component rules and assigns a selector before a component selector
+*   This method adds the passed suffix to the beginning of the current selector.
+*   if the suffix is not a valid selector, it will be merged with component class name using the append sass method, 
+*   this behavior can be disabled using the second parameter of this method.
 */
 @mixin wrap($suffix: null, $merge: true) {
     @if $suffix {
@@ -67,8 +73,8 @@
 }
 
 /*
-*   Adds a method to the component class
-*   -method, .method
+*   This method uses the append method to add the passed suffix to the root element of the selector.
+*   Important! The selector root must be with the class name of the component!
 */
 @mixin and($suffix: null) {
     @if $suffix {
@@ -92,7 +98,7 @@
 }
 
 /*
-*   Adds a selector immediately after the component class thereby allow you to write rules for siblings elements
+*   This method inserts a part of the selector immediately after the first root of the selector, serves to create a sibling selector
 */
 @mixin nest($suffix: null) {
     @if $suffix {
@@ -115,6 +121,9 @@
     }
 }
 
+/*
+*   This method inserts a part of the selector before the current element.
+*/
 @mixin before($suffix: null) {
     @if $suffix {
         $output: ();
@@ -136,6 +145,11 @@
     }
 }
 
+/*
+*   This method adds a suffix to the previous selector element using the append sass method. 
+*   If the suffix is not a valid selector, it will be merged with component class name using the append sass method, 
+*   this behavior can be disabled using the second parameter of this method.
+*/
 @mixin prev($suffix: null, $merge: true) {
     @if $suffix {
         $output: ();

@@ -445,7 +445,7 @@ class htmlPlugin extends plugin {
             let options = context.hash ? context.hash: {};
             let cwd = options.cwd ? path.join(this.dist, options.cwd) : this.dist;
             let pathToSRC = path.join(cwd, src);
-            let relativeSrc = options.relativeSrc ? options.relativeSrc : config.relativeSrc;
+            let relativeSrc = options.rel ? options.rel : config.relativeSrc;
             let page_ids = [];
             if(this.resources.has(pathToSRC)) {
                 page_ids = this.resources.get(pathToSRC);
@@ -453,7 +453,7 @@ class htmlPlugin extends plugin {
             page_ids.push(rootData.page.id);
             this.resources.set(path.relative(this.dist, pathToSRC), page_ids);
             if(!fs.existsSync(pathToSRC)) {
-                this.log(`Resource by path ${pathToSRC} not exist. Required for ${rootData.page.path} page`, 'warning');
+                this.log(`${pathToSRC} resource not exists, required for ${rootData.page.path} page`, 'warning');
             }
             if(this.release) {
                 let host = this.release.host;
@@ -499,8 +499,12 @@ class htmlPlugin extends plugin {
             }
             return '';
         });
-        Handlebars.registerHelper("log", function() {
-            console.log(JSON.stringify(this, null, 4));
+        Handlebars.registerHelper("log", function(data) {
+            if(data) {
+                console.log(JSON.stringify(data, null, 4));
+            } else {
+                console.log(JSON.stringify(this, null, 4));
+            }
             return '';
         });
         Handlebars.registerHelper('raw', function(options) {
@@ -1067,8 +1071,6 @@ class htmlPlugin extends plugin {
                     let scssProms = [];
                     let self = this;
 
-                    //let pipes = _.findWhere(this.pipes.storage, {page_id: args.id});
-
                     $('[class*="@"]').each(function() {
                         let pipes = _.findWhere(self.mainScssPipes.storage, {page_id: model.id});
                         let cid = $(this).parents('[cid]').attr('cid');                        
@@ -1082,8 +1084,7 @@ class htmlPlugin extends plugin {
                         let classes = $(this).attr('class').split(' ').map(e => e.trim()).filter(e => e.trim() != "");
                           
                         classes = classes.map(e => {                            
-                            if(/@(?!\\)(@|\d+)?/.test(e)) {        
-                                //console.log(e);                      
+                            if(/@(?!\\)(@|\d+)?/.test(e)) {                                  
                                 e = e.replace(/@(?!\\)(@|\d+)?/gm, function(match, num) {                                    
                                     if(!num) {
                                         num = 0;
@@ -1109,7 +1110,6 @@ class htmlPlugin extends plugin {
                     $('[cid]').each(function() {
                         $(this).removeAttr('cid');
                     });
-
 
                     $('style[scss], style[sass]').each(function() {
                         let attr = $(this).attr('sass') ? 'sass' : 'scss';

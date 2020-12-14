@@ -1,7 +1,11 @@
-/*
-*   CSS default properties
-*   This file contains any CSS properties that can be applied when styling components.
+/*------------------------------------------
+*   Optional project file
+--------------------------------------------
+*   Module: ungic.project
+*   Desc: This file contains any CSS properties that can be applied when styling components.
+*   API:  https://ungic.com/guide/api/sass.html#ungic-project
 */
+
 @use "ungic.utils" as utils;
 @use "ungic.theme" as theme;
 

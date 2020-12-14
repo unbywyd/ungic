@@ -143,8 +143,8 @@ class app extends skeleton {
             this.system('Project successfully initialized. Use "ungic run" command for starting', 'warning');
             return process.exit();
         }
-        if(!appPaths.config && !appPaths.package) {
-            let response;
+        let response;
+        if(!appPaths.config && !appPaths.package) {           
             if(!options.createMode) {
                 this.system('Note! Recommended to create package.json using npm init command.', 'warning');
                 response = await prompts({
@@ -184,13 +184,21 @@ class app extends skeleton {
         options.app = this;
         let prj = new ungicProject(this.config, options);
         try {
-            let config = await prj.initialize();
+            let config = await prj.initialize({checkDirs: true});
+            if(config instanceof Error) {
+                this.system(config);
+                process.exit();
+            }
             await fse.outputFile(path.join(options.root ? options.root : appPaths.root, 'ungic.config.json'), JSON.stringify(merge(this.config, config, {arrayMerge: (destinationArray, sourceArray) => _.union(destinationArray, sourceArray)}), null, 4));
         } catch(e) {
             this.system(e);
             return
         }
-        this.system('Project successfully initialized. Use "ungic run" command for starting', 'success');
+        if(options.createMode) {
+            this.system('Project successfully initialized. To run the project, go to the created '+response.name+' directory and use the "ungic run" command!', 'success');
+        } else {
+            this.system('Project successfully initialized. To run the project, use the "ungic run" command!', 'success');
+        }
         process.exit();
     }
     async begin() {

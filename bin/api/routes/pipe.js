@@ -20,6 +20,9 @@ async function routes(fastify, options) {
                     },
                     as: {
                         type: 'string'
+                    },
+                    silence: {
+                        type: 'boolean'                        
                     }
                 }
             }
@@ -31,6 +34,7 @@ async function routes(fastify, options) {
             throw new Error('Project not ready');
         }
         let cids = request.query.cids ? request.query.cids.split(',') : [];
+        let silence = request.query.silence;
 
         let scssPlugin = app.project.plugins.get('scss');
 
@@ -81,15 +85,27 @@ async function routes(fastify, options) {
             }
         }
         output += `
+            let silence = ${silence};
+            function reload(relative) {
+                document.dispatchEvent(new CustomEvent('ungic_reload', {detail:relative}));                
+                if(silence) {
+                    return
+                }
+                var doc = document.documentElement;
+                var x = (window.pageXOffset || doc.scrollLeft) - (doc.clientLeft || 0);
+                var y = (window.pageYOffset || doc.scrollTop)  - (doc.clientTop || 0);
+                window.localStorage.setItem('wp-last-scroll-position', x + ',' + y);
+                window.location.reload();   
+            }
             const socket = io("${fastify.address}");
             const pages = "${pages}";
             const resource = window.performance ? window.performance.getEntriesByType("resource") : [];
             socket.on('change', (events) => {
-                for(let e of events) {
+                for(let e of events) {                    
+                    document.dispatchEvent(new CustomEvent('ungic', {detail:e}));
                     let {events, relative, url}  = e;
-                    if(pages.indexOf(relative) != -1 || pages.indexOf('*') != -1) {
-                        window.location.reload();
-                        return
+                    if(pages.indexOf(relative) != -1 || pages.indexOf('*') != -1) {                        
+                        return reload(relative);                        
                     }
                     let skips = [];
                     if(e.relative.indexOf('.css') != -1) {
@@ -113,7 +129,7 @@ async function routes(fastify, options) {
                                     }
                                 }
                             } else {
-                                window.location.reload();
+                               reload(relative);
                             }
                         }
                     }

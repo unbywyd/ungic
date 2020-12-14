@@ -1,5 +1,7 @@
-/*
-*   Optional component configuration file. This file can contain any configuration parameters required to style the component.
+/*------------------------------------------
+*   Optional component configuration file. 
+--------------------------------------------
+*   This file can contain any configuration parameters of the component.
 */
 
 @use ".core/props" as *; // Get access to the processed properties of this component, you can use the prop() method to get the processed value.

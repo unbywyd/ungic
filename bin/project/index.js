@@ -31,6 +31,21 @@ class ungicProject extends skeleton {
     }
     async initialize(options={}) {
         let config = this.config;
+        let checkDirsOnly = (root, dirs) => {
+            let status = true;
+            return () => {
+                for(let dir in dirs) {
+                    let toPath = path.join(root, dirs[dir]);
+                    if(fs.existsSync(toPath)) {       
+                        return new Error('It is not possible to initialize the ungic project to this directory due to file conflict. ' + toPath + ' already exists.');                 
+                    }
+                    if(config.fs[dir]) {
+                        checkDirsOnly(toPath, config.fs[dir]);
+                    }
+                }
+                return status;
+            }
+        }
         let ensureDirs = async (root, dirs) => {
             for(let dir in dirs) {
                 let toPath = path.join(root, dirs[dir]);
@@ -42,8 +57,18 @@ class ungicProject extends skeleton {
                 }
             }
         }
-
-        await ensureDirs(this.root, this.fsDirs());
+        if(options.checkDirs) {
+            let getStatus = checkDirsOnly(this.root, this.fsDirs());
+            let status = getStatus();
+            if(status === true) {
+                await ensureDirs(this.root, this.fsDirs());
+            } else {
+                return status;
+            }
+        } else {
+            await ensureDirs(this.root, this.fsDirs());
+        }
+        
 
         if(!options.run) {
             let buildPlugins = {

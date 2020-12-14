@@ -13,8 +13,6 @@ async function routes(fastify, options) {
             reply.code(200);
             reply.header("Content-Type", "text/css");
             if(!iconsPlugin.iconsStorage.fonts) {
-                //reply.code('400');
-                //throw new Error(`Icons plugin did not generate icon fonts`);
                 return '';
             }
             if(!iconsPlugin.iconsStorage.fonts.data || !iconsPlugin.iconsStorage.fonts.data.icons || !iconsPlugin.iconsStorage.fonts.data.icons.length) {
@@ -36,11 +34,8 @@ async function routes(fastify, options) {
         reply.code(200);
         reply.header("Content-Type", "text/css");
         if(!iconsPlugin.iconsStorage.sprite) {
-            //reply.code('400');
-            //throw new Error(`Icons plugin did not generate sprites`);
             return '';
         }
-
 
         if(!iconsPlugin.iconsStorage.sprite.data.icons.length) {
             return '';
