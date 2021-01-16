@@ -15,6 +15,9 @@ async function routes(fastify, options) {
                     dir: {
                         type: 'string'
                     },
+                    timeout: {
+                        type: 'number'
+                    },
                     cids: {
                         type:'string'
                     },
@@ -86,6 +89,8 @@ async function routes(fastify, options) {
         }
         output += `
             let silence = ${silence};
+            const Timeout = ${request.query.timeout || 0};
+            let t;
             function reload(relative) {
                 document.dispatchEvent(new CustomEvent('ungic_reload', {detail:relative}));                
                 if(silence) {
@@ -95,10 +100,13 @@ async function routes(fastify, options) {
                 var x = (window.pageXOffset || doc.scrollLeft) - (doc.clientLeft || 0);
                 var y = (window.pageYOffset || doc.scrollTop)  - (doc.clientTop || 0);
                 window.localStorage.setItem('wp-last-scroll-position', x + ',' + y);
-                window.location.reload();   
+                clearTimeout(t);
+                t = setTimeout(() => {
+                    window.location.reload();
+                }, Timeout);                  
             }
             const socket = io("${fastify.address}");
-            const pages = "${pages}";
+            const pages = "${pages}";            
             const resource = window.performance ? window.performance.getEntriesByType("resource") : [];
             socket.on('change', (events) => {
                 for(let e of events) {                    

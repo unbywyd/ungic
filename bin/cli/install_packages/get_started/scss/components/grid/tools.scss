@@ -1,0 +1,83 @@
+@use "mixins"as *;
+
+.ai {
+    &-start {
+        align-items: flex-start;
+    }
+    &-end {
+        align-items: flex-end;
+    }
+    &-center {
+        align-items: center;
+    }
+    &-stretch {
+        align-items: stretch;
+    }
+    &-baseline {
+        align-items: baseline;
+    }
+}  
+
+.ac {
+    &-center {
+        align-content: center;
+    }
+    &-end {
+        align-content: flex-end;
+    }
+    &-start {
+        align-content: flex-start;
+    }
+    &-between {
+        align-content: space-between;
+    }
+    &-around {
+        align-content: space-around;
+    }
+    &-stretch {
+        align-content: stretch;
+    }
+}
+
+.jc {
+    &-center {
+        justify-content: center;
+    }
+    &-end {
+        justify-content: flex-end;
+    }
+    &-start {
+        justify-content: flex-start;
+    }
+    &-between {
+        justify-content: space-between;
+    }
+    &-around {
+        justify-content: space-around;
+    }
+    &-evenly {
+        justify-content: space-evenly;
+    }
+}
+
+.as {
+    &-stretch {
+        align-self: stretch;
+    }
+    &-start {
+        align-self: flex-start;
+    }
+    &-end {
+        align-self: flex-end;
+    }
+    &-center {
+        align-self: center;
+    }
+    &-baseline {
+        align-self: baseline;
+    }
+}
+
+@include responsive-tool(hide, true) {
+    display: none !important;
+} 

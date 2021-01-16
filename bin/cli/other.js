@@ -10,7 +10,7 @@ const open = require('open');
 
 module.exports = function (yargs, done) {
   yargs
-    .command('demo', 'Install demo content', () => {
+    .command('demo', 'Get started with demo project', () => {
     }, () => {
      done(async() => {
       let answers = await prompts.call(this, [{
@@ -24,7 +24,7 @@ module.exports = function (yargs, done) {
       }
       try {
           let app = this.app;
-          let demoPath = path.join(__dirname, './demo');
+          let demoPath = path.join(__dirname, './install_packages/demo');
           let scssPlugin = this.app.project.plugins.get('scss');    
           await intro.call(this, async()=> {              
             await scssPlugin.createComponent('grid');
@@ -43,13 +43,13 @@ module.exports = function (yargs, done) {
         }
       });
     })
-    .command('boilerplate', 'Install boilerplate components', () => {
+    .command('boilerplate', 'Get started with boilerplate', () => {
     }, () => {
      done(async() => {       
         let answers = await prompts.call(this, [{
           type: 'confirm',
           name: 'install',
-          message: `Do you want to install a boilerplate template?`
+          message: `Do you want to install a boilerplate project?`
         }]);
         if(!answers || (answers && !answers.install)) {
           this.logger.warning('Action canceled', 'CLI');
@@ -57,19 +57,22 @@ module.exports = function (yargs, done) {
         }
         let app = this.app;
         let scssPlugin = this.app.project.plugins.get('scss');
-        let sourcePath = path.join(__dirname, './get-started');
+        let sourcePath = path.join(__dirname, './install_packages/get_started');
         try {
           await intro.call(this, async()=> {
-            this.logger.log('Copying and processing files in progress, please wait', 'CLI');
+            this.logger.log('Copying and processing files in progress, please wait', 'CLI');         
+       
             await scssPlugin.createComponent('grid');
             await scssPlugin.createComponent('app');
             await scssPlugin.createComponent('normalize');
-            await scssPlugin.createComponent('utils');
+            await scssPlugin.createComponent('utils');      
+
             await fse.copy(sourcePath, path.join(app.project.root, app.project.fsDirs('source')), {
               overwrite: true
             });
           });
           this.logger.system('Done! All files have been successfully added to your source directory and were processed', 'CLI', 'success');
+          open(app.fastify.address + '/');
         } catch(e) {
           this.logger.system(e, 'CLI');
         }      
@@ -81,7 +84,7 @@ module.exports = function (yargs, done) {
         let answers = await prompts.call(this, [{
           type: 'confirm',
           name: 'install',
-          message: `Do you want to install a bootstrap demo project?`
+          message: `Do you want to install a bootstrap project?`
         }]);
         if(!answers || (answers && !answers.install)) {
           this.logger.warning('Action canceled', 'CLI');
@@ -89,28 +92,30 @@ module.exports = function (yargs, done) {
         }        
         let app = this.app;
         let scssPlugin = this.app.project.plugins.get('scss');
-        let sourcePath = path.join(__dirname, './bootstrap');
+        let sourcePath = path.join(__dirname, './install_packages/bootstrap');
 
         this.logger.system(colors.yellow.bold("Note") + ', for work with bootstrap, your ungic project must have the bootstrap package installed. To install the '+colors.yellow.bold("bootstrap package")+', use '+colors.yellow.bold('npm i bootstrap')+' command from your project directory.', 'CLI', 'warning');
-        let answers = await prompts.call(this, [{
+        answers = await prompts.call(this, [{
           type: 'confirm',
           name: 'confirm',
           default: false,
           message: `Note! Make sure bootstrap has been installed in your working directory of the ungic project! Do you want to continue?`
         }]);
         if(!answers.confirm) {
-          return done();
+          return
         }
         try {
           await intro.call(this, async()=> {
             this.logger.log('Copying and processing files in progress, please wait', 'CLI');
 
+            await scssPlugin.createComponent('app');
             await scssPlugin.createComponent('bootstrap');
             await fse.copy(sourcePath, path.join(app.project.root, app.project.fsDirs('source')), {
               overwrite: true
             });
           });
           this.logger.system('Done! All files have been successfully added to your source directory and were processed.', 'CLI', 'success');
+          open(app.fastify.address + '/');
         } catch(e) {
           this.logger.system(e, 'CLI');
         }

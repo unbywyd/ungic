@@ -7,10 +7,14 @@
     cursor: default;
     color: rgb(66, 66, 66);
     white-space: nowrap;
+    text-align: left !important;
+    direction: ltr !important;
     -webkit-user-select: none;       
 }
 
 .jsonViewWrap {
+   position: relative;
+   z-index: 999999;
    padding: 10px 20px;
    background-color: #eef6fe;
    margin: 20px;

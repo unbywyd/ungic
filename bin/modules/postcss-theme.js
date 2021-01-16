@@ -70,7 +70,7 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
 
             if(rule.selector.indexOf('[un-prefix') != -1) {
                 //let customPrefix;
-                rule.selector = rule.selector.split(/,\s+/).map(s => {
+                rule.selector = rule.selector.split(/,\s*/).map(s => {
                     customPrefix = /un-custom-prefix-/.test(s);
                     s = s.replace(/un-custom-prefix-/gm, '');
                     let regexp = /\[un-prefix=(?:'|")?\{\{(.*)\}\}(?:'|")?\]/;
@@ -126,7 +126,7 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
             }
             if(rule.selector.indexOf('[un-prefix') != -1) {
                 let regexp = /\[un-prefix=(?:'|")?\{\{(.*)\}\}(?:'|")?\]/;
-                rule.selector = rule.selector.split(/,\s+/).map(selector => {
+                rule.selector = rule.selector.split(/,\s*/).map(selector => {
                     selector = selector.replace(/un-custom-prefix-/gm, '');
                     let search = selector.match(regexp);
                     return selector.replace(regexp, search[1]);
@@ -140,7 +140,7 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
         
         let regexp = /^.un-(theme|inverse)([^\s]+)?\s+html/gm;
         if(regexp.test(rule.selector)) {
-            rule.selector = rule.selector.split(/,\s+/).map(s => {
+            rule.selector = rule.selector.split(/,\s*/).map(s => {
                 return s.replace(regexp, function(m) {
                     if(/^html/.test(m)) {
                         return m.replace(/html$/gm, '');
@@ -151,14 +151,20 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
             }).join(', ');
         }
 
-        if(/html:not/gm.test(rule.selector)) {
+        /*if(/html:not/gm.test(rule.selector)) {           
             rule.selector = rule.selector.split(/,\s+/).map(function(s) {
                 return s.replace(/(?!^)\s+?html:not/gm, ':not');
             }).join(',');
-        }
+
+        if(/\[data-ungic-root\]:not/gm.test(rule.selector)) {          
+         
+            rule.selector = rule.selector.split(/,\s+/).map(function(s) {
+                return s.replace(/(?!^)\s+?\[data-ungic-root\]:not/gm, ':not');
+            }).join(',');
+        }*/
 
         if(/(?<![(\["'])\.(un-inverse|un-theme-\w+)\s+:not/.test(rule.selector)) {
-            rule.selector = rule.selector.split(/,\s+/).map(function(s) {
+            rule.selector = rule.selector.split(/,\s*/).map(function(s) {
                 return s.replace(/(?<![(\["'])\.(un-inverse|un-theme-\w+)\s+:not/, function(match) {                    
                     return match.replace(/\s+\:not/, ':not');
                 })

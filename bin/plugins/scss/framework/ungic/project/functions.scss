@@ -4,6 +4,7 @@
 @use "ungic.utils" as utils;
 @use "sass:meta";
 @use "sass:map";
+@use "./property-handlers.scss" as property-handlers;
 
 $config: meta.module-variables(config);
 $properties: meta.module-variables(properties);
@@ -40,4 +41,9 @@ $default_properties: meta.module-variables(def_properties);
 
 @function props($defaults: false) {
   @return properties($defaults);
+}
+
+@function prop($prop, $args...) {
+  $props: utils.merge($default_properties, $properties);
+  @return property-handlers.handler($prop, $args...);
 }

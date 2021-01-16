@@ -1,0 +1,24 @@
+/*---------------------------------------------
+*   Optional component file of custom type
+---------------------------------------------*/
+
+@use "ungic.component" as *;
+
+@use "sass:map" as map;
+
+@mixin tool-step($step-options, $props) {
+	$step: map.get($step-options, step);
+	$apex: map.get($step-options, apex);
+	$astep: $step;
+	$suffix: 1;
+	@while ($astep <= $apex) {
+		&-#{$suffix} {
+			@each $prop in $props {
+				#{$prop}: $astep + 0em;
+			}
+			@content;
+		}
+		$astep: $astep + $step;
+		$suffix: $suffix + 1;
+	}
+}

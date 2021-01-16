@@ -1,0 +1,27 @@
+/*------------------------------------------
+*   Optional component configuration file. 
+--------------------------------------------
+*   This file can contain any configuration parameters of the component.
+*/
+
+@use ".core/props" as *; // Get access to the processed properties of this component, you can use the prop() method to get the processed value.
+@use "ungic.theme" as *; // Get access to theme module to work with colors
+
+$base-system-color-name: system;
+
+// Size tool
+$sizes: (
+	apex: 5,
+	step: .1
+);
+
+// Space
+$space-height: prop(padding-top);
+
+// Highlight
+$highlight-bgc: color($base-system-color-name, .9);
+$highlight-color: color($base-system-color-name, -.7);
+
+// Divider
+$divider-bgc: gray(.9);
+$divider-vertical-space-sides: prop(margin-left);

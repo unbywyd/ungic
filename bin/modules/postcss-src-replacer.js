@@ -27,7 +27,7 @@ module.exports = postcss.plugin('ungic-src-replacer', function (opts) {
                             if(opts.release.host && !isRelative(opts.release.host)) {
                                 return `${before}${url.resolve(opts.release.host, src)}${after}`;
                             } else {
-                                return `${before}${src.replace(/^(\.{2}(\/|\\))+/, '/')}${after}`;
+                                return str; //`${before}${src.replace(/^(\.{2}(\/|\\))+/, '/')}${after}`;
                             }
                         } catch(e) {
                             console.log(e);

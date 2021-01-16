@@ -45,9 +45,13 @@ module.exports = {
                 type: "boolean",
                 default: true
               },
+              versionInFilename: {
+                type: 'boolean',
+                default: true
+              },
               inverse: {
                 type: "boolean"
-              },
+              },              
               defaultInverse: {
                 type: "boolean"
               },
@@ -135,6 +139,7 @@ module.exports = {
           inverseMode: "combined",
           inverse: true,
           defaultInverse: false,
+          versionInFilename: true,
           autoprefixer: true,
           direction: 'ltr',
           oppositeDirection: true
@@ -143,7 +148,7 @@ module.exports = {
       build: {
         default: {
           configId: "default",
-          themes: [],
+          themes: [],         
           defaultTheme: "default",
           components: "*",
           excludeComponents: []

@@ -6,22 +6,22 @@
 */
 
 // SASS native modules
-@use "sass:meta"as meta;
-@use "sass:map"as map;
+@use "sass:meta" as meta;
+@use "sass:map" as map;
 
 // Component core
-@use ".core"as this;
+@use ".core" as this;
 
 // Theme module
-@use "ungic.theme"as theme;
+@use "ungic.theme" as theme;
 
 // Ungic framework modules
-@use "ungic.meta"as un-meta;
-@use "ungic.utils"as un-utils;
+@use "ungic.meta" as un-meta;
+@use "ungic.utils" as un-utils;
 
 // Custom
-@use "functions"as *;
-@use "mixins"as *;
+@use "functions" as *;
+@use "mixins" as *;
 
 // you must include any style files here
 // or write them in this file

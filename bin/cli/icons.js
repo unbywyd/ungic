@@ -101,29 +101,6 @@ module.exports = function (yargs, done) {
         return this.logger.system(_.map(icons, i => (i.svg ? '[SVG]' : '[Image]') + ' ' + i.name + ', ' + i.id + ' - ' + i.path).sort().join('\n'), 'Icons list');
       });
     })
-    .command('icons_page', 'Create page with all icons', args => {
-    }, args => {
-      done(() => {
-        return new Promise(async(done, rej) => {
-          let app = this.app;
-          let scssPlugin = this.app.project.plugins.get('scss');
-          let demoPath = path.join(__dirname, './icons-page');
-          try {
-            await intro.call(this, async()=> {
-              this.logger.log('Copying and processing files in progress, please wait', 'CLI');
-              await scssPlugin.createComponent('ungic_icons');
-              await fse.copy(demoPath, path.join(app.project.root, app.project.fsDirs('source')), {
-                overwrite: true
-              });
-            });
-            this.logger.system('Done! ungic_icons page was added successfully to source directory and precompiled', 'CLI', 'success');
-          } catch(e) {
-            this.logger.system(e, 'CLI');
-          }
-          done();
-        });
-      });
-    })
     .command('import [path]', 'Import svg from exported file (path relative to dist directory)', args => {
       args.option('save', {
         alias: 's',

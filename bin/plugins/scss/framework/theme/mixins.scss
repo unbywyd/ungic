@@ -11,7 +11,7 @@
     $inverse: get(inverse);
     $inverse-mode: get(inverse-mode);
     @if $inverse and not $inverse-mode {
-        @include un-meta.wrapsys('[un-prefix="{{html:not(.un-inverse)}}"]') {
+        @include un-meta.wrapsys('[un-prefix="{{[data-ungic-root]:not(.un-inverse)}}"]') {
             @content;
         }
     } @else if $inverse {
@@ -27,7 +27,7 @@
 @mixin is-type($type) {
     $inverse-mode: get(inverse-mode);
     @if get(theme-type) == $type and not $inverse-mode {
-        @include un-meta.wrapsys('[un-prefix="{{html:not(.un-inverse)}}"]') {
+        @include un-meta.wrapsys('[un-prefix="{{[data-ungic-root]:not(.un-inverse)}}"]') {
             @content;
         }
     } @else if $inverse-mode and get(theme-type) == $type {
@@ -57,7 +57,7 @@
     $active-name: get(name);
     @if $theme-name == $active-name {
         @if $theme-name == 'default' {
-            @include un-meta.wrapsys('[un-save-props] html:not([class*="un-theme"])') {
+            @include un-meta.wrapsys('[un-save-props] [data-ungic-root]:not([class*="un-theme"])') {
                 @content;
             }
         } @else {

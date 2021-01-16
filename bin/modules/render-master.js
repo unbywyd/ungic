@@ -28,7 +28,7 @@ class renderMaster extends skeleton {
         let config = this.config;
         this.collector = new Collector(config);
         this.callback = callback;
-        this.collector.on('finish', events => {
+        this.collector.on('finish', events => {           
             for(let event of events) {
                 this.log(`A new "${event.description}" rendering event for ${config.id} was received.`);
             }
@@ -54,6 +54,10 @@ class renderMaster extends skeleton {
 
         this.events = _.without(this.events, ...events);
 
+        events = _.uniq(events, function(x){
+            return x.description;
+        });
+
         try {
             if(this.callback.constructor.name === 'AsyncFunction') {
                 await this.callback(events);
@@ -77,7 +81,7 @@ class renderMaster extends skeleton {
             events: this.events
         }
     }
-    add(event) {
+    add(event) {       
         this.collector.add(event, !this.launched);
     }
 }

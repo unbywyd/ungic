@@ -11,7 +11,7 @@ module.exports = function(action) {
 
     // Максимальный перерыв между ответами от плагинов
     let collector = new Collector({
-      timeout: 2000
+      timeout: 1000
     });   
 
     // Запустили запасной таймер

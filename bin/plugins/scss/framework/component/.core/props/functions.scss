@@ -11,11 +11,13 @@
 @use "sass:map";
 @use "sass:meta";
 @use "ungic.utils" as utils;
-@use "ungic.meta.property-handlers" as property-handlers;
+@use "./handlers" as property-handlers;
 @use "ungic.project" as project;
 
 $component: meta.module-variables(this);
 $default-properties: meta.module-variables(default-props);
+
+@use "ungic.meta.property-handlers" as global-property-handlers;
 
 /*
 *   Gel all component properties
@@ -39,7 +41,7 @@ $default-properties: meta.module-variables(default-props);
 *   Get the computed value of a specific property of a component
 */
 @function prop($prop, $args...) {
-  @return property-handlers.handler($prop, $component, $args...);
+  @return property-handlers.handler($prop, $args...);
 }
 
 /*
@@ -50,8 +52,8 @@ $default-properties: meta.module-variables(default-props);
   @if not map.has-key($all_props, $prop) {
     @return null;
   }
-  $project-value: property-handlers.handler($prop, map.merge(map.deep-remove($component, properties, private-properties), (properties: project.$properties, private-properties: ())));
-  $private-value: property-handlers.handler($prop, $component);
+  $project-value: global-property-handlers.handler($prop, (properties: project.$properties, private-properties: ()));
+  $private-value: property-handlers.handler($prop);
 
   @if meta.inspect($project-value) != meta.inspect($private-value) {
     @return true;

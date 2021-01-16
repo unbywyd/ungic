@@ -446,8 +446,8 @@ $theme: meta.module-variables(theme);
         } @else {
             $dark: $light;
         }
-    } @else {
-        @warn "The second "$dark" argument is not specified, for a dark theme the value will be applied as for a light!";
+    } @else if $dark == null {
+        @warn "The second argument is not specified, for a dark theme the value will be applied as for a light!";
         $dark: $light;
     }
     $type: get(theme-type);

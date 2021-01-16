@@ -276,22 +276,24 @@ class htmlPlugin extends plugin {
                 return this._attrHandler(attrs);
             })
         });
+        this.collection.on('__removed', (model) => {        
+            this.pageRemoved(model.id);
+        });
         this.collection.on('all', (event, model) => {
             if(event == 'updated' || event == 'added' || event == 'removed') {
                 this.sassUsed.clean(m => m.page_id == model.id);
                 this.iconsUsed.clean(m => m.page_id == model.id);
-                this.iconsDataUsed.clean(m => m.page_id == model.id);
-
+                this.iconsDataUsed.clean(m => m.page_id == model.id);                
+                this.slotsStorage.clean(r => r.htmlModelId == model.id); 
+                
                 if(event == 'removed') {
+                    this.pageRemoved(model.id);
                     if(model.get('type') == 'page') {
                         if(config.deleteFromDist) {
                             fse.remove(path.join(this.dist, model.get('path')));
                         }
                         return;
                     }
-                    this.slotsStorage.clean(r => r.htmlModelId == model.id); 
-                    this.pipes.clean(m => m.page_id == model.id);
-                    this.mainScssPipes.clean(m => m.page_id == model.id);
                 }
                 if(event == 'updated' || event == 'added') {
                     if(model.get('type') == 'page') {
@@ -395,32 +397,24 @@ class htmlPlugin extends plugin {
             this._dist_handler(event, path.relative(this.dist, ph));
         });
         let self = this;
-        /*this.MustacheHelpers = {
-            debug_it: function() {
-                return function(searchBy) {
-                    if(self.release) {
-                        return '';
-                    }
-                    let data = this;
-                    if(searchBy) {
-                        data = getDeepEl(searchBy, data);
-                    }
-                    return '<div dir="ltr"><pre dir="ltr" data-path="'+this.ungic.model.path+'" class="un-debug">' + JSON.stringify(data, null, 4) + '</pre></div>';
-                }
-            },
-            debug: function() {
-                if(self.release) {
-                    return '';
-                }
-                return '<div dir="ltr"><pre dir="ltr" data-path="'+this.ungic.model.path+'" class="un-debug">' + JSON.stringify(this, null, 4) + '</pre></div>';
-            },
-            debug_source: function() {
-                if(self.release) {
-                    return '';
-                }
-                return JSON.stringify(this, null, 4);
-            }
-        }*/
+        Handlebars.registerHelper("amount", function(els) {
+            if(typeof els == 'object') {
+                return Object.keys(els).length;
+            }            
+            return Array.isArray(els) ? els.length : 0;
+        });
+        let htmlEscape = (string) => {
+            const htmlEscapes = {
+                '<': '&lt',
+                '>': '&gt',
+              }      
+              const reUnescapedHtml = /[<>]/g
+              const reHasUnescapedHtml = RegExp(reUnescapedHtml.source)
+              
+            return (string && reHasUnescapedHtml.test(string))
+                ? string.replace(reUnescapedHtml, (chr) => htmlEscapes[chr])
+                : string    
+        }
         Handlebars.registerHelper("debug", function(searchBy) {
             if(self.release) {
                 return '';
@@ -430,14 +424,17 @@ class htmlPlugin extends plugin {
             if('string' == typeof searchBy) {
                 data = getDeepEl(searchBy, data);
             }
-            //console.log(this);
-            return '<div dir="ltr"><pre dir="ltr" data-path="'+this.ungic.model.path+'" class="un-debug">' + JSON.stringify(data, null, 4) + '</pre></div>';
+            if(this.ungic && this.ungic.model) {
+                return '<div dir="ltr"><pre dir="ltr" data-path="'+this.ungic.model.path+'" class="un-debug">' + htmlEscape(JSON.stringify(data, null, 4)) + '</pre></div>';
+            } else {
+                return '<div dir="ltr"><pre dir="ltr" class="un-debug">' + htmlEscape(JSON.stringify(data, null, 4)) + '</pre></div>';
+            }            
         });
         Handlebars.registerHelper("debug_source", function() {
             if(self.release) {
                 return '';
             }
-            return JSON.stringify(this, null, 4);
+            return htmlEscape(JSON.stringify(this, null, 4));
         });
         Handlebars.registerHelper("src", (src, context) => {
             let rootData = context.data.root.ungic;
@@ -535,8 +532,8 @@ class htmlPlugin extends plugin {
             if(options.move === 'true' || options.move === true) {
                 source = _.extend({}, rootData, source);
             }
-            if(options.data) {
-                if(options.data == 'icons') {
+            if(options.data || options.icons) {
+                if(options.data == 'icons' || options.icons) {
                     this.iconsDataUsed.set({page_id: source.ungic.page.id});
                     let iconsData = {};
                     if('object' == typeof this.iconsStorage.fonts && this.iconsStorage.fonts.data) {
@@ -548,8 +545,14 @@ class htmlPlugin extends plugin {
                     if('object' == typeof this.iconsStorage.sprite && this.iconsStorage.sprite.data) {
                         iconsData.sprites = this.iconsStorage.sprite.data.icons;
                     }
-                    source.icons = iconsData;
-                } else {
+                    if(iconsData[options.icons]) {
+                        source.icons = iconsData[options.icons];
+                    } else {
+                        source.icons = iconsData;
+                    }
+                } 
+                
+                if(options.data && options.data != 'icons') {
                     if(typeof options.data == "string") {                       
                         if(!/=/.test(options.data) && path.extname(options.data) != "" && [".json", ".yaml"].includes(path.extname(options.data).toLowerCase())) {
                             let dataPath = path.join(cwd, options.data);
@@ -599,7 +602,7 @@ class htmlPlugin extends plugin {
                         return this.log(`${model.get('type')} type not supported for including. Error while assembling ${rootData.ungic.page.path} page`, 'error');
                     }
                     source.ungic.model = {
-                        id: model.id,
+                        id: model.id,                        
                         path: model.get('path')
                     }
                     content = model.get('body');
@@ -637,6 +640,9 @@ class htmlPlugin extends plugin {
                             }
                             return data;
                         }
+                        if(typeof options.sass != 'string') {
+                            options.sass = '';
+                        }
                         let sass_options = options.sass.replace(/\s/g, '').split(',');     
                                 
                         if(scssPlugin && scssPlugin.exports.size()) {
@@ -645,9 +651,19 @@ class htmlPlugin extends plugin {
                                 if(res.length) {
                                     for(let r of res) {
                                         sass[r.id] = r.data;
+                                        let source = '';
+                                        try {
+                                            source = JSON.stringify(r.data);
+                                        } catch(e) {
+
+                                        }
+                                        // Удалили предыдущею опцию
+                                        this.sassUsed.clean(m => m.page_id == rootData.ungic.page.id && m.oid == r.id);
+
                                         this.sassUsed.set({
                                             oid: r.id,
-                                            page_id: rootData.ungic.page.id
+                                            page_id: rootData.ungic.page.id,
+                                            source
                                         });
                                     }
                                 }
@@ -774,7 +790,7 @@ class htmlPlugin extends plugin {
             extname: path.extname(ph).toLowerCase(),
             path: path.normalize(ph)
         }
-        let fullPath = path.join(this.root, ph);
+        let fullPath = path.join(this.root, ph);  
         if(!await fsp.exists(fullPath)) {
             let model = this.collection.find(model=>model.get('path') == path.normalize(ph));
             if(model) {
@@ -790,11 +806,15 @@ class htmlPlugin extends plugin {
         }
         entityData.body = body;
         let model = this.collection.find(model=>model.get('path') == path.normalize(ph));
-        if(model) {
-            this.pipes.clean(m => m.page_id == model.id);
-            this.mainScssPipes.clean(m => m.page_id == model.id);
+        //console.log('model', model);
+        if(model) {           
+            this.pageRemoved(model.id);
         }
         await this.collection.add(entityData, options);
+    }
+    pageRemoved(id) {
+        this.pipes.clean(m => m.page_id == id);
+        this.mainScssPipes.clean(m => m.page_id == id);
     }
     toRelease(args) {
         return new Promise(async(done, rej) => {
@@ -1010,10 +1030,11 @@ class htmlPlugin extends plugin {
                 let scssPlugin = this.project.plugins.get('scss');
                 let attrs = model.get();
                 source = _.extend(source, {
-                    model: model,
+                    model: _.pick(model.toJSON(), 'path', 'id'),
                     page: {
                         id: model.id,
-                        path: attrs.path
+                        path: attrs.path,
+                        pipe: model.get('pipe') || []
                     }
                 });
                 let output;
@@ -1064,47 +1085,85 @@ class htmlPlugin extends plugin {
                     this.log(`HTML Syntax processing error in ${attrs.path} page`);
                 }
                 if($) {
-                    let $body = $('body'), $head =  $('head');
+                    let $body = $('body'), $head =  $('head');              
                     scssPlugin.cleanHtmlInternalSass(model.id);
                     let sassInternalRulesChanged = [], sassInternalRules = [];
                     let hasSlots = [];
                     let scssProms = [];
                     let self = this;
 
-                    $('[class*="@"]').each(function() {
+                    let replaceShortTagSymb = function(attr) {
                         let pipes = _.findWhere(self.mainScssPipes.storage, {page_id: model.id});
-                        let cid = $(this).parents('[cid]').attr('cid');                        
-                        cid = cid ? cid : (pipes && pipes.main ? pipes.main : "");
+                        let cid = $(this).parent().closest('[cid]').attr('cid');    
+                        let parentCID = (pipes && pipes.main ? pipes.main : "");                  
+                        cid = cid ? cid : parentCID;
                         let currentComponent; 
-                        if($(this).attr('cid')) {
+                        if($(this).attr('cid') && !/\@/g.test($(this).attr('cid'))) {
                             cid = $(this).attr('cid');
                             currentComponent = true;
                         }              
-                        let parentClasses = ($(this).parent().attr('class') || "").split(' ').map(e => e.trim()).filter(e => e.trim() != "");                        
-                        let classes = $(this).attr('class').split(' ').map(e => e.trim()).filter(e => e.trim() != "");
-                          
+                        let parentClasses = ($el) => {                           
+                            let $parent = $el.parent().closest('['+attr+']:not(['+attr+'=""])');                                                
+                            if(!$parent.length || ($parent.length && $parent.prop('tagName') == 'HTML')) {
+                                return [];
+                            }                       
+                            if($parent && (!$parent.attr(attr) || ($parent.attr(attr) && $parent.attr(attr).trim() == ''))) {                                                                                   
+                                return parentClasses($body.find($parent));
+                            }
+                            return ($parent.attr(attr) || "").split(' ').map(e => e.trim()).filter(e => e.trim() != "");
+                        }                        
+                        let classes = $(this).attr(attr).split(' ').map(e => e.trim()).filter(e => e.trim() != "");                        
+        
+                        let $this = $(this);
                         classes = classes.map(e => {                            
-                            if(/@(?!\\)(@|\d+)?/.test(e)) {                                  
-                                e = e.replace(/@(?!\\)(@|\d+)?/gm, function(match, num) {                                    
-                                    if(!num) {
-                                        num = 0;
-                                    }
-                                    if(num == "@" || currentComponent) {
+                            if(/@(?<!\\)(@|\d+)?/.test(e)) {                                  
+                                e = e.replace(/@(?<!\\)(@{1,}|\d+)?/gm, function(match, num) {                                    
+                                    // Если одна собачка, вернуть имя аппликации или ближайшего сида                                
+                                    if(!num || currentComponent) {
                                         return cid;
-                                    } else {
-                                        num = parseInt(num);  
-                                        if(num > 0) {
-                                            num = num - 1;
-                                        }                                                                
-                                        return parentClasses[num] ? parentClasses[num] : cid;
                                     }
+                                    // Две собачки вернуть имя аппликации или первый класс родительского компонента
+                                    if(num == "@") {
+                                        if(parentCID && parentCID != '') {
+                                            return parentCID;
+                                        } else {
+                                            num = 0;
+                                        }
+                                    }
+                                    if('string' == typeof num && /^@{2,}$/.test(num)) {                                                                         
+                                        num = num.split('@').length; 
+                                        num = num - 2;                                      
+                                    }
+                                    num = parseInt(num);  
+                                    if(num > 0) {
+                                        num = num - 1;
+                                    }      
+                                    let result = parentClasses($this);                                                                                                        
+                                    return result[num] ? result[num] : cid;
                                 });
                             } else {                                                             
                                 e = e.replace(/\@\\*/gm, cid);
                             }
                             return e;
-                        });                   
-                        $(this).attr('class', classes.join(' '));
+                        });     
+                                        
+                        $(this).attr(attr, classes.join(' ').replace(/\\/g, ''));
+                        
+                    }
+                    $('[cid*="@"]').each(function() {
+                        replaceShortTagSymb.call(this, "cid");                        
+                    });
+                    $('style[sass*="@"]').each(function() {
+                        replaceShortTagSymb.call(this, "sass");                        
+                    });
+                    $('[for*="@"]').each(function() {
+                        replaceShortTagSymb.call(this, "for");                        
+                    });
+                    $('[id*="@"]').each(function() {
+                        replaceShortTagSymb.call(this, "id");                        
+                    });    
+                    $('[class*="@"]').each(function() {
+                        replaceShortTagSymb.call(this, "class");                        
                     });
 
                     $('[cid]').each(function() {
@@ -1581,12 +1640,33 @@ class htmlPlugin extends plugin {
         let models = this.collection.findAllWhere({type: 'page'}, false);
 
         let scssPlugin = this.project.plugins.get('scss');
-        scssPlugin.on('exports', (event, models) => {
+        scssPlugin.on('exports', (event, models) => {  
             if(Array.isArray(models)) {
-                let storage = this.sassUsed.storage;
+                // Хранилище содержит используемые опции, страницы и их данные
+                let storage = this.sassUsed.storage;      
+                // Получили все ид полученных опций      
                 let ids = _.map(models, m => m.model ? m.model.id : m.id);
-                let expOptions = _.filter(storage, e => ids.indexOf(e.oid) != -1);
-                if(expOptions.length) {
+                // Фильтруем хранилище, если ид используется + данные изменились
+                let expOptions = _.filter(storage, e => {
+                    let used = ids.indexOf(e.oid) != -1;
+                    if(used) {
+                        let currentModel = _.find(models, m => {
+                            let id = m.model ? m.model.id : m.id;
+                            return id == e.oid;
+                        });
+                        let model = currentModel.model ? currentModel.model : currentModel;
+                        let data = '';
+                        try {
+                            data = JSON.stringify(model.get('data'));
+                        } catch(e) {
+
+                        }                       
+                        return data !== e.source
+                    }
+                    return used;
+                });                
+                if(expOptions.length) {     
+                         
                     let models = this.collection.filter(model => _.find(expOptions, e => e.page_id == model.id));
                     if(models.length) {
                         let pages = models.map(model=>model.toJSON());
@@ -1606,8 +1686,8 @@ class htmlPlugin extends plugin {
             } else {
                 delete this.iconsStorage.fonts
             }
-            if(this.iconsUsed.storage.length) {
-                let pages = _.groupBy(this.iconsUsed.storage, 'page_id');
+            if(this.iconsUsed.storage.length) {               
+                let pages = _.groupBy(this.iconsUsed.storage, 'page_id');       
                 for(let pageId in pages) {
                     let page = this.collection.findByID(pageId);
                     if(page) {
@@ -1618,14 +1698,14 @@ class htmlPlugin extends plugin {
             }
         });
 
-        this.project.on('icons', async e => {
+        this.project.on('icons', async e => {          
             try {
                 let pagesReady = [];
                 let ids;
                 this.iconsStorage[e.type] = e;
                 if(this.iconsDataUsed.storage.length) {
                     for(let data of this.iconsDataUsed.storage) {
-                        let page = this.collection.findByID(data.page_id);
+                        let page = this.collection.findByID(data.page_id);         
                         if(page) {
                             this.collection.remove(page.id, {silent: true});
                             pagesReady.push(page.id);
@@ -1636,6 +1716,7 @@ class htmlPlugin extends plugin {
                 if(this.iconsUsed.storage.length) {
                     let pagesToRebuild = [];
                     let pages = _.groupBy(this.iconsUsed.storage, 'page_id');
+            
                     for(let pageId in pages) {
                         if(e.models && e.models.length) {
                             for(let model of e.models) {
@@ -1648,7 +1729,7 @@ class htmlPlugin extends plugin {
                             }
                         }
                     }
-                    if(pagesToRebuild.length) {
+                    if(pagesToRebuild.length) {                       
                         for(let pageId of pagesToRebuild) {
                             let page = this.collection.findByID(pageId);
                             if(page) {

@@ -89,7 +89,7 @@ module.exports = {
         default: {
             releases: {
                 default: {
-                    saveAssetsDirs: ['img', 'imgs', 'images'],
+                    saveAssetsDirs: ['img', 'imgs', 'images'],                   
                     scssBuildName: "default",
                     htmlBuildName: "default",
                     iconsBuildName: "default",

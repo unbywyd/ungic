@@ -1,0 +1,92 @@
+@use "sass:map" as map;
+@use "sass:list" as list;
+
+@use "ungic.component" as this;
+@use "ungic.theme" as *;
+@use "ungic.utils" as *;
+
+@function u($px, $base: this.prop('font-size')) {
+  @return em(strip-unit($px), strip-unit($base));
+}
+
+@function breakpoint($size, $breakpoints-with-padding: true) {
+  $result: null;
+  $grid-breakpoints: this.config(breakpoints);
+  $padding-offset: this.config(breakpoints-with-padding);
+  $offset: 0;
+  @if ($padding-offset and $breakpoints-with-padding) {
+    $offset: px(this.prop(padding-left) + this.prop(padding-right));
+  }
+  @if (map.has-key($grid-breakpoints, $size)) {
+    $result: map.get($grid-breakpoints, $size) + $offset;
+  } @else {
+    @warn '#{$size} breakpoint not exist';
+  }
+  @return $result;
+}
+
+@function breakpoints($list-by: null) {
+  $grid-breakpoints: this.config(breakpoints);
+  $padding-offset: this.config(breakpoints-with-padding);
+  @if ($padding-offset) {
+    $offset: px(this.prop(padding-left) + this.prop(padding-right));
+    $results: ();
+    @each $key, $point in $grid-breakpoints {
+      @if ($list-by== "values" or $list-by == "keys") {
+        @if ($list-by == "keys") {
+          $results: list.append($results, $key);
+        } @else {
+          $results: list.append($results, $point + $offset);
+        }
+      } @else {
+        $results: deep-merge(
+          $results,
+          (
+            $key: $point + $offset,
+          )
+        );
+      }
+    }
+    @return $results;
+  } @else {
+    @if ($list-by == "values" or $list-by == "keys") {
+      $results: ();
+      @each $key, $value in $grid-breakpoints {
+        @if ($list-by == "keys") {
+          $results: list.append($results, $key);
+        } @else {
+          $results: list.append($results, $value);
+        }
+      }
+      @return $results;
+    }
+    @return $grid-breakpoints;
+  }
+}
+
+@function container-size($size) {
+  @return breakpoint($size, this.config(width-container-with-padding));
+}
+
+@function media($rule, $parentheses: true) {
+  @if type-of($rule) != string {
+    @return false;
+  }
+  @each $item in this.config(media-rules) {
+    $rules: map.get($item, rules);
+    @if list.index($rules, $rule) {
+      $media: map.get($item, media);
+      $result: list.nth($media, 1) + ':' + breakpoint(list.nth($media, 2));
+      @if $parentheses {
+        @return '(' + $result + ')';
+      } @else {
+        @return $result;
+      }
+    }
+  }
+  @return false;
+}
+
+@function q($rule) {
+  @return media($rule, false);
+}

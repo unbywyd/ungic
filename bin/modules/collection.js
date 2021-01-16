@@ -190,6 +190,11 @@ class Collection {
         if(!options.silent && changed.length) {
             this._change('add', changed);
         }
+        if(changed.length) {
+            for(let model of changed) {
+                this._events.emit('__added', model);
+            }
+        }
     }
     async set(models, options={}) {
         options = _.extend({
@@ -199,6 +204,11 @@ class Collection {
         let changed = await this._set(models, options);
         if(!options.silent && changed.length) {
             this._change('set', changed);
+        }
+        if(changed.length) {
+            for(let model of changed) {
+                this._events.emit('__set', model);
+            }
         }
     }
     sort() {
@@ -250,7 +260,8 @@ class Collection {
         if(!models.length) {
             return
         }
-        let removed = [];
+        let removed = [];   
+    
         for(let model of models) {
             removed.push(this._remove(model, {silent: true}));
         }
@@ -263,6 +274,11 @@ class Collection {
                 }
             } else {
                 this._change('removed', removed);
+            }
+        }
+        if(removed.length) {
+            for(let model of removed) {
+                this._events.emit('__removed', model);
             }
         }
     }

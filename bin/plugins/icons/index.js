@@ -23,7 +23,7 @@ const moment = require('moment');
 const watchGrouping = require('../../modules/watch-grouping');
 const hbs = require('handlebars');
 const sass = require('sass');
-const Spritesmith = require('spritesmith');
+const spriteSmith = require('spritesmith');
 const resizeImg = require('resize-img');
 var sizeOf = require('image-size');
 hbs.registerHelper("coordinate", function(val) {
@@ -105,9 +105,9 @@ class iconsPlugin extends plugin {
         config.id = 'icons';
         super(require('./model-scheme'), config, sysconfig);
         this.codepoints = [];
-        this.watchController = new watchGrouping;
-        this.watchController.on('ready', events => {
-            this.fileChanged(events);
+        this.watchController = new watchGrouping();
+        this.watchController.on('ready', events => {                
+            this.fileChanged(events);    
         });
         this.iconsStorage = {};
         let model = Model({
@@ -176,7 +176,6 @@ class iconsPlugin extends plugin {
         this.cpManager = new codepointManager(this);
 
         this.collection.on('all', (event, model) => {
-            //console.log('event', event, model);
             if(event == 'updated' || event == 'added' || event == 'removed') {
                 if(model.has('svg')) {
                     if(this.buildConfig.svgIcons) {
@@ -205,8 +204,14 @@ class iconsPlugin extends plugin {
             }
         });
 
+        let iconsTimer;
+
         this.on('icons', data => {
-            this.iconsStorage[data.type] = data;
+            this.iconsStorage[data.type] = data;            
+            clearTimeout(iconsTimer);
+            iconsTimer = setTimeout(() => {            
+                this.generateHTMLPage();
+            }, 100);
         });
 
         this.renderMaster = new renderMaster(_.extend(config.render, {
@@ -227,17 +232,16 @@ class iconsPlugin extends plugin {
     }
     async render(events) {
         this.emit('render');
-        let config = this.config, fontsData, svgSpriteData, spritesData;
         for(let event of events) {
             if(event.type == 'fonts') {
-                fontsData = await this.fontGeneration(_.sortBy(event.models, model => model.get('id')));
+                await this.fontGeneration(_.sortBy(event.models, model => model.get('id')));
             }
             if(event.type == 'svgSprite') {
-                svgSpriteData = this.generateSvgSprite(_.sortBy(event.models, model => model.get('id')));
+                this.generateSvgSprite(_.sortBy(event.models, model => model.get('id')));
             }
             if(event.type == 'sprite') {
                 try {
-                    spritesData = await this.generateSprite(_.sortBy(event.models, model => model.get('id')));
+                    await this.generateSprite(_.sortBy(event.models, model => model.get('id')));
                 } catch(e) {
                     console.log(e);
                 }
@@ -247,9 +251,7 @@ class iconsPlugin extends plugin {
             this.begined = true;
             this.emit('begined', this.iconsStorage);
         }
-
-        await this.cpManager.save(this.collection);
-        await this.generateHTMLPage({svgSpriteData});
+        await this.cpManager.save(this.collection);        
         this.emit('rendered');
     }
     rebuild() {
@@ -279,7 +281,11 @@ class iconsPlugin extends plugin {
         }
 
         source.release = this.releaseData;
+
         if(this.collection.size()) {
+            if(data.svgSpriteData && data.svgSpriteData.sprite) {
+                source.svgSprite = data.svgSpriteData.sprite;
+            }
             if(this.releaseData) {
                 source.stylesheets = [];
                 if(data.fontsData) {
@@ -288,25 +294,37 @@ class iconsPlugin extends plugin {
                 if(data.spritesData) {
                     source.stylesheets.push({href: data.spritesData.css_url});
                 }
-            }
 
-            if(data.svgSpriteData && data.svgSpriteData.sprite) {
-                source.svgSprite = data.svgSpriteData.sprite;
-            }
-            let hasSvg = this.collection.find(m => m.has('svg')), hasSprites = this.collection.find(m => !m.has('svg'));
-
-            if(hasSvg) {
-                let icons = this.collection.filter(m => m.has('svg'));
-                if(this.buildConfig.svgIconsMode == 'fonts') {
-                    source.icons.fonts = icons;
-                } else {
-                    source.icons.svgSprite = icons;
+                let hasSvg = this.releaseData.svgIcons, hasSprites = this.releaseData.sprites;
+                if(hasSvg) {                    
+                    if(this.buildConfig.svgIconsMode == 'fonts') {
+                        source.icons.fonts = this.releaseData.svgIcons.map(m => m.toJSON());
+                    } else {
+                        source.icons.svgSprite = this.releaseData.svgIcons.map(m => m.toJSON());
+                    }
                 }
-            }
+                if(hasSprites) {
+                    source.icons.sprites = this.releaseData.sprites.map(m => m.toJSON());
+                }                
+            } else {               
+                if(this.iconsStorage.svgSprite && this.iconsStorage.svgSprite.data) {
+                    source.svgSprite = this.iconsStorage.svgSprite.data.sprite;
+                }         
+                let hasSvg = this.collection.find(m => m.has('svg')), hasSprites = this.collection.find(m => !m.has('svg'));
 
-            if(hasSprites) {
-                let icons = this.collection.filter(m => !m.has('svg'));
-                source.icons.sprites = icons;
+                if(hasSvg) {
+                    let icons = this.collection.filter(m => m.has('svg'));
+                    if(this.buildConfig.svgIconsMode == 'fonts') {
+                        source.icons.fonts = icons;
+                    } else {
+                        source.icons.svgSprite = icons;
+                    }
+                }
+
+                if(hasSprites) {
+                    let icons = this.collection.filter(m => !m.has('svg'));
+                    source.icons.sprites = icons;
+                }
             }
         } else {
             source.icons = false;
@@ -321,11 +339,20 @@ class iconsPlugin extends plugin {
         return
     }
     async fileChanged(events) {
-        let paths = [];
+        let paths = [], spriteRemoved, svgRemoved;
         for(let event in events) {
             for(let ev of events[event]) {
-               await this.setEntityByPath(path.relative(this.root, ev.path), {silent:true});
-               paths.push(path.normalize(path.relative(this.root, ev.path)));
+              if(event == 'unlink') {  
+                if(path.extname(ev.path) != '.svg') {
+                    spriteRemoved = true;
+                } else {
+                    svgRemoved = true;
+                }          
+                await this.setEntityByPath(path.relative(this.root, ev.path), {silent:true, unlink: true});                
+              } else {
+                await this.setEntityByPath(path.relative(this.root, ev.path), {silent:true});                
+              }
+              paths.push(path.normalize(path.relative(this.root, ev.path)));
             }
         }
         let config = this.config;
@@ -351,9 +378,10 @@ class iconsPlugin extends plugin {
                 this.allSVGToRender();
             }
         }
+  
         if(!this.collection.size()) {
             await this.generateHTMLPage();
-        }
+        }       
     }
     async setEntityByPath(ph, options={}) {
         let supports = ['png', 'svg', 'jpeg', 'jpg'];
@@ -364,7 +392,7 @@ class iconsPlugin extends plugin {
         }
 
         let fullPath = path.join(this.root, ph);
-        if(!await fsp.exists(fullPath)) {
+        if(!await fsp.exists(fullPath) || options.unlink) {            
             let model = this.collection.find(model=> {
                 return model.get('path') == path.normalize(ph);
             });
@@ -1116,7 +1144,7 @@ class iconsPlugin extends plugin {
             /*
             *   Пробежать и срезать размер в тем папку и сохранить все ссылки, отправить в смитх и затем временные крякнуть*
             */
-            Spritesmith.run({src: sprites}, async (err, result) => {
+           spriteSmith.run({src: sprites}, async (err, result) => {
                  try {
                     if(err) {
                         this.log(err);
