@@ -10,7 +10,8 @@ $project: () !default;
 */
 @use "config" with (
     $settings: map.get($project, theme),
-    $inverse-mode: map.get($project, inverse-mode)
+    $inverse-mode: map.get($project, inverse-mode),
+    $theme-prefix: map.get($project, theme-prefix)
 );
 
 @forward "functions";

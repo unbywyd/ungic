@@ -44,6 +44,10 @@ module.exports = {
         type: 'boolean',
         default: true
     },
+    dirAttribute: {
+        type: 'string',
+        default: 'dir'
+    },
     cleancss: {
         type: 'object',
         default: {}

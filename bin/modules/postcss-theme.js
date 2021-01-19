@@ -33,9 +33,13 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
             if (decl.prop) {
                 let prop = decl.prop;
                 let colors = extractor.fromDecl(decl);
-                if(!colors.length) {
-                    if(propertiesToSave.indexOf(prop) == -1 && prop.indexOf('color') == -1) {
-                        decl.remove();
+                 colors = _.reject(colors, c => parseInt(c) === 0);                
+                if(!colors.length) {                    
+                    // Проблема такая - из-за того что мод включен он удаляет все переменные, в деве это норм, в продакшене это не норм
+                    if((!propertiesToSave.includes(prop) && prop.indexOf('color') == -1) || opts.themeColorsVarsMode) {      
+                        if(!/^--/.test(decl.prop)) {
+                            decl.remove();
+                        } 
                     }
                 }
             }
@@ -46,7 +50,22 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
         return rule;
     }
 
-    let parseRule = rule => {      
+    /*function rgbFix(rule) {        
+        rule.walkDecls(decl => {
+            if (decl.prop) {
+                if(/^var\(--ungic/.test(decl.value) && /-rgb/.test(decl.value)) {
+                    decl.value = `rgba(${decl.value}, 1)`;
+                }
+            }
+        });
+    }*/
+
+    let parseRule = rule => {   
+        
+        if(opts.themeColorsVarsMode) {
+           //rgbFix(rule);
+        }
+
         if('string' == typeof rule.selector && regexp.test(rule.selector)) {
             let saveProps, saveInverseProps, hasInverse = /(?<![(\["'])\.un-inverse/.test(rule.selector), customPrefix;
 
@@ -135,7 +154,7 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
         }
     }
   
-    root.walkRules(function(rule) {
+    root.walkRules(function(rule) {      
         parseRule(rule);
         
         let regexp = /^.un-(theme|inverse)([^\s]+)?\s+html/gm;
@@ -151,19 +170,7 @@ module.exports = postcss.plugin('ungic-theme', function (opts) {
             }).join(', ');
         }
 
-        /*if(/html:not/gm.test(rule.selector)) {           
-            rule.selector = rule.selector.split(/,\s+/).map(function(s) {
-                return s.replace(/(?!^)\s+?html:not/gm, ':not');
-            }).join(',');
-
-        if(/\[data-ungic-root\]:not/gm.test(rule.selector)) {          
-         
-            rule.selector = rule.selector.split(/,\s+/).map(function(s) {
-                return s.replace(/(?!^)\s+?\[data-ungic-root\]:not/gm, ':not');
-            }).join(',');
-        }*/
-
-        if(/(?<![(\["'])\.(un-inverse|un-theme-\w+)\s+:not/.test(rule.selector)) {
+          if(/(?<![(\["'])\.(un-inverse|un-theme-\w+)\s+:not/.test(rule.selector)) {
             rule.selector = rule.selector.split(/,\s*/).map(function(s) {
                 return s.replace(/(?<![(\["'])\.(un-inverse|un-theme-\w+)\s+:not/, function(match) {                    
                     return match.replace(/\s+\:not/, ':not');

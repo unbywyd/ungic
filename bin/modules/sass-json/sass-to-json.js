@@ -4,6 +4,7 @@ const sass = require('sass');
 const rgbHex = require('rgb-hex');
 const types = sass.types;
 const Color = require('color-converter').default;
+const model = require('../model');
 
 function createRound(methodName) {
     const func = Math[methodName]
@@ -97,4 +98,6 @@ function mapToObject ( map, opts ) {
 	return data;
 }
 
-module.exports = getJsonValueFromSassValue;
+module.exports.mapToObject = mapToObject;
+
+module.exports.getJsonValueFromSassValue = getJsonValueFromSassValue;

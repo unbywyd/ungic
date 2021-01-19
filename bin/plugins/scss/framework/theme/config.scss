@@ -14,17 +14,28 @@ $settings: () !default;
 *   This is if the second run for inversion colors
 */
 $inverse-mode: false !default;
+$theme-prefix: false !default;
 
 $colors: map.get($settings, 'colors');
 $config: map.get($settings, 'config');
 $palettes: map.get($settings, 'palettes');
+// Default inversion (Инверсия по умолчанию)
 $inverse: map.get($config, inverse);
+
+$default-inverse: $inverse;
+
+$inverse-support: map.get($config, inverse-support);
+$colors-vars-mode: map.get($config, colors-vars-mode);
+
 $name: map.get($settings, 'theme-name');
+
 
 /*
 *   Inverted relative to the global method
+*   Если это вторичный режим сборки в режиме инверсии и режим инверсии по умолчанию правда, тогда меняем его на ложь (инвертируем значение) и наоборот.
 */
 @if($inverse-mode) {
+   // $inverse = defaultInverse
     @if($inverse) {
         $inverse: false
     } @else {

@@ -1,22 +1,29 @@
 module.exports = {
-    rtlPrefix: {
-        type: "object",
-        properties: {
-            prefixType: {
-                type: 'string',
-                enum: ['attribute', 'class']
-            },
-            prefix: {
-                type: 'string'
-            }
-        },
-        default: {
-            prefixType: "attribute",
-            prefix: ''
-        }
+    dirAttribute: {
+        type: 'string',
+        default: 'dir'
+    },
+    htmlIsRootElement: {
+        type: 'boolean',
+        default: true
+    },
+    generateThemeColorsVars: {
+        type: 'boolean',
+        default: false
+    },
+    themeColorsVarsMode: {
+        type: 'boolean',
+        default: false
     },
     cleancss: {
-        type: 'boolean',
+        "anyOf": [
+            {
+                type: 'object'
+            },
+            {
+                type: 'boolean'
+            }
+        ],
         default: true
     }
 }

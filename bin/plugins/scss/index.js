@@ -26,6 +26,7 @@ const srcReplacer = require('../../modules/postcss-src-replacer');
 const rtl = require('postcss-rtl');
 const autoprefixer = require('autoprefixer');
 const Storage = require('../../modules/storage');
+const rgbHex = require('rgb-hex');
 
 class builder extends skeleton {
     constructor(scheme, config = {}) {
@@ -81,6 +82,7 @@ class scssPlugin extends plugin {
         this.internalSassRules = new Storage;
         this.internalSassRulesRequired = new Storage;
         this.iconsSaveStorage = new Storage;
+        this.colorsVars = new Storage;
         this.componentsDepends = new Storage;
         this.individualComponentParams = new Storage;
         let model = Model({
@@ -371,7 +373,70 @@ class scssPlugin extends plugin {
             }
         })();
     }
-    _sassRender(data, cids, config = {}) {
+    generateVars(cids, source) {
+        let config = this.config;       
+        let colors = new Map;
+        for(let color of this.colorsVars.storage) {
+            if(cids.includes(color.cid)) {
+                colors.set(color.source, color);
+            }
+        }
+        let vars = [];
+        if(colors.size) {
+            colors.forEach((color) => {
+                let inversePrefix = false;
+
+                if(color.inverseSupport && color.inverseMode) {
+                    inversePrefix = '.un-inverse';                    
+                }
+
+                if(!color.themePrefix) {
+                    if(!inversePrefix) {
+                        vars.push({
+                            'selector': ':root',
+                            'var': color.varName,
+                            'color': color.color
+                        });
+                    } else {
+                        vars.push({
+                            'selector': inversePrefix,
+                            'var': color.varName,
+                            'color': color.color
+                        });
+                    }
+                } else {
+                    // Имеет конкретную тему, имеет класс темы .un-theme-{name}
+                    let themeSelector = `.un-theme-${color.themeName}`;
+
+                    if(!inversePrefix) {
+                        vars.push({
+                            'selector': themeSelector,
+                            'var': color.varName,
+                            'color': color.color
+                        });
+                    } else {
+                        vars.push({
+                            'selector': inversePrefix + themeSelector,
+                            'var': color.varName,
+                            'color': color.color
+                        });
+                    }
+                }
+            });
+        }
+        let output = '';
+        if(source) {
+            return vars;
+        }
+        if(vars.length) {
+            let data = _.groupBy(vars, 'selector');
+            for(let selector in data) {                
+                output = output + ` ${selector}{${data[selector].map(e => `${e.var}:${e.color}`).join(';')}}`;
+            }
+        }
+        return output;
+    }
+    _sassRender(data, cids, config = {}) {        
         let exportsStorage = [];
         let functions = _.extend(encodeFunction, {
             "is-release()": () => {
@@ -380,6 +445,47 @@ class scssPlugin extends plugin {
                 } else {
                     return sass.types.Boolean.FALSE
                 }
+            },
+            "ungic-save-color($data)": (data) => {
+                let sassString = sass.types.String;
+                let payload = {};
+                for (let i = 0; i < data.getLength(); i++ ) {
+                    let key = data.getKey(i).getValue();                  
+                    let value = data.getValue(i).getValue();
+                    let nums = ['colorTint', 'hueOffset', 'saturation'];
+                    if(key == 'colorName' || key == 'color') {
+                        value = value.replace(/'|"/g, '');
+                    }
+                    payload[key] = nums.includes(key) ? parseFloat(value) : value;                    
+                }         
+
+                let source = JSON.stringify(_.omit(payload, 'color'));
+                let toID = (num) => {
+                    return num.toString().replace('.', '0');
+                }
+                
+                let varName = `--ungic-color-${payload.colorName}`;
+              
+                if(payload.colorTint !== 0) {
+                    varName = varName + `-${toID(payload.colorTint)}t`;
+                }    
+                if(payload.hueOffset !== 0) {
+                    varName = varName + `-${toID(payload.hueOffset)}h`;
+                }    
+                if(payload.saturation !== 0) {
+                    varName = varName + `-${toID(payload.saturation)}s`;
+                }
+                for(let cid of cids) {  
+                    if(!_.find(this.colorsVars.storage, e => e.cid == cid && e.source == source))  {  
+                        this.colorsVars.set({
+                            cid,                            
+                            varName,
+                            source,
+                            ...payload                  
+                        }); 
+                    }                
+                }
+                return new sassString(varName);
             },
             "to-export($cid, $oid, $data)": (cid, oid, data) => {
                 cid = cid.getValue();
@@ -437,7 +543,7 @@ class scssPlugin extends plugin {
             });
         });
     }
-    async _postcss(data, buildConfig, release) {
+    async _postcss(data, buildConfig, release={}) {
         let config = this.config;
         let postcssTheme = require('../../modules/postcss-theme');
         let postcssThemeAfter = require('../../modules/postcss-theme-after');
@@ -460,7 +566,10 @@ class scssPlugin extends plugin {
             }
         }
 
-        plugins.push(postcssTheme(release));
+        plugins.push(postcssTheme({
+            themeColorsVarsMode: config.themeColorsVarsMode,
+            ...release
+        }));
 
         if (release) {
             let releasePath = path.join(this.dist, 'releases', release.releaseName + '-v' + release.version, config.fs.dist.css);
@@ -473,18 +582,19 @@ class scssPlugin extends plugin {
 
         let events = [];
 
+        
         if (rtlOptions) {
-            if (config.rtlPrefix.prefixType) {
-                rtlOptions.prefixType = config.rtlPrefix.prefixType;
-            }
-            if ('string' == typeof config.rtlPrefix.prefix && config.rtlPrefix.prefix.length) {
-                rtlOptions.prefix = config.rtlPrefix.prefix;
-            }
+            rtlOptions.prefixType = 'attribute';
+            rtlOptions.prefix = config.dirAttribute || 'dir';
+           
             if (!(buildConfig.direction == 'ltr' && !buildConfig.oppositeDirection)) {
                 plugins.push(rtl(rtlOptions));
             }          
             //if(config.topSelector == 'html') {
-            plugins.push(postcssThemeAfter());
+            plugins.push(postcssThemeAfter({
+                dirAttribute: config.dirAttribute || 'dir',
+                htmlIsRootElement: config.htmlIsRootElement
+            }));
             //}
         }
 
@@ -507,7 +617,6 @@ class scssPlugin extends plugin {
                 }));
             }))
         }
-
 
         if (cleanscssMerging) {
             if (release) {
@@ -563,7 +672,7 @@ class scssPlugin extends plugin {
         return params;
     }
     async _renderComponents(components, release) {
-        for (let cid of components) {
+        for (let cid of components) {           
             if (!await this.componentHasRender(cid)) {
                 components = _.without(components, cid);
                 this.log(`${cid} component does not have a render file, or it is empty, this component will be skipped.`, 'warning');
@@ -575,11 +684,12 @@ class scssPlugin extends plugin {
         let renderTemplate = path.join(this.framework, 'render.hbs.scss');
         renderTemplate = await fsp.readFile(renderTemplate, 'UTF-8');
         let config = this.config;
-        let source = { components: await this.getComponents(), render: components };
+        let source = { components: await this.getComponents(), render: components, themeColorsVarsMode: config.themeColorsVarsMode, generateThemeColorsVars: config.generateThemeColorsVars };
 
         this.internalSassRulesRequired.clean(e => components.indexOf(e.cid) != -1);
         this.iconsSaveStorage.clean(e => components.indexOf(e.cid) != -1);
-        this.componentsDepends.clean(e => components.indexOf(e.cid) != -1);        
+        this.componentsDepends.clean(e => components.indexOf(e.cid) != -1);     
+        this.colorsVars.clean(e => components.indexOf(e.cid) != -1);   
         let toRemove = this.exports.filter(exp => ['project'].concat(components).indexOf(exp.get('cid')) != -1);
         this.exports.remove(toRemove, { silent: true });  
         let build = this.builder.config;
@@ -603,12 +713,16 @@ class scssPlugin extends plugin {
             let data = [];
             source.themePrefix = false;
             source.defaultTheme = true;
+            source.inverse = false;
             source.defaultInverse = buildConfig.defaultInverse;
+            source.inverseSupport = buildConfig.inverse;
+
             let res = await this._sassRender(hbs.compile(renderTemplate)(source), components);
             if (res && res.css) {
-                data.push(res.css);
-                source.inverse = buildConfig.inverse;
-                if (source.inverse) {
+                data.push(res.css);           
+               
+                if (source.inverseSupport) {
+                    source.inverse = true;
                     let response = await this._sassRender(hbs.compile(renderTemplate)(source), components);
                     data.push(response.css);
                 }
@@ -625,6 +739,12 @@ class scssPlugin extends plugin {
                 if (result.trim() == '') {
                     result = '/* This component has no rules :( */'
                 }
+                let vars = this.generateVars(components);
+                if(/^[\n\s]*@charset\s*"UTF-8";/.test(result)) {
+                    result = result.replace(/^[\n\s]*@charset\s*"UTF-8";/, '@charset "UTF-8";' + vars);
+                } else {
+                    result = vars + ' ' + result;
+                }               
                 await fse.outputFile(path.join(this.dist, config.fs.dist.css, components.join('-') + dir + '.css'), result);
                 this.emit('ready', components);
                 return true;
@@ -636,8 +756,12 @@ class scssPlugin extends plugin {
             let themes = releaseData.themes ? releaseData.themes : [];
             source.themePrefix = false;
             source.defaultTheme = true;
+            // по умолчанию режим инверсии в ложь
+            source.inverse = false;
             source.release = true;
             source.defaultInverse = releaseData.defaultInverse;
+            source.inverseSupport = releaseData.inverse;
+
             if (!this.releaseResults) {
                 this.releaseResults = [];
             }
@@ -645,16 +769,19 @@ class scssPlugin extends plugin {
             if (!releaseData.oppositeDirection) {
                 dir = (releaseData.direction ? '.' + releaseData.direction : '');
             }        
+       
             let res = await this._sassRender(hbs.compile(renderTemplate)(source), components, { release });
             if (res && res.css) {
-                data.push(res.css);
-                source.inverse = releaseData.inverse;
-
+                data.push(res.css);              
+             
                 let sourceURL = path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName) + dir + '.scss.map');
                 await fse.outputFile(sourceURL, res.map.toString());
 
-                if (source.inverse) {
-                    try {
+                 // Если требуется инверсия
+                if (source.inverseSupport) {
+                    // Переключаем инверсию
+                    source.inverse = true;
+                    try {                    
                         let response = await this._sassRender(hbs.compile(renderTemplate)(source), components, { release });
                         data.push(response.css);
                         sourceURL = path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName) + dir + '-inverse.scss.map');
@@ -665,12 +792,13 @@ class scssPlugin extends plugin {
                 }
 
                 if (themes.length) {
+                    // Выключаем режим инверсии                   
                     for (let theme of themes) {
                         source.defaultTheme = false;
-                        source.themePrefix = (theme == 'default' && releaseData.defaultTheme == "default") ? false : true;
                         source.inverse = false;
+                        source.themePrefix = (theme == 'default' && releaseData.defaultTheme == "default") ? false : true;                        
                         source.theme = theme;
-                        try {
+                        try {                         
                             let response = await this._sassRender(hbs.compile(renderTemplate)(source), components, { release });
                             data.push(response.css);
                             sourceURL = path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName) + dir + '-theme-' + theme + '.scss.map');
@@ -678,9 +806,11 @@ class scssPlugin extends plugin {
                         } catch (e) {
                             console.log(e);
                         }
-                        source.inverse = releaseData.inverse;
-                        if (source.inverse) {
-                            try {
+                        // Если инверсия требуется         
+                        if (source.inverseSupport) {
+                            // Переключаем инверсию
+                            source.inverse = true;
+                            try {                       
                                 let response = await this._sassRender(hbs.compile(renderTemplate)(source), components, { release });
                                 data.push(response.css);
                                 sourceURL = path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName) + dir + '-theme-' + theme + '-inverse.scss.map');
@@ -691,13 +821,41 @@ class scssPlugin extends plugin {
                         }
                     }
                 }       
+                let vars = this.generateVars(components);
+                data.unshift(Buffer.from(vars));            
+               
                 let result = await this._postcss(Buffer.concat(data), releaseData, release);
                 let versionName = releaseData.versionInFilename ? ('v' + moment().unix() + '-') : '';
+
+               
+                //let varsBySelector = _.groupBy(vars, 'selector');
+                //console.log(Object.keys(varsBySelector));
+               /* let addVarsToCSS = (vars, result) => {
+                    if(/^[\n\s]*@charset\s*"UTF-8";/.test(result)) {
+                        result = result.replace(/^[\n\s]*@charset\s*"UTF-8";/, '@charset "UTF-8";' + vars);
+                    } else {
+                        result = vars + ' ' + result;
+                    } 
+                    return result
+                }*/
+            
                 for (let r of result) {
+                    
                     if (typeof r == 'string') {
                         let output = await this.getReleseLabel(releaseData, r);                        
                         let url = path.join(config.fs.dist.css,  versionName + (releaseData.filename ? releaseData.filename : releaseData.releaseName) + dir + '.min.css');
-                        await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
+                       /* let vars;    
+                        if(releaseData.themeMode == 'combined' && releaseData.inverseMode == 'combined') {
+                            vars = this.generateVars(components);
+                        } else if(releaseData.themeMode == 'combined') {
+                            // руут + темы без инверсии
+                        }  else if(releaseData.inverseMode == 'combined') {
+                            // руут + инверсия без тем
+                        } else {
+                            vars = varsBySelector[':root'] ? `:root{${varsBySelector[':root'].map(e => `${e.var}:${e.color}`).join(';')}}` : '';
+                        }   */       
+           
+                        await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), /*addVarsToCSS(vars,*/ output/*)*/);
                         this.releaseResults.push(url);
                     } else {
                         for (let e of r) {
@@ -705,8 +863,9 @@ class scssPlugin extends plugin {
                                 let output = await this.getReleseLabel(releaseData, e.root);
                                 let theme = e.theme ? e.theme : '';
                                 try {
+                                    //let vars = varsBySelector['.un-theme-' + theme] ? `.un-theme-${theme} {${varsBySelector['.un-theme-' + theme].map(e => `${e.var}:${e.color}`).join(';')}}` : '';
                                     let url = path.join(config.fs.dist.css, versionName + (releaseData.filename ? releaseData.filename : releaseData.releaseName) + '.theme-' + theme + dir + '.min.css');
-                                    await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
+                                    await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), /*addVarsToCSS(vars,*/ output/*)*/);
                                     this.releaseResults.push(url);
                                 } catch (e) {
                                     this.log(e, 'error');
@@ -715,10 +874,13 @@ class scssPlugin extends plugin {
                             if (e.inverse_root) {
                                 let output = await this.getReleseLabel(releaseData, e.inverse_root);
                                 let theme = e.theme;
-                                try {
+                                try {                                   
                                     let label = (theme == 'default' && releaseData.defaultTheme == "default") ? '' : '.theme-' + theme;
+                                    let selector = (theme == 'default' && releaseData.defaultTheme == "default") ? '' : '.un-theme-' + theme;
+
+                                   // let vars = varsBySelector['.un-inverse' + selector] ? `.un-inverse${selector} {${varsBySelector['.un-inverse' + selector].map(e => `${e.var}:${e.color}`).join(';')}}` : '';
                                     let url = path.join(config.fs.dist.css, versionName + (releaseData.filename ? releaseData.filename : releaseData.releaseName) + label + '-inverse' + dir + '.min.css');
-                                    await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
+                                    await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), /*addVarsToCSS(vars,*/ output/*)*/);
                                     this.releaseResults.push(url);
                                 } catch (e) {
                                     this.log(e, 'error');

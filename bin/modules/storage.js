@@ -17,7 +17,14 @@ class Storage {
         return _.findWhere(this.storage, data);
     }
     clean(rej) {
-        this.storage = _.reject(this.storage, m => rej(m));
+        let rejected = [];
+        this.storage = _.reject(this.storage, m => {
+            if(rej(m)) {
+                rejected.push(m);
+                return true;
+            }
+        });
+        return rejected;
     }
 }
 module.exports = Storage;

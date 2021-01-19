@@ -1003,6 +1003,8 @@ class htmlPlugin extends plugin {
         if(args.components) {
             args.components = args.components.join(',');
         }
+
+        args.dirAttribute = this.config.dirAttribute;
         return fse.outputFile(rootPath, Handlebars.compile(template)(args));
     }
     async _render(events) {

@@ -37,7 +37,7 @@ class ungicProject extends skeleton {
                 for(let dir in dirs) {
                     let toPath = path.join(root, dirs[dir]);
                     if(fs.existsSync(toPath)) {       
-                        return new Error('It is not possible to initialize the ungic project to this directory due to file conflict. ' + toPath + ' already exists.');                 
+                        return new Error('Conflict occurred during initialization. ' + toPath + ' already exists.');                 
                     }
                     if(config.fs[dir]) {
                         checkDirsOnly(toPath, config.fs[dir]);
@@ -62,8 +62,6 @@ class ungicProject extends skeleton {
             let status = getStatus();
             if(status === true) {
                 await ensureDirs(this.root, this.fsDirs());
-            } else {
-                return status;
             }
         } else {
             await ensureDirs(this.root, this.fsDirs());

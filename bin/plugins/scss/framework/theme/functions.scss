@@ -1,6 +1,6 @@
 @use "ungic.utils" as *;
 @use "ungic.meta" as un-meta;
-@use "sass:color";
+@use "sass:color" as color;
 @use "sass:list";
 @use "sass:map";
 @use "sass:string";
@@ -491,7 +491,7 @@ $theme: meta.module-variables(theme);
 /*
 *   Get gray color with $offset
 */
-@function gray($offset:0) {
+@function _gray($offset:0) {
     @if type-of($offset) == string {
         @return palette("gray", $offset);
     }
@@ -538,13 +538,29 @@ $theme: meta.module-variables(theme);
     @return lightness($color, $offset);
 }
 
+@function gray($offset:0) {
+    @if get(colors-vars-mode) {
+        @return color-var('gray', $offset);
+    } @else {
+        @return _gray($offset);
+    }
+}
+
+@function gray-rgb($offset:0) {
+    @if get(colors-vars-mode) {
+        @return color-var('gray', $offset, 0, 0, true);
+    } @else {
+        @return _gray($offset);
+    }
+}
+
 /*
 *   The main function for working with colors of theme
 *   $color-name - get color by $color-name
 *   $color-tint - may be a tint from the palette or $offset
 */
 
-@function color($color-name, $color-tint: 0, $hue-offset: 0, $saturation: 0) {
+@function _color($color-name, $color-tint: 0, $hue-offset: 0, $saturation: 0) {
     @if type-of($color-name) != string {
         $color-name: meta.inspect($color-name);
     }
@@ -561,7 +577,7 @@ $theme: meta.module-variables(theme);
         $color-tint: nth($color-tint, 2);
     }
     @if $color-name == "gray" or $color-name == "grey" {
-        @return gray($color-tint);
+        @return _gray($color-tint);
     }
     @if type-of($color-name) != string {
         @warn '#{$color-name} must be a registered color-name';
@@ -582,4 +598,41 @@ $theme: meta.module-variables(theme);
         @return transparent;
     }
     @return brightness($color-name, $color-tint, $offset, $saturation);
+}
+
+@function color($color-name, $color-tint: 0, $hue-offset: 0, $saturation: 0) {
+    @if get(colors-vars-mode) {
+        @return color-var($color-name, $color-tint, $hue-offset, $saturation);
+    } @else {
+        @return _color($color-name, $color-tint, $hue-offset, $saturation);
+    }
+}
+
+@function color-var($color-name, $color-tint: 0, $hue-offset: 0, $saturation: 0, $rgb-list: false) {
+    $color: _color($color-name, $color-tint, $hue-offset, $saturation);
+    $colorName: $color-name;
+    @if($rgb-list) {
+        $color: "#{color.red($color)}, #{color.green($color)}, #{color.blue($color)}";
+        $colorName: "#{$colorName}-rgb";
+    }
+    $save-color: ungic-save-color((
+        'color': meta.inspect($color),
+        'colorName': meta.inspect($colorName),
+        'colorTint': strip-unit($color-tint),
+        'hueOffset': strip-unit($hue-offset),
+        'saturation': strip-unit($saturation),
+        'inverseMode': get('inverse-mode'),
+        'inverseSupport': get('inverse-support'),
+        'themeName': meta.inspect(get('name')),
+        'themePrefix': get('theme-prefix')
+    ));
+    @return var(string.unquote($save-color));
+}
+
+@function color-rgb($color-name, $color-tint: 0, $hue-offset: 0, $saturation: 0) {
+    @if get(colors-vars-mode) {
+        @return color-var($color-name, $color-tint, $hue-offset, $saturation, true);
+    } @else {
+        @return _color($color-name, $color-tint, $hue-offset, $saturation);
+    }
 }
