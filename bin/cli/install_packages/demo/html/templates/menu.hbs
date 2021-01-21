@@ -1,0 +1,23 @@
+<nav class="@" cid="@-nav">
+    <div class="container">
+        <div class="row jc-between-fxs jc-center-txs">
+            <div class="cell hide-txs">
+                <a href="/" class="@@-logo">
+                    {{{icon "ungic"}}}
+                </a>
+            </div>
+            <div class="cell">
+                <ul class="@-menu">
+                    <li class="active hide-tsm">
+                        <a href="/">Demo project</a>
+                    </li>
+                    {{#each links}}
+                        <li>
+                            <a {{#if attrs}} {{#each attrs}} {{name}}="{{value}}" {{/each}}{{/if}} href="{{{url}}}">{{{label}}}</a>
+                        </li>
+                    {{/each}}
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>

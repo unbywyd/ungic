@@ -537,7 +537,6 @@ $theme: meta.module-variables(theme);
     $color: hsl($hue, list.nth($hsl, 2), list.nth($hsl, 3));
     @return lightness($color, $offset);
 }
-
 @function gray($offset:0) {
     @if get(colors-vars-mode) {
         @return color-var('gray', $offset);
@@ -546,6 +545,16 @@ $theme: meta.module-variables(theme);
     }
 }
 
+/*
+*   Returns gray color as var
+*/
+@function gray-var($offset:0) {
+    @return color-var('gray', $offset, 0, 0);
+}
+
+/*
+*   Returns gray color as var with rgb value list
+*/
 @function gray-rgb($offset:0) {
     @if get(colors-vars-mode) {
         @return color-var('gray', $offset, 0, 0, true);
@@ -599,7 +608,6 @@ $theme: meta.module-variables(theme);
     }
     @return brightness($color-name, $color-tint, $offset, $saturation);
 }
-
 @function color($color-name, $color-tint: 0, $hue-offset: 0, $saturation: 0) {
     @if get(colors-vars-mode) {
         @return color-var($color-name, $color-tint, $hue-offset, $saturation);
@@ -608,6 +616,9 @@ $theme: meta.module-variables(theme);
     }
 }
 
+/*
+*   Returns color as var
+*/
 @function color-var($color-name, $color-tint: 0, $hue-offset: 0, $saturation: 0, $rgb-list: false) {
     $color: _color($color-name, $color-tint, $hue-offset, $saturation);
     $colorName: $color-name;
@@ -629,6 +640,9 @@ $theme: meta.module-variables(theme);
     @return var(string.unquote($save-color));
 }
 
+/*
+*   Returns color as var with rgb value list
+*/
 @function color-rgb($color-name, $color-tint: 0, $hue-offset: 0, $saturation: 0) {
     @if get(colors-vars-mode) {
         @return color-var($color-name, $color-tint, $hue-offset, $saturation, true);

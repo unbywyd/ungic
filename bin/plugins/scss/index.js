@@ -552,7 +552,7 @@ class scssPlugin extends plugin {
         if (buildConfig.autoprefixer) {
             plugins.push(autoprefixer);
         }
-        let build = this.builder.config;
+       // let build = this.builder.config;
         let rtlOptions;
         if (buildConfig.direction) {
             if (buildConfig.direction == 'rtl' || buildConfig.oppositeDirection) {
@@ -716,7 +716,7 @@ class scssPlugin extends plugin {
             source.inverse = false;
             source.defaultInverse = buildConfig.defaultInverse;
             source.inverseSupport = buildConfig.inverse;
-
+            
             let res = await this._sassRender(hbs.compile(renderTemplate)(source), components);
             if (res && res.css) {
                 data.push(res.css);           
@@ -942,8 +942,8 @@ class scssPlugin extends plugin {
     }
     async _render(events) {
         this.emit('render');
-        let config = this.config;
-        let prjConfig = this.project.config;
+       // let config = this.config;
+       // let prjConfig = this.project.config;
         for (let event of events) {
             try {
                 let success = await this._renderComponents(event.components);

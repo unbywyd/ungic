@@ -1087,7 +1087,10 @@ class htmlPlugin extends plugin {
                     this.log(`HTML Syntax processing error in ${attrs.path} page`);
                 }
                 if($) {
-                    let $body = $('body'), $head =  $('head');              
+                    let $body = $('body'), $head =  $('head'); 
+                    if(!this.release) {
+                        $body.attr('ungic-dev', true);
+                    }             
                     scssPlugin.cleanHtmlInternalSass(model.id);
                     let sassInternalRulesChanged = [], sassInternalRules = [];
                     let hasSlots = [];

@@ -1,7 +1,6 @@
 const _ = require('underscore');
 const prompts = require('../modules/prompt.js');
 const scssInquirer = require('./release/scss_inquirer');
-const moment = require('moment');
 
 module.exports = function (yargs, done) {
   yargs
@@ -35,11 +34,62 @@ module.exports = function (yargs, done) {
           args.requestVersion = true;
           let release = await scssInquirer.call(this, args);
           if(typeof release == 'object') {
+            this.logger.system(`Release build start, please wait...`);
             await plugin.release(release);
           }
         } catch(e) {
           console.log(e);
         }
+      });
+    })
+    .command('dev', 'temporarily change build configuration in development mode', yargs => {
+      let plugin = this.app.project.plugins.get('scss');
+      let config = plugin.builder.config;
+      for(let key in config.dev) {
+        let type = typeof config.dev[key];
+        if(['boolean', 'string', 'number'].includes(type)) {
+          yargs.option(key, {
+            type
+          });
+        }
+      }      
+    }, args => {
+      done(async() => {
+        args = _.omit(args, '_', '$0');
+        if(!Object.keys(args).length) {
+          return this.logger.system('Parameters not specified, use dev --help command to view supported parameters', 'CLI');
+        }
+        let plugin = this.app.project.plugins.get('scss');
+        let config = plugin.builder.config;
+        try {          
+          plugin.builder.setConfig({dev: _.extend(config.dev, args)});
+          let components = await plugin.getComponents();
+          if (components.length) {
+            let answers = await prompts.call(this, [{
+              type: 'confirm',
+              name: 'restart',
+              message: `Do you want to rebuild the components?`
+            }]);
+            if (!answers) {
+              this.logger.system('Changes made successfully', 'CLI');
+              return
+            }
+            if(answers.restart) {
+              this.logger.system(`${components.join(',')} components will be rebuilt`, 'CLI');
+              for(let cid of components) {
+                plugin.renderMaster.add({
+                  description: `${cid} component`,
+                  components: [cid]
+                });
+              }
+            }
+          } else {
+            this.logger.system('Changes made successfully', 'CLI');
+          }
+        } catch(e) {
+          this.logger.system(e);
+        }        
+
       });
     })
     .command('components', 'Show list of existing components', {}, args => {

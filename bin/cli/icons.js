@@ -1,12 +1,7 @@
 const path = require('path');
 const _ = require('underscore');
-const fg = require('fast-glob');
-const fse = require('fs-extra');
-const fs = require('fs');
 const colors = require('colors');
-const prompts = require('../modules/prompt.js');
 const iconsInquirer = require('./release/icons_inquirer');
-const intro = require('../modules/add-files-to-project');
 
 module.exports = function (yargs, done) {
   yargs
@@ -56,25 +51,38 @@ module.exports = function (yargs, done) {
         }
       });
     })
-    .command('search <params>', 'Get icon data', args => {
+    .command('search', 'Get icon data', yargs => {
+      yargs.option('path', {
+        type: 'string'
+      });
+      yargs.option('name', {
+        type: 'string' 
+      });
+      yargs.option('sourcename', {
+        type: 'string' 
+      });
+      yargs.option('id', {
+        type: 'string' 
+      });
     }, args => {
       done(() => {
-        const argv = require('yargs-parser')(args.params);
+        args = _.omit(args, '_', '$0');
+        if(!Object.keys(args).length) {
+          return this.logger.system('Parameters not specified, use search --help command to view supported parameters', 'CLI');
+        }
+
         let iconsPlugin = this.app.project.plugins.get('icons');
         let icons = iconsPlugin.collection;
         if(!icons.size()) {
           return this.logger.system(`This project has no icons.`, 'CLI', 'warning');
         }
-        let support = ['path', 'name', 'id', 'codepoint'];
         icons = icons.toJSON();
 
-        let searchBy = _.pick(argv, ...support);
-
-        let found = _.where(icons, searchBy);
+        let found = _.where(icons, args);
         this.logger.system(`${colors.green.bold(found.length)} icons found for your request`, 'CLI');
 
         if(found.length) {
-          return this.logger.system(_.map(found, i => (i.svg ? '[SVG]' : '[Image]') + ' ' + i.name + ', ' + i.id + ' - ' + i.path).sort().join('\n'), 'Icons list');
+          return this.logger.system(_.map(found, i => (i.svg ? '[SVG]' : '[Image]') + ` sourcename: ${i.sourcename}, name: ${i.name}, ID: ${i.id}, path: ${i.path}`).sort().join('\n'), 'Icons list');
         }
       });
     })
@@ -98,7 +106,7 @@ module.exports = function (yargs, done) {
           return this.logger.system(`This project has no ${args.type} icons.`, 'CLI', 'warning');
         }
 
-        return this.logger.system(_.map(icons, i => (i.svg ? '[SVG]' : '[Image]') + ' ' + i.name + ', ' + i.id + ' - ' + i.path).sort().join('\n'), 'Icons list');
+        return this.logger.system(_.map(icons, i => (i.svg ? '[SVG]' : '[Image]') + ` sourcename: ${i.sourcename}, name: ${i.name}, ID: ${i.id}, path: ${i.path}`).sort().join('\n'), 'Icons list');
       });
     })
     .command('import [path]', 'Import svg from exported file (path relative to dist directory)', args => {
@@ -132,6 +140,7 @@ module.exports = function (yargs, done) {
           let release = await iconsInquirer.call(this, args);
           if(typeof release == 'object') {
             try {
+              this.logger.system(`Release build start, please wait...`);
               await plugin.release(release);
             } catch(e) {
               console.log(e);

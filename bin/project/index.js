@@ -96,7 +96,21 @@ class ungicProject extends skeleton {
             }
         }
     }
-    async updateConfig() {
+    async updateConfigFile(data={}) {
+        try {
+            let currentConfig = await fsp.readFile(path.join(this.root, 'ungic.config.json'), 'UTF-8');
+            currentConfig = JSON.parse(currentConfig);
+            if(typeof data == 'function') {
+                currentConfig = data(currentConfig);
+            } else {
+                currentConfig = _.extend(currentConfig, data);
+            }
+            await fse.outputFile(path.join(this.root, 'ungic.config.json'), JSON.stringify(currentConfig, false, 4));
+        } catch(e) {
+            this.system('ungic.config.json incorrect', 'error');
+        }
+    }
+    async updateConfig() {        
         try {
             let currentConfig = await fsp.readFile(path.join(this.root, 'ungic.config.json'), 'UTF-8');
             currentConfig = JSON.parse(currentConfig);

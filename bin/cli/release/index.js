@@ -206,6 +206,8 @@ module.exports = async function(args) {
       }
     }
 
+    this.logger.system(`Release build start, please wait...`);
+
     await fse.emptyDir(releaseDist);
     if(buildConfig.saveAssetsDirs) {
       for(let dir of buildConfig.saveAssetsDirs) {

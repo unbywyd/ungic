@@ -113,7 +113,10 @@ class app extends skeleton {
             config = Object.assign(config, require(configPath), config_cmd);
         } else {
             config = Object.assign(config, config_cmd);
-        }
+        }      
+        if(args.command == 'init') {
+            config._visit = true;
+        }  
         super(require('./model-scheme'), {objectMerge: true}, config);
         this.PLUGINS_SETTINGS = PLUGINS_SETTINGS;
         config = this.config;
@@ -227,9 +230,11 @@ class app extends skeleton {
         await require('./api')(this.fastify, this);
 
         this.fastify.use((req, res, next) => {
-            if(req.originalUrl != 'ungic' && !/^\/ungic\//.test(req.originalUrl)) {
+            if(req.originalUrl != 'ungic' && !/^\/ungic\//.test(req.originalUrl)) {              
                 return handler(req, res, {
                     public: path.join(appPaths.root, config.fs.dirs.dist),
+                    renderSingle: true,
+                    symlinks: true,
                     headers: [{
                       "source" : "**/*",
                       "headers" : [
@@ -315,7 +320,7 @@ class app extends skeleton {
         } catch(e) {
             console.log(e);
         }
-        if(config.openInBrowser) {
+        if(config.openInBrowser && !config._visit) {
             await open(this.fastify.address);
         }
         process.title = `[${config.name}] ungic project`;

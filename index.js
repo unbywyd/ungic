@@ -4,8 +4,8 @@ let path = require("path");
 let ungic = require("./bin");
 let skeleton = require('./bin/modules/skeleton');
 let readline = require('./bin/modules/readline');
+const prompts = require('./bin/modules/prompt.js');
 const fg = require('fast-glob');
-const { clear } = require('console');
 const open = require('open');
 
 
@@ -159,9 +159,9 @@ class App extends skeleton {
     this.app = new ungic(config);
 
     if (config.log) {
-      console.log(colors.cyan('Log output to console enabled. You can disable this option using the "--log false" command.'));
+      console.log(colors.cyan('Log output to console enabled. You can disable this option using the "log false" command.'));
     } else {
-      console.log(colors.cyan('Log output to console disabled. You can enable this option using the "--log true" command.'));
+      console.log(colors.cyan('Log output to console disabled. You can enable this option using the "log true" command.'));
     }
     this.app.on('log', (type, message, args = {}) => {
       if (!config.log && ['system', 'error'].indexOf(type) == -1) { //  && ['success', 'error'].indexOf(type) == -1
@@ -311,6 +311,40 @@ class App extends skeleton {
             }
           }
         yargs.argv;
+    }    
+    let appConfig = this.app.config;
+    if(appConfig._visit) {     
+      let answers = await prompts.call(this, [{
+        type: 'confirm',
+        name: 'install',
+        message: `Do you want to install one of the demo projects to get started?`
+      }]);
+      if(answers && answers.install) {
+        // install package
+        let {demo, boilerplate} = require('./bin/cli/modules/install_packages');
+        let response = await prompts.call(this, [{
+          type: 'list',
+          name: 'name',
+          message: `Choose package to install`,
+          validate: v => v.replace(/\s+/, '') !== '',
+          choices: ["demo", 'boilerplate']
+        }]);
+        if(response && response.name)  {          
+          if(response.name == 'demo') {
+            await demo.call(this, {silence:1});
+          }
+          if(response.name == 'boilerplate') {
+            await boilerplate.call(this, {silence:1});
+          }
+          this.system('package installation complete');
+          await this.app.project.updateConfigFile(data => {
+            delete data._visit;
+            return data;
+          });   
+        } else {
+          this.system('The action was interrupted', 'warning');
+        }   
+      }
     }
     if (!this.ready) {
       this.ready = true;

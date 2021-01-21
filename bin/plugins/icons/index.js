@@ -115,6 +115,10 @@ class iconsPlugin extends plugin {
                 type: 'string',
                 required: true
             },
+            sourcename: {
+                type: 'string',
+                required: true
+            },
             name: {
                 type: 'string',
                 required: true
@@ -410,6 +414,7 @@ class iconsPlugin extends plugin {
 
         let entityData = {
             name: path.basename(ph, path.extname(ph)).replace(/[_-]+/g, ' '),
+            sourcename: path.basename(ph, path.extname(ph)),
             id: extname == 'svg' ? ph.replace(path.extname(ph), '').replace(/[^\w]+/g, '_') : ph.replace(/[^\w]+/g, '_'),
             path: path.normalize(ph)
         }

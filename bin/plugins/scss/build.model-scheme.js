@@ -1,6 +1,7 @@
 module.exports = {
   dev: {
     type: "object",
+    additionalProperties: false,
     required: ['theme'],
     properties: {
       theme: {
@@ -148,7 +149,7 @@ module.exports = {
       build: {
         default: {
           configId: "default",
-          themes: [],         
+          themes: "*",         
           defaultTheme: "default",
           components: "*",
           excludeComponents: []

@@ -164,8 +164,9 @@ textarea {
   font-size: inherit;
   line-height: inherit;
   margin: 0;
-  color: inherit;
+  color: color(text-color);
   box-shadow: none;
+  background-color: color(background-color);
   &::-moz-focus-inner {
     border: 0;
   }
