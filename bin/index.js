@@ -114,7 +114,7 @@ class app extends skeleton {
         } else {
             config = Object.assign(config, config_cmd);
         }      
-        if(args.command == 'init') {
+        if(args.command == 'init' || args.command == 'create') {
             config._visit = true;
         }  
         super(require('./model-scheme'), {objectMerge: true}, config);
