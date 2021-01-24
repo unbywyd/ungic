@@ -209,13 +209,13 @@ module.exports = async function(args) {
     this.logger.system(`Release build start, please wait...`);
 
     await fse.emptyDir(releaseDist);
-    if(buildConfig.saveAssetsDirs) {
-      for(let dir of buildConfig.saveAssetsDirs) {
-        if(await fse.pathExists(path.join(this.app.project.dist, dir))) {
-          await fse.copy(path.join(this.app.project.dist, dir), path.join(releaseDist, dir));
-        }
+    // Вот тут надо тупо скопировать все файлы в дист
+    if(buildConfig.saveAllAssets) {
+      if(await fse.pathExists(this.app.project.assets)) {
+        await fse.copy(this.app.project.assets, path.join(releaseDist, dir));
       }
     }
+
     let commonScssRelease;
 
     // Общий релиз для стилей

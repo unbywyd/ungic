@@ -79,6 +79,9 @@
 }
 
 @function unit-merge($number, $unit) {
+    @if not math.is-unitless($number) {
+        @return $number;
+    }
     $units: ('px': 1px, 'cm': 1cm, 'mm': 1mm, '%': 1%, 'ch': 1ch, 'pc': 1pc, 'in': 1in, 'em': 1em, 'rem': 1rem, 'pt': 1pt, 'ex': 1ex, 'vw': 1vw, 'vh': 1vh, 'vmin': 1vmin, 'vmax': 1vmax);
 
     @if not list.index(map.keys($units), $unit) {
@@ -89,7 +92,7 @@
 }
 
 @function strip-unit($number) {
-    @if type-of($number)=='number'and not math.is-unitless($number) {
+    @if type-of($number) == 'number' and not math.is-unitless($number) {
         @return $number / ($number * 0 + 1);
     }
 

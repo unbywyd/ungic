@@ -43,8 +43,8 @@ module.exports = {
                         type: "object",
                         required: ['scssBuildName', 'htmlBuildName', 'iconsBuildName'],
                         properties: {
-                            saveAssetsDirs: {
-                                type: 'array'
+                            saveAllAssets: {
+                                type: 'boolean'
                             },
                             version: {
                                 type: 'string'
@@ -89,7 +89,7 @@ module.exports = {
         default: {
             releases: {
                 default: {
-                    saveAssetsDirs: ['img', 'imgs', 'images'],                   
+                    saveAllAssets: true,            
                     scssBuildName: "default",
                     htmlBuildName: "default",
                     iconsBuildName: "default",
@@ -167,7 +167,7 @@ module.exports = {
             "dirs": {
                 "source": "source",
                 "dist": "dist",
-                "temp": "temp"
+                "temp": "temp"                
             },
             "dist": {
                 "css": "css",
@@ -176,9 +176,10 @@ module.exports = {
                 "js": "js"
             },
             "source": {
-                "scss": "scss",
-                "html": "html",
-                "icons": "icons"
+                "scss": "styles",
+                "html": "pages",
+                "icons": "icons",
+                "assets": "assets"
             }
         }
     }

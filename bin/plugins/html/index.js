@@ -1,7 +1,6 @@
 const plugin = require('../');
 const fg = require('fast-glob');
 const fs = require('fs');
-const url = require('url');
 const fsp = fs.promises;
 const fse = require('fs-extra');
 const beautify = require('js-beautify');
@@ -40,6 +39,8 @@ class builder extends skeleton {
         super(scheme, {objectMerge: true}, config);
     }
 }
+
+const {urlJoin} = require('../../modules/url-join');
 
 let jsOptimaze = (source) => {
     return new Promise((res, rej) => {
@@ -385,11 +386,12 @@ class htmlPlugin extends plugin {
             } catch(e) {
                 console.log(e);
             }
-        });
-
-        this.on('watcher:'+ config.fs.dirs.source + ':' +config.fs.source.html, (event, ph, stat) => {
+        });      
+        this.on('watcher:'+ config.fs.dirs.source + ':' +config.fs.source[this.id], (event, ph, stat) => {
             let availableTypes = _.keys(systemConfig.supportedTypes).map(type => '.' + type);
+            
             if(availableTypes.indexOf(path.extname(ph)) != -1) {
+              
                 this.setEntityByPath(event, path.relative(this.root, ph));
             }
         });
@@ -463,7 +465,7 @@ class htmlPlugin extends plugin {
                 }
 
                 if(!isRelative(host)) {
-                    return url.resolve(host, path.relative(this.dist, pathToSRC));
+                    return urlJoin(host, path.relative(this.dist, pathToSRC));
                 } else {
                     return '/' + path.relative(this.dist, pathToSRC).replace(/\\+/g, '/');
                 }
@@ -1356,7 +1358,7 @@ class htmlPlugin extends plugin {
                                             }
                                     }
                                     if(!self.release.includeExternalStyles && isRelative(href) && !isRelative(self.release.host)) {
-                                            $(this).attr('href', url.resolve(self.release.host, href));
+                                            $(this).attr('href', urlJoin(self.release.host, href));
                                     }
                                     } catch(e) {
                                         console.log(e);
@@ -1530,9 +1532,8 @@ class htmlPlugin extends plugin {
                                             console.log(e);
                                         }
                                         if(self.release.host && !isRelative(self.release.host)) {
-                                            $(this).attr(attr, url.resolve(self.release.host, urlEl));
+                                            $(this).attr(attr, urlJoin(self.release.host, urlEl));
                                         }
-
                                         res();
                                     }))
                                 }

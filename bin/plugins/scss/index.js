@@ -968,7 +968,7 @@ class scssPlugin extends plugin {
                 this.log(message, type);
             }
         });
-        this.on('watcher:' + config.fs.dirs.source + ':' + config.fs.source.scss, (event, ph, stat) => {
+        this.on('watcher:' + config.fs.dirs.source + ':' + config.fs.source[this.id], (event, ph, stat) => {
             if (path.extname(ph) == '.scss') {
                 this.watchController.emit('bind', event, ph);
             }
@@ -994,6 +994,7 @@ class scssPlugin extends plugin {
                 });
             }
         }
+
 
         if (!await fsp.exists(path.join(this.root, 'project'))) {
             await fse.copy(path.join(this.framework, 'project'), path.join(this.root, 'project'));

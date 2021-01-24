@@ -25,6 +25,7 @@ class ungicProject extends skeleton {
         this.app = options.app;
         config = this.config;
         this.dist = path.join(this.root, config.fs.dirs.dist);
+        this.assets = path.join(path.join(this.root, config.fs.dirs.source), config.fs.source.assets);
         this.sourceDir = path.join(this.root, config.fs.dirs.source);
         this.plugins = new Map;
         this.skipWatch = new Set;
@@ -124,6 +125,14 @@ class ungicProject extends skeleton {
     async begin(options={}) {
         let config = this.config;
         this.fastify = options.fastify;
+
+                    
+      /* let copyAssets = async() => {
+            if(await fse.pathExists(this.assets)) {
+                await fse.copy(this.assets, this.dist);
+            }
+        }
+        await copyAssets();*/
 
         let htmlPluginConfig = _.extend({}, config.plugins.html || {}, {fs: config.fs});
         htmlPlugin = new htmlPlugin(htmlPluginConfig, {
@@ -232,7 +241,7 @@ class ungicProject extends skeleton {
             console.log(e);
             this.error(e);
         }
-       // console.log(this.root);
+
         this.watcher = chokidar.watch(this.root, {
             ignoreInitial: true,
             ignorePermissionErrors: true,
@@ -265,13 +274,13 @@ class ungicProject extends skeleton {
                 }
             }
             let ph_splitter = _.filter(ph.split(this.root)[1].split(path.sep), ph => ph != "");
-            let watchEvent = (storage, dir, prev="", prevdir="") => {
-                let _dir = findDir(storage, dir);
-                if(_dir) {
-                    this._events.emit('watcher:' + prev + dir, event, ph, stat);
-                    if(this.plugins.size) {
-                        this.plugins.forEach(plugin=>plugin.emit('watcher:' + prev + dir, event, ph, stat));
-                    }
+            let watchEvent = (storage, dir, prev="", prevdir="") => {               
+                let _dir = findDir(storage, dir);             
+                this._events.emit('watcher:' + prev + dir, event, ph, stat);
+                if(this.plugins.size) {
+                    this.plugins.forEach(plugin=>plugin.emit('watcher:' + prev + dir, event, ph, stat));
+                }
+                if(_dir) { 
                     watchEvent(_dir, ph_splitter.shift(), prev + dir + ':', dir);
                 }
             }
@@ -281,6 +290,9 @@ class ungicProject extends skeleton {
                 this._events.emit('watcher:root', event, ph, stat);
             }
         });
+        /*this.on('watcher:source:assets', (event, ph, stat) => {
+            console.log(ph);
+        });*/
         this.begined = true;
     }
     unwatch(plugin) {

@@ -3,8 +3,7 @@ const fse = require('fs-extra');
 const fs = require('fs');
 const isRelative = require('./is-relative');
 const path = require('path');
-const url = require('url');
-
+const {urlJoin} = require('./url-join');
 module.exports = postcss.plugin('ungic-src-replacer', function (opts) {
     opts = opts || {};
     return function (root, result) {
@@ -25,9 +24,9 @@ module.exports = postcss.plugin('ungic-src-replacer', function (opts) {
                             }
                             // Если хост указан как внешняя ссылка, то заменяем локальный путь на ссылку
                             if(opts.release.host && !isRelative(opts.release.host)) {
-                                return `${before}${url.resolve(opts.release.host, src)}${after}`;
+                                return `${before}${urlJoin(opts.release.host, src)}${after}`;
                             } else {
-                                return str; //`${before}${src.replace(/^(\.{2}(\/|\\))+/, '/')}${after}`;
+                                return str;
                             }
                         } catch(e) {
                             console.log(e);

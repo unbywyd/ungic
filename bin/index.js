@@ -219,51 +219,106 @@ class app extends skeleton {
             root:  path.join(__dirname, 'client'),
             prefix: '/ungic/',
             redirect: true,
+            decorateReply: false,
             setHeaders: (res) => {
                 res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
                 res.setHeader('Surrogate-Control', 'no-store');
                 res.setHeader('Pragma', 'no-cache');
                 res.setHeader('Expires', '0');
             }
-        });
+        });      
+        this.fastify.register(require('fastify-static'), {
+            root:  path.join(appPaths.root, config.fs.dirs.source, config.fs.source.assets),
+            prefix: '/assets/',
+            decorateReply: true,
+            setHeaders: (res) => {
+                res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+                res.setHeader('Surrogate-Control', 'no-store');
+                res.setHeader('Pragma', 'no-cache');
+                res.setHeader('Expires', '0');
+            }
+        });    
 
         await require('./api')(this.fastify, this);
 
         this.fastify.use((req, res, next) => {
-            if(req.originalUrl != 'ungic' && !/^\/ungic\//.test(req.originalUrl)) {              
+            if(req.originalUrl != 'ungic' && !/^\/ungic\//.test(req.originalUrl) && !/^\/assets\//.test(req.originalUrl)) {         
+                let reqUrl = decodeURIComponent(req.url);                 
+                let pathToFile = path.join(appPaths.root, config.fs.dirs.dist, reqUrl), skipHandler;
+                if(!/\/$/.test(reqUrl) && path.extname(reqUrl) != '') {
+                    let assetsFile = path.join(appPaths.root, config.fs.dirs.source, config.fs.source.assets, reqUrl);                   
+                    if(!fs.existsSync(pathToFile) && fs.existsSync(assetsFile)) {
+                        req.url = '/assets/' + req.url.replace(/^\/+/, '');
+                        req.originalUrl = '/assets/' + req.url.replace(/^\/+/, '');
+                        skipHandler = true;
+                    }
+                }
+                if(!skipHandler) {
+                    return handler(req, res, {
+                        public: path.join(appPaths.root, config.fs.dirs.dist),
+                        renderSingle: true,
+                        symlinks: true,
+                        headers: [{
+                        "source" : "**/*",
+                        "headers" : [
+                            {
+                                "key" : "Cache-Control",
+                                "value" : "no-store, no-cache, must-revalidate, proxy-revalidate"
+                            },
+                            {
+                                "key" : "Access-Control-Allow-Origin",
+                                "value": "*"
+                            },
+                            {
+                                "key" : "Surrogate-Control",
+                                "value" : "no-store",
+                            },
+                            {
+                                "key" : "Pragma",
+                                "value" : "no-cache"
+                            },
+                            {
+                                "key" : "Expires",
+                                "value" : "0"
+                            }
+                        ]
+                        }]
+                    });
+                }
+            } 
+            if(/^\/assets\//.test(req.originalUrl)) {
                 return handler(req, res, {
-                    public: path.join(appPaths.root, config.fs.dirs.dist),
-                    renderSingle: true,
-                    symlinks: true,
+                    public: path.join(appPaths.root, config.fs.dirs.source),                        
+                    trailingSlash: true,
                     headers: [{
-                      "source" : "**/*",
-                      "headers" : [
-                          {
+                        "source" : "**/*",
+                        "headers" : [
+                            {
                             "key" : "Cache-Control",
                             "value" : "no-store, no-cache, must-revalidate, proxy-revalidate"
-                          },
-                          {
+                            },
+                            {
                             "key" : "Access-Control-Allow-Origin",
                             "value": "*"
-                          },
-                          {
+                            },
+                            {
                             "key" : "Surrogate-Control",
                             "value" : "no-store",
-                          },
-                          {
+                            },
+                            {
                             "key" : "Pragma",
                             "value" : "no-cache"
-                          },
-                          {
+                            },
+                            {
                             "key" : "Expires",
                             "value" : "0"
-                          }
-                      ]
+                            }
+                        ]
                     }]
-                });
+                }); 
             } else {
                 next();
-            }
+            }            
         });
         let start = async port => {
             try {
