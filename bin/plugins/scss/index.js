@@ -464,8 +464,8 @@ class scssPlugin extends plugin {
                     return num.toString().replace('.', '0');
                 }
                 
-                let varName = `--ungic-color-${payload.colorName}`;
-              
+                let varName = `--uc-${payload.colorName}`;
+                
                 if(payload.colorTint !== 0) {
                     varName = varName + `-${toID(payload.colorTint)}t`;
                 }    
@@ -475,6 +475,7 @@ class scssPlugin extends plugin {
                 if(payload.saturation !== 0) {
                     varName = varName + `-${toID(payload.saturation)}s`;
                 }
+              
                 for(let cid of cids) {  
                     if(!_.find(this.colorsVars.storage, e => e.cid == cid && e.source == source))  {  
                         this.colorsVars.set({
@@ -543,7 +544,7 @@ class scssPlugin extends plugin {
             });
         });
     }
-    async _postcss(data, buildConfig, release={}) {
+    async _postcss(data, buildConfig, release) {
         let config = this.config;
         let postcssTheme = require('../../modules/postcss-theme');
         let postcssThemeAfter = require('../../modules/postcss-theme-after');
@@ -566,20 +567,26 @@ class scssPlugin extends plugin {
             }
         }
 
-        plugins.push(postcssTheme({
-            themeColorsVarsMode: config.themeColorsVarsMode,
-            ...release
-        }));
+        let params = {
+            themeColorsVarsMode: config.themeColorsVarsMode
+        }
+        if(release) {
+            params = _.extend(params, release);
+        }
+        plugins.push(postcssTheme(params));
 
-        if (release) {
-            let releasePath = path.join(this.dist, 'releases', release.releaseName + '-v' + release.version, config.fs.dist.css);
+        if (release) {  
+            let releasePath = path.join(this.dist, 'releases', release.releaseName + '-v' + release.version); 
             plugins.push(srcReplacer({
                 release,
-                dist: path.join(this.dist, config.fs.dist.css),
-                distPath: releasePath
+                log: this.log.bind(this),
+                assets: this.project.assets,
+                dist: this.dist,
+                relativeDist: config.fs.dist.css,
+                releaseDistPath: releasePath
             }));
         }
-
+        
         let events = [];
 
         
@@ -827,36 +834,21 @@ class scssPlugin extends plugin {
                 let result = await this._postcss(Buffer.concat(data), releaseData, release);
                 let versionName = releaseData.versionInFilename ? ('v' + moment().unix() + '-') : '';
 
-               
-                //let varsBySelector = _.groupBy(vars, 'selector');
-                //console.log(Object.keys(varsBySelector));
-               /* let addVarsToCSS = (vars, result) => {
-                    if(/^[\n\s]*@charset\s*"UTF-8";/.test(result)) {
-                        result = result.replace(/^[\n\s]*@charset\s*"UTF-8";/, '@charset "UTF-8";' + vars);
-                    } else {
-                        result = vars + ' ' + result;
-                    } 
-                    return result
-                }*/
-            
+    
                 for (let r of result) {
                     
                     if (typeof r == 'string') {
                         let output = await this.getReleseLabel(releaseData, r);                        
                         let url = path.join(config.fs.dist.css,  versionName + (releaseData.filename ? releaseData.filename : releaseData.releaseName) + dir + '.min.css');
-                       /* let vars;    
-                        if(releaseData.themeMode == 'combined' && releaseData.inverseMode == 'combined') {
-                            vars = this.generateVars(components);
-                        } else if(releaseData.themeMode == 'combined') {
-                            // руут + темы без инверсии
-                        }  else if(releaseData.inverseMode == 'combined') {
-                            // руут + инверсия без тем
-                        } else {
-                            vars = varsBySelector[':root'] ? `:root{${varsBySelector[':root'].map(e => `${e.var}:${e.color}`).join(';')}}` : '';
-                        }   */       
-           
-                        await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), /*addVarsToCSS(vars,*/ output/*)*/);
-                        this.releaseResults.push(url);
+ 
+                       
+                        if(!releaseData.includeLocalStyles) {           
+                            await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
+                        }
+                        this.releaseResults.push({
+                            url,
+                            content: output
+                        });
                     } else {
                         for (let e of r) {
                             if (e.root) {
@@ -865,8 +857,13 @@ class scssPlugin extends plugin {
                                 try {
                                     //let vars = varsBySelector['.un-theme-' + theme] ? `.un-theme-${theme} {${varsBySelector['.un-theme-' + theme].map(e => `${e.var}:${e.color}`).join(';')}}` : '';
                                     let url = path.join(config.fs.dist.css, versionName + (releaseData.filename ? releaseData.filename : releaseData.releaseName) + '.theme-' + theme + dir + '.min.css');
-                                    await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), /*addVarsToCSS(vars,*/ output/*)*/);
-                                    this.releaseResults.push(url);
+                                    if(!releaseData.includeLocalStyles) {     
+                                        await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
+                                    }
+                                    this.releaseResults.push({
+                                        url,
+                                        content: output
+                                    });
                                 } catch (e) {
                                     this.log(e, 'error');
                                 }
@@ -876,12 +873,16 @@ class scssPlugin extends plugin {
                                 let theme = e.theme;
                                 try {                                   
                                     let label = (theme == 'default' && releaseData.defaultTheme == "default") ? '' : '.theme-' + theme;
-                                    let selector = (theme == 'default' && releaseData.defaultTheme == "default") ? '' : '.un-theme-' + theme;
-
-                                   // let vars = varsBySelector['.un-inverse' + selector] ? `.un-inverse${selector} {${varsBySelector['.un-inverse' + selector].map(e => `${e.var}:${e.color}`).join(';')}}` : '';
+                                    //let selector = (theme == 'default' && releaseData.defaultTheme == "default") ? '' : '.un-theme-' + theme;
+                                   
                                     let url = path.join(config.fs.dist.css, versionName + (releaseData.filename ? releaseData.filename : releaseData.releaseName) + label + '-inverse' + dir + '.min.css');
-                                    await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), /*addVarsToCSS(vars,*/ output/*)*/);
-                                    this.releaseResults.push(url);
+                                    if(!releaseData.includeLocalStyles) {
+                                        await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
+                                    }    
+                                    this.releaseResults.push({
+                                        url,
+                                        content: output
+                                    });
                                 } catch (e) {
                                     this.log(e, 'error');
                                 }
@@ -935,10 +936,10 @@ class scssPlugin extends plugin {
             this.system(`${release.releaseName} release not generated.`, false);
             this.system(e, 'error');
         }
-        let urls = this.releaseResults;
+        let data = this.releaseResults;
         delete this.releaseResults;
         delete this.activeRelease;
-        return urls
+        return data;
     }
     async _render(events) {
         this.emit('render');

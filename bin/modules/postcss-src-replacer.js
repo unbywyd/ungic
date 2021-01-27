@@ -1,12 +1,10 @@
 const postcss = require('postcss');
 const fse = require('fs-extra');
-const fs = require('fs');
-const isRelative = require('./is-relative');
-const path = require('path');
 const {urlJoin} = require('./url-join');
+const parseSrc = require('./parse-src');
 module.exports = postcss.plugin('ungic-src-replacer', function (opts) {
     opts = opts || {};
-    return function (root, result) {
+    return function (root) {
         let regexps = [
             /(url\(\s*(?:'|")?)([^'")]+)((?:'|")?\s*\))/g,
             /(AlphaImageLoader\(\s*src=['"]?)([^"')]+)(["'])/g
@@ -14,26 +12,57 @@ module.exports = postcss.plugin('ungic-src-replacer', function (opts) {
         root.walkDecls((decl) => {
             let regexp = regexps.find(regexp => decl.value.search(regexp) != -1);
             if(regexp) {
-                decl.value = decl.value.replace(regexp, function(str, before, src, after) {
-                   if(isRelative(src)) {
-                        let releaseDistPath = path.join(opts.distPath, src), sourceDistPath = path.join(opts.dist, src);
-                        try {
-                            // Если файла нет в релизе, копируем в релиз
-                            if(!fs.existsSync(releaseDistPath) && fs.existsSync(sourceDistPath)) {
-                                fse.copySync(sourceDistPath, releaseDistPath);
+                let value = decl.value.replace(regexp, function(str, before, src, after) {       
+                    
+                    let data = parseSrc({
+                        assets: opts.assets,
+                        src,
+                        dist: opts.dist,
+                        relativeDist: opts.relativeDist,
+                        releaseDistPath: opts.releaseDistPath,
+                        virtualRelativeDist: opts.release.includeLocalStyles ? '' : (opts.relativeDist || ''),
+                        urlsOptimization: opts.release.urlsOptimization
+                    });
+                    
+                    if(data.isRelative) {
+                        /*
+                        *   Если файл не найден и требуется оптимизация удаляем правило
+                        */
+                      
+                        if(!data.sourceFile && opts.release.urlsOptimization) {
+                            if(opts.log) {
+                                opts.log(`${src} resource not found and ${decl.prop} property will be removed`, 'warning');
                             }
-                            // Если хост указан как внешняя ссылка, то заменяем локальный путь на ссылку
-                            if(opts.release.host && !isRelative(opts.release.host)) {
-                                return `${before}${urlJoin(opts.release.host, src)}${after}`;
-                            } else {
-                                return str;
-                            }
-                        } catch(e) {
-                            console.log(e);
+                            return '';
+                        } 
+
+                        // Если файл имеется, и отсутствует в релизе, клонируем
+                        if(data.sourceFile && !data.existsInRelease) {
+                            fse.copySync(data.sourceFile, data.outputReleaseDistPath);
+                        }    
+                        
+                        let host = opts.release.host || '';                     
+                        if(opts.release.urlsOptimization || host != '') {                                    
+                            return `${before}${urlJoin(host, data.virtualRelativeRootSrc)}${after}`;
+                        } else {
+                            return str;
                         }
-                   }
+
+                    } else {
+                        /*
+                        *   Вернули внешние ссылки
+                        */
+                        return str;
+                    }                    
                 });
+
+                if(!value || value == '') {                   
+                    decl.remove();
+                } else {
+                    decl.value = value;
+                }
             }
         });
     }
 });
+

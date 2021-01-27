@@ -15,6 +15,7 @@ const skeleton = require('./modules/skeleton');
 const open = require('open');
 const Collector = require('./modules/collector.js');
 const merge = require('deepmerge');
+let URL = require('url');
 
 class finishController extends skeleton {
     constructor(config={}) {
@@ -243,17 +244,18 @@ class app extends skeleton {
 
         this.fastify.use((req, res, next) => {
             if(req.originalUrl != 'ungic' && !/^\/ungic\//.test(req.originalUrl) && !/^\/assets\//.test(req.originalUrl)) {         
-                let reqUrl = decodeURIComponent(req.url);                 
-                let pathToFile = path.join(appPaths.root, config.fs.dirs.dist, reqUrl), skipHandler;
-                if(!/\/$/.test(reqUrl) && path.extname(reqUrl) != '') {
-                    let assetsFile = path.join(appPaths.root, config.fs.dirs.source, config.fs.source.assets, reqUrl);                   
-                    if(!fs.existsSync(pathToFile) && fs.existsSync(assetsFile)) {
-                        req.url = '/assets/' + req.url.replace(/^\/+/, '');
-                        req.originalUrl = '/assets/' + req.url.replace(/^\/+/, '');
-                        skipHandler = true;
-                    }
-                }
-                if(!skipHandler) {
+                
+                let parsed = URL.parse(req.url);
+                
+                let reqUrl = parsed.pathname;
+
+                let pathToFile = path.join(appPaths.root, config.fs.dirs.dist, reqUrl);
+               
+                let assetsFile = path.join(appPaths.root, config.fs.dirs.source, config.fs.source.assets, reqUrl);                   
+                if(!fs.existsSync(pathToFile) && fs.existsSync(assetsFile)) {
+                    req.url = '/assets/' + req.url.replace(/^\/+/, '');
+                    req.originalUrl = '/assets/' + req.url.replace(/^\/+/, '');                    
+                } else {
                     return handler(req, res, {
                         public: path.join(appPaths.root, config.fs.dirs.dist),
                         renderSingle: true,
@@ -346,6 +348,14 @@ class app extends skeleton {
         this.project = new ungicProject(this.config, {app: this});
         this.project.on('log', (type, message, args={}) => {
             this.log(message, type, args);
+        });
+        this.project.on(`watcher:${config.fs.dirs.source}:${config.fs.source.assets}`, (event, ph) => {           
+            let relative = path.relative(this.project.assets, ph).replace(/\\+/g, '/');
+            this.finishController.push({
+                event,
+                url: this.fastify.address + '/' + path.relative(this.project.assets, ph).replace(/\\+/g, '/'),
+                relative
+            });
         });
         this.project.on('watcher:' + config.fs.dirs.dist, (event, ph) => {
             let relative = path.relative(this.project.dist, ph).replace(/\\+/g, '/');

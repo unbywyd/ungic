@@ -290,9 +290,6 @@ class ungicProject extends skeleton {
                 this._events.emit('watcher:root', event, ph, stat);
             }
         });
-        /*this.on('watcher:source:assets', (event, ph, stat) => {
-            console.log(ph);
-        });*/
         this.begined = true;
     }
     unwatch(plugin) {

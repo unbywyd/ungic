@@ -149,9 +149,9 @@ module.exports = async function(args, defaultConfig={}) {
       htmlQuestions = [];
       htmlQuestions.push({
         type: 'confirm',
-        name: 'includeExternalStyles',
+        name: 'includeLocalStyles',
         message: `Include all local external styles to internal styles?`,
-        default: !!(release.includeExternalStyles)
+        default: !!(release.includeLocalStyles)
       });
       htmlQuestions.push({
         type: 'confirm',

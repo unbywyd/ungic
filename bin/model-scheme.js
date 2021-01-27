@@ -52,6 +52,9 @@ module.exports = {
                             combineIcons: {
                                 type: 'boolean'
                             },
+                            urlsOptimization: {
+                                type: 'boolean'
+                            },
                             combineScssComponents: {
                                 type: 'boolean'
                             },
@@ -95,7 +98,8 @@ module.exports = {
                     iconsBuildName: "default",
                     includeOnlyUsedComponents: false,
                     combineIcons: true,
-                    combineScssComponents: true
+                    combineScssComponents: true,
+                    urlsOptimization: true
                 }
             }
         }

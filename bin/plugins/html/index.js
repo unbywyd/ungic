@@ -21,7 +21,6 @@ const MD = new(require('markdown-it'));
 const yaml = require('js-yaml');
 const validate = require('html5-validator');
 const amphtmlValidator = require('amphtml-validator');
-//const pug = require('pug');
 const minify = require('html-minifier').minify;
 const cheerio = require('cheerio');
 const appPaths = require('../../modules/app-paths')();
@@ -32,6 +31,8 @@ const terser = require('terser');
 const babelify = require('babelify');
 const browserify = require('browserify');
 const sass = require('sass');
+const parseSrc = require('../../modules/parse-src');
+const {urlJoin} = require('../../modules/url-join');
 
 const systemConfig = require('./system-config');
 class builder extends skeleton {
@@ -40,14 +41,12 @@ class builder extends skeleton {
     }
 }
 
-const {urlJoin} = require('../../modules/url-join');
 
-let jsOptimaze = (source) => {
+
+let jsOptimaze = (code) => {
+    let source = Array.isArray(code) ? code.join(' ') : code;
     return new Promise((res, rej) => {
-        var vFile = new Stream.Readable();
-        if(Array.isArray(source)) {
-            source = source.join(' ');
-        }
+        var vFile = new Stream.Readable(); 
         vFile.push(source, 'utf8')
         vFile.push(null);
 
@@ -143,7 +142,7 @@ class htmlPlugin extends plugin {
         super(require('./model-scheme'), config, sysconfig);
         this.iconsStorage = {};
         this.ungicParser = new(require('./utils/parser'));
-        this.resources = new Map;
+        //this.resources = new Map;
         this.typeHandlers = new typeHandlers;
         this.typeHandlers.set('md', async attrs => {
             attrs.source = attrs.body;
@@ -395,9 +394,9 @@ class htmlPlugin extends plugin {
                 this.setEntityByPath(event, path.relative(this.root, ph));
             }
         });
-        this.on('watcher:' + config.fs.dirs.dist, (event, ph, stat) => {
+       /* this.on('watcher:' + config.fs.dirs.dist, (event, ph, stat) => {
             this._dist_handler(event, path.relative(this.dist, ph));
-        });
+        });*/
         let self = this;
         Handlebars.registerHelper("amount", function(els) {
             if(typeof els == 'object') {
@@ -440,40 +439,28 @@ class htmlPlugin extends plugin {
         });
         Handlebars.registerHelper("src", (src, context) => {
             let rootData = context.data.root.ungic;
-            let config = this.config;
+           // let config = this.config;
             let options = context.hash ? context.hash: {};
-            let cwd = options.cwd ? path.join(this.dist, options.cwd) : this.dist;
-            let pathToSRC = path.join(cwd, src);
-            let relativeSrc = options.rel ? options.rel : config.relativeSrc;
-            let page_ids = [];
-            if(this.resources.has(pathToSRC)) {
-                page_ids = this.resources.get(pathToSRC);
+            if(options.cwd) {
+                src = path.join(options.cwd, src);
+            }          
+            let relativeSrc = options.rel;
+
+            let srcData = this.parseSrc(src);
+            
+            if(!srcData.sourceFile) {
+                this.log(`${src} resource not exist, required for ${rootData.page.path} page`, 'warning');
             }
-            page_ids.push(rootData.page.id);
-            this.resources.set(path.relative(this.dist, pathToSRC), page_ids);
-            if(!fs.existsSync(pathToSRC)) {
-                this.log(`${pathToSRC} resource not exists, required for ${rootData.page.path} page`, 'warning');
-            }
+
             if(this.release) {
-                let host = this.release.host;
-
-                let distRelative = path.relative(this.dist, pathToSRC);
-                let distPath = path.join(this.dist, 'releases', this.release.releaseName + '-v' + this.release.version);
-                let pathToRelease = path.join(distPath, distRelative);
-                if(!fs.existsSync(pathToRelease) && fs.existsSync(pathToSRC)) {
-                    fse.copySync(pathToSRC, pathToRelease);
-                }
-
-                if(!isRelative(host)) {
-                    return urlJoin(host, path.relative(this.dist, pathToSRC));
-                } else {
-                    return '/' + path.relative(this.dist, pathToSRC).replace(/\\+/g, '/');
-                }
-            }
-            if(!relativeSrc) {
-                return this.project.fastify.address + '/' + path.relative(this.dist, pathToSRC).replace(/\\+/g, '/');
+                this.saveReleaseSource(srcData);
+                return this.setReleaseSrc(srcData);
             } else {
-                return '/' + path.relative(this.dist, pathToSRC).replace(/\\+/g, '/');
+                if(!relativeSrc) {
+                    return urlJoin(this.project.fastify.address, srcData.virtualRelativeRootSrc);
+                } else {
+                    return srcData.virtualRelativeRootSrc;
+                }
             }
         });
         Handlebars.registerHelper("icon", (id, context) => {
@@ -734,11 +721,36 @@ class htmlPlugin extends plugin {
             return content;
         });
     }
+    setReleaseSrc(data) {
+        let host = this.release.host;
+        if(this.release.urlsOptimization || host != '') { 
+            return urlJoin(host, data.virtualRelativeRootSrc);
+        } else {
+            return data.originalSrc;
+        }
+    }
+    saveReleaseSource(data) {
+        if(data.sourceFile && !data.existsInRelease) {
+            fse.copySync(data.sourceFile, data.outputReleaseDistPath);
+        }  
+    }
+    parseSrc(src) {
+        let data = parseSrc({
+            assets: this.project.assets,
+            src,
+            dist: this.dist,
+            relativeDist: '',
+            virtualRelativeDist: '',
+            releaseDistPath: this.release ? path.join(this.dist, 'releases', this.release.releaseName + '-v' + this.release.version) : false,
+            urlsOptimization: this.release ? this.release.urlsOptimization : false
+        });
+        return data;
+    }
     _idbypath(path) {
         return Buffer.from(path).toString('base64');
     }
     async _attrHandler(attrs) {
-        let config = this.config;
+        //let config = this.config;
         if(attrs.path) {
             attrs.id = this._idbypath(attrs.path);
         }
@@ -896,7 +908,7 @@ class htmlPlugin extends plugin {
         } catch(e) {
             this.system(e);
         }
-    }
+    } 
     async distPretty(ph) {
         let pathDist = path.join(this.dist, ph);
         if(!await fsp.exists(pathDist)) {
@@ -1264,7 +1276,16 @@ class htmlPlugin extends plugin {
                             if(this.iconsStorage.svgSprite  && this.iconsStorage.svgSprite.data && this.iconsStorage.svgSprite.data.icons.length && !this.iconsStorage.svgSprite.data.external) {
                                 $body.append(this.iconsStorage.svgSprite.data.sprite);
                             }
-
+                            $('[src], [href]').each(function() {
+                                let attr = $(this).attr('href') ? 'href' : 'src';
+                                let src = $(this).attr(attr);                               
+                                if(isRelative(src)) {
+                                   let srcData = self.parseSrc(src);
+                                   if(!srcData.sourceFile) {
+                                        self.log(`${src} resource not found`, 'warning');
+                                   }
+                                }
+                            });   
                         } else {
                             let styles = [];
                             let distPath = path.join(this.dist, 'releases', this.release.releaseName + '-v' + this.release.version);
@@ -1282,22 +1303,24 @@ class htmlPlugin extends plugin {
                                     $body.append(svgSprite.sprite);
                                 }
                             }
+                            
                             postcssPlugins.push(srcReplacer({
+                                assets: this.project.assets,
                                 release: this.release,
-                                dist: path.join(this.dist, config.fs.dist.css),
-                                distPath
+                                relativeDist: '',
+                                dist: this.dist,            
+                                log: this.log.bind(this),                
+                                releaseDistPath: distPath
                             }));
+ 
 
-                            if(this.release.optimizeInternalStyles) {
-                                postcssPlugins.push(clean(cleancssConfig));
-                            }
-
-                            if(!this.release.includeExternalStyles) {
+                            // Если не требуется включать внешние стили как внутренние
+                            if(!this.release.includeLocalStyles) {
                                 /*
                                 *   Подключили все стили из сасс фремворка и иконки
                                 */
                                 if(this.release.scssURLS) {
-                                    for(let url of this.release.scssURLS) {
+                                    for(let {url} of this.release.scssURLS) {
                                         $head.append(`<link rel="stylesheet" href="${url.replace(/\\+/g, '/')}">`);
                                     }
                                 }
@@ -1313,78 +1336,67 @@ class htmlPlugin extends plugin {
                                 *   Перекидывем все стили в инлайн стили
                                 */
                                 if(this.release.scssURLS) {
-                                    for(let url of this.release.scssURLS) {
-                                        let cssRules = await fsp.readFile(path.join(distPath, url), 'UTF-8');
-                                        styles.unshift({
+                                    for(let {url, content} of this.release.scssURLS) {                                      
+                                        styles.push(content/*{
                                             path: path.join(distPath, url),
                                             url,
-                                            cssRules
-                                        });
+                                            cssRules: content
+                                        }*/);
                                     }
                                 }
+                              
                                 if(this.release.iconsReleases && this.release.iconsReleases.length) {
                                     for(let el of this.release.iconsReleases) {
                                         if(el.css_url) {
                                             let cssRules = await fsp.readFile(path.join(distPath, el.css_url), 'UTF-8');
-                                            styles.unshift({
+                                            styles.push(cssRules/*{
                                                 path: path.join(distPath, el.css_url),
                                                 url: el.css_url,
                                                 cssRules
-                                            });
+                                            }*/);
                                         }
                                     }
                                 }
                             }
-
-                            let linkProms = [];
-                            $('link[rel="stylesheet"]').each(function() {
-                                linkProms.push(new Promise(async(res, rej) => {
-                                    try {
-                                    let href = $(this).attr('href');
-                                    if(isRelative(href)) {
-                                            let ph = path.join(self.dist, href);
-                                            if(await fsp.exists(ph)) {
-                                                if(!self.release.includeExternalStyles) {
-                                                    await fse.copy(ph, path.join(distPath, href));
-                                                } else {
-                                                    let cssRules = await fsp.readFile(ph, 'UTF-8');
-                                                    styles.unshift({
-                                                        path: ph,
-                                                        url: href,
-                                                        cssRules
-                                                    });
-                                                    $(this).remove();
-                                                }
-                                            }
+                           
+                            let internalStyles = [];
+                            // Ищем другие подключенные локальные стили
+                            $('link[rel="stylesheet"]').each(function() {                               
+                                let href = $(this).attr('href');
+                                if(isRelative(href)) {
+                                    let data = self.parseSrc(href);
+                                    if(!data.sourceFile) {                                        
+                                        if(self.release.formatting == 'minifier') {
+                                            self.log(`${href} css file not found and <link> tag will be removed`, 'warning');
+                                            $(this).remove();
+                                        } else {
+                                            self.log(`${href} css file not found`, 'warning');
+                                        }
+                                    } else {
+                                        /*
+                                        *   Если не требуется включать внешние стили, но они локальные, сохраняем их или фильтруем                                        
+                                        */                                           
+                                        if(!self.release.includeLocalStyles) {                                                                                      
+                                            self.saveReleaseSource(data);
+                                            $(this).attr('href', self.setReleaseSrc(data));                                            
+                                        } else {                                            
+                                            internalStyles.push(fs.readFileSync(data.sourceFile, 'UTF-8'));
+                                            $(this).remove();
+                                        }
                                     }
-                                    if(!self.release.includeExternalStyles && isRelative(href) && !isRelative(self.release.host)) {
-                                            $(this).attr('href', urlJoin(self.release.host, href));
-                                    }
-                                    } catch(e) {
-                                        console.log(e);
-                                    }
-                                    res();
-                                }));
+                                }                             
                             });
 
-
-                            if(linkProms.length) {
-                                await Promise.all(linkProms);
+                            if(this.release.optimizeInternalStyles) {
+                                postcssPlugins.push(clean(cleancssConfig));
                             }
 
                             let proms = [];
-                            $('style').each(function() {
+                            $('style').each(function() {             
                                 if(self.release.mergeInternalStyles) {
-                                    styles.unshift({
-                                        cssRules: $(this).html(),
-                                        url: null,
-                                        path: null
-                                    });
-                                    $(this).remove();
+                                    internalStyles.push($(this).html());  
+                                    $(this).remove();                                           
                                 } else {
-                                    /*
-                                    *   Добавить постксс плагин для замены срс в случае подмены хоста
-                                    */
                                     proms.push(new Promise(async(res, rej)=>{
                                         try {
                                             let result = await postcss(postcssPlugins).process($(this).html(), {from: undefined});
@@ -1393,14 +1405,14 @@ class htmlPlugin extends plugin {
                                                 if(typeof rules != 'string') {
                                                     rules = rules.toString();
                                                 }
-                                                $(this).html(rules);
+                                                $(this).html(rules);                                                                                
                                             }
                                         } catch(e) {
                                             self.log('An error occurred while optimizing styles!', 'error');
                                         }
                                         res();
-                                    }));
-                                }
+                                    }));  
+                                }                          
                             });
 
                             if(proms.length) {
@@ -1408,78 +1420,114 @@ class htmlPlugin extends plugin {
                             }
 
                             let cssResult = '';
-                            if(styles.length) {
-                                try {
-                                    let result = await postcss(postcssPlugins).process(_.pluck(styles, 'cssRules').join(' '), {from: undefined});
-                                    cssResult = result.css;
-                                } catch(e) {
-                                    console.log(e);
+
+                            // internalStyles - могут быть только тогда, когда требуется объединить все инлайн стили или включить локальные
+                            let allInternalStyles = '';
+                            
+                            if(internalStyles.length) {
+                                let result = await postcss(postcssPlugins).process(internalStyles.join('\n'), {from: undefined});
+                                if(result.css) {
+                                    let rules = result.css;
+                                    if(typeof rules != 'string') {
+                                        rules = rules.toString();
+                                    }    
+                                    allInternalStyles = rules;                                                                                                      
                                 }
                             }
+                        
+                            if(styles.length) {
+                                cssResult = styles.join(' ');
+                                if(allInternalStyles != '') {                                    
+                                    let result = await postcss([clean({level: 1})]).process(cssResult + ' ' + allInternalStyles, {from: undefined});
+                                    if(result.css) {
+                                        cssResult = result.css.toString();
+                                    }
+                                }
+                            }                 
 
-                            if(typeof cssResult != 'string') {
-                                cssResult = cssResult.toString();
-                            }
-
-                            if(typeof cssResult == 'string' && cssResult.trim() != '') {
+                            if(typeof cssResult == 'string' && cssResult.trim() != '') {                                                         
                                 $head.append('<style>' + cssResult +'</style>');
                             }
 
                             let scripts = [];
-                            let promsScripts = [];
-                            $('script').each(function() {
-
+                            
+                            let optimizeElScripts = (content, $el) => {
+                                let result = Promise.resolve();
+                                try {
+                                    result = jsOptimaze(content).then(e=> {
+                                        $el.html(e);
+                                    });                                                                      
+                                } catch(e) {
+                                    this.log('An error occurred while optimizing the script', 'error');
+                                    this.log(e);
+                                }
+                                return result;
+                            }
+                            proms = [];
+                            $('script').each(function() {                               
                                 if($(this).attr('async') || $(this).attr('type') && $(this).attr('type').trim().toLowerCase() != 'text/javascript') {
                                     return
-                                }
-
-                                promsScripts.push(new Promise(async(res, rej) => {
-                                    try {
-                                        if($(this).attr('src')) {
-                                            if(self.release.includeLocalScripts) {
-                                                let src = $(this).attr('src');
-                                                try {
-                                                    if(isRelative(src)) {
-                                                        let pathToSource = path.join(self.dist, src);
-                                                        if(await fsp.exists(pathToSource)) {
-                                                            let content = await fsp.readFile(pathToSource, 'UTF-8');
-                                                            scripts.unshift(content);
-                                                            $(this).remove();
+                                }                        
+                                try {                                 
+                                    let src = $(this).attr('src');                           
+                                    if(src && src.trim() != '') {                                        
+                                        if(isRelative(src)) {
+                                            let srcData = self.parseSrc(src);
+                                            if(!srcData.sourceFile) {                                                
+                                                if(self.release.formatting == 'minifier') {
+                                                    self.log(`${src} script not found and <script> tag will be removed`, 'warning');
+                                                    $(this).remove();
+                                                } else {
+                                                    self.log(`${src} script not found`, 'warning');
+                                                }
+                                            } else {                                                
+                                                if(self.release.includeLocalScripts) {
+                                                    let content = fs.readFileSync(srcData.sourceFile, 'UTF-8');                                                                                                                                                         
+                                                    if(self.release.mergeInternalScripts) {        
+                                                        scripts.push(content);                                                    
+                                                        $(this).remove();
+                                                    } else {
+                                                        $(this).removeAttr('src');
+                                                        if(self.release.optimizeInternalScripts) {
+                                                            proms.push(optimizeElScripts(content, $(this)));
+                                                        } else {
+                                                            $(this).html(content);
                                                         }
-                                                    }
-                                                } catch(e) {
-                                                    console.log(e);
-                                                }
+                                                        if(self.release.internalScriptsInFooter) {
+                                                            $(this).appendTo('body');
+                                                        }
+                                                    }                                                   
+                                                } else {
+                                                    // Сохраняем файл, если не следует его включать в локальные скрипты.
+                                                    self.saveReleaseSource(srcData);
+                                                }              
                                             }
-                                            res();
-                                        } else {
-                                            if(self.release.mergeInternalScripts) {
-                                                scripts.unshift($(this).html());
-                                                $(this).remove();
-                                            } else {
-                                                if(self.release.optimizeInternalScripts) {
-                                                    try {
-                                                        let result = await jsOptimaze($(this).html());
-                                                        $(this).text(result);
-                                                    } catch(e) {
-                                                        self.log('An error occurred while optimizing the script', 'error');
-                                                        self.log(e);
-                                                    }
-                                                }
-                                            }
-                                            res();
                                         }
-                                    } catch(e) {
-                                        console.log(e);
+                                    } else if($(this).html().trim() != '') {  
+                                           
+                                        if(self.release.mergeInternalScripts) {
+                                            scripts.push($(this).html());
+                                            $(this).remove();                                                                                                
+                                        } else {
+                                            if(self.release.optimizeInternalScripts) {
+                                                proms.push(optimizeElScripts($(this).html(), $(this)));
+                                            }
+                                            if(self.release.internalScriptsInFooter) {
+                                                $(this).appendTo('body');
+                                            }
+                                        }                                        
+                                    } else if((!src || (src && src.trim() == '')) && $(this).html().trim() == '') {
+                                        self.log(`An empty script is found and will be removed`, 'warning');
+                                        $(this).remove();
                                     }
-                                }));
-                            });
-
-                            if(promsScripts.length) {
-                                await Promise.all(promsScripts);
-                            }
-
-                            if(scripts.length) {
+                                } catch(e) {
+                                    console.log(e);
+                                }
+                            });    
+                            if(proms.length) {
+                                await Promise.all(proms);
+                            }                              
+                            if(scripts.length) {                                 
                                 if(this.release.optimizeInternalScripts) {
                                     try {
                                         let res = await jsOptimaze(scripts);
@@ -1494,51 +1542,37 @@ class htmlPlugin extends plugin {
                                         this.log('An error occurred while optimizing the script', 'error');
                                         this.log(e);
                                     }
+                                } else {
+                                    if(self.release.internalScriptsInFooter) {
+                                        $body.append('<script>'+scripts.join('\n')+'</script>');
+                                    } else {
+                                        $head.append('<script>'+scripts.join('\n')+'</script>');
+                                    }
                                 }
                             }
-
-                            let promsScriptsToFooter = [];
+                         
                             if(this.release.externalScriptsInFooter) {
-                                $('script').each(function() {
-                                    promsScriptsToFooter.push(new Promise(async(res, rej) => {
-                                        try {
-                                            if($(this).attr('src') && !isRelative($(this).attr('src'))) {
-                                                $(this).appendTo('body');
-                                            }
-                                        } catch(e) {
-                                            self.log(e);
-                                        }
-                                        res();
-                                    }));
+                                $('script[src]').each(function() { 
+                                    let src = $(this).attr('src');                                 
+                                    if(src && src.trim() != '') {
+                                        $(this).appendTo('body');
+                                    }                    
                                 });
                             }
-
-                            if(promsScriptsToFooter) {
-                                await Promise.all(promsScriptsToFooter);
-                            }
-
-                            let promsSrcReplacer = [];
+                            
                             $('[src], [href]').each(function() {
                                 let attr = $(this).attr('href') ? 'href' : 'src';
-                                let urlEl = $(this).attr(attr);
-                                if(isRelative(urlEl) && !/^\#/.test(urlEl)) {
-                                    let pathToDist = path.join(self.dist, urlEl), pathToRelease = path.join(distPath, urlEl);
-                                    promsSrcReplacer.push(new Promise(async(res, rej) => {
-                                        try {
-                                            if(await fsp.exists(pathToDist) && !await fsp.exists(pathToRelease)) {
-                                                await fse.copy(pathToDist, pathToRelease);
-                                            }
-                                        } catch(e) {
-                                            console.log(e);
-                                        }
-                                        if(self.release.host && !isRelative(self.release.host)) {
-                                            $(this).attr(attr, urlJoin(self.release.host, urlEl));
-                                        }
-                                        res();
-                                    }))
+                                let src = $(this).attr(attr);                               
+                                if(isRelative(src)) {
+                                   let srcData = self.parseSrc(src);
+                                   if(!srcData.sourceFile) {
+                                        self.log(`${src} source not exist`, 'warning');
+                                   } else {
+                                        self.saveReleaseSource(srcData);
+                                        $(this).attr(attr, self.setReleaseSrc(srcData));
+                                   }
                                 }
-                            });
-                            await Promise.all(promsSrcReplacer);
+                            });                     
 
                         }
                     } catch(e) {
@@ -1572,8 +1606,8 @@ class htmlPlugin extends plugin {
                                 "includeAutoGeneratedTags": false,
                                 "keepClosingSlash": false,
                                 "maxLineLength": 0,
-                                "minifyCSS": !(this.release && this.release.optimizeInternalStyles),
-                                "minifyJS": true,
+                                "minifyCSS": false,
+                                "minifyJS": false,
                                 "preserveLineBreaks": true,
                                 "preventAttributesEscaping": false,
                                 "processConditionalComments": true,
@@ -1606,7 +1640,7 @@ class htmlPlugin extends plugin {
         this.emit('ready', events);
         this.emit('rendered', true);
     }
-    _dist_handler(event, ph) {
+    /*_dist_handler(event, ph) {
         if(this.resources.has(ph)) {
             let page_ids = this.resources.get(ph);
 
@@ -1615,14 +1649,14 @@ class htmlPlugin extends plugin {
                 let paths = models.map(m=>m.toJSON().path).join(', ');
                 let projectConfig = this.project.config;
                 if(projectConfig.verbose) {
-                    this.log(`Dependent resource by path ${ph} has been changed. It used in ${paths} pages.`);
+                    this.log(`Dependent resource ${ph} has been changed. It used in ${paths} pages.`);
                 }
             }
             if(!fs.existsSync(ph)) {
                 this.resources.delete(ph);
             }
         }
-    }
+    }*/
     async initialize() {
         if(this.project.config.build.plugins[this.id]) {
             try {

@@ -44,7 +44,7 @@ module.exports = {
               validation: {
                 type: 'boolean'
               },
-              includeExternalStyles: {
+              includeLocalStyles: {
                 type: 'boolean'
               },
               mergeInternalStyles: {
@@ -113,7 +113,7 @@ module.exports = {
         default: {
           formatting: 'beautify',
           validation: false,
-          includeExternalStyles: false,
+          includeLocalStyles: false,
           mergeInternalStyles: false,
           optimizeInternalStyles: false,
           includeLocalScripts: false,
@@ -126,7 +126,7 @@ module.exports = {
       build: {
         default: {
           pages: "*",
-          host: '/',
+          host: '',
           excludePages: [],
           configId: "default"
         }

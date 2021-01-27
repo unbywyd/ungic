@@ -1,3 +1,5 @@
 module.exports.urlJoin = (url='', suffix='') => {
-    return url.replace(/\/+$/, '') + '/' + suffix.replace(/^\/+/, '');
+    suffix = suffix.replace(/\\+/g, '/');
+    let result = url.replace(/\/+$/, '') + '/' + suffix.replace(/^\/+/, '');
+    return result.replace(/\\+/g, '/');
 }

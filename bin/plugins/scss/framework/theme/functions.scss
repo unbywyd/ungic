@@ -132,7 +132,7 @@ $theme: meta.module-variables(theme);
 
     $d: list.nth(un-meta.hsl($light-color), 3);
     $l: ((($d - $l) * $intensity) / 100) + $l;
-    @return hsl($h, $s * 1%, $l);
+    @return hsl($h, $s * 1%, strip-unit($l) * 1%);
 }
 
 /*
@@ -165,7 +165,7 @@ $theme: meta.module-variables(theme);
     $dark-color: un-meta.darkest($background-color, $text-color);
     $d: list.nth(un-meta.hsl($dark-color), 3);
     $l: $l - (($l - $d) * $intensity) / 100;
-    @return hsl($h, $s * 1%, $l);
+    @return hsl($h, $s * 1%, strip-unit($l) * 1%);
 }
 
 /*
@@ -407,7 +407,7 @@ $theme: meta.module-variables(theme);
             $saturation: $saturation - $saturation-even-offset;
         }
     }
-    $color: hsl(list.nth($hsl, 1), $saturation, $light);
+    $color: hsl(list.nth($hsl, 1), strip-unit($saturation) * 1%, strip-unit($light) * 1%);
     @return color.adjust($color, $hue: $amount * map.get($options, hue-offset));
 }
 
@@ -529,7 +529,7 @@ $theme: meta.module-variables(theme);
 
     $color: color.adjust(
         color.grayscale(color.mix(colors(background-color), colors(text-color))),
-        $saturation: $saturation
+        $saturation: strip-unit($saturation) * 1%
     );
 
     $hsl: un-meta.hsl($color);

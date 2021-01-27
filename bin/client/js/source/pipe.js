@@ -43,14 +43,14 @@ document.addEventListener("DOMContentLoaded", function() {
     const resource = window.performance ? window.performance.getEntriesByType("resource") : [];
     const pagesrc = document.querySelector('[data-connect]').getAttribute('data-src');
     socket.on('change', (events) => {
-        for(let e of events) {
+        for(let e of events) {           
             let {events, relative, url}  = e;
             if(relative == pagesrc) {
                 reload();                
                 return
             }
             let skips = [];
-            if(e.relative.indexOf('.css') != -1) {
+            if(relative.indexOf('.css') != -1) {
                 let links = document.querySelectorAll('[href*="'+relative+'"]');
                 if(links.length) {
                     for(let link of links) {

@@ -70,6 +70,8 @@ module.exports = async function(args) {
 
   let htmlRelease = await htmlInquirer.call(this, args, release);
 
+  htmlRelease.urlsOptimization = buildConfig.urlsOptimization;
+
   if('object' == typeof htmlRelease) {
     let pagesChosen = htmlRelease.pages, scssComponents = [], commonIcons = [], releaseByPage = {}, commonSvgIcons = [], commonSpritesIcons = [];
 
@@ -212,14 +214,18 @@ module.exports = async function(args) {
     // Вот тут надо тупо скопировать все файлы в дист
     if(buildConfig.saveAllAssets) {
       if(await fse.pathExists(this.app.project.assets)) {
-        await fse.copy(this.app.project.assets, path.join(releaseDist, dir));
+        await fse.copy(this.app.project.assets, releaseDist);
       }
     }
 
     let commonScssRelease;
 
     // Общий релиз для стилей
+    
     if(scssRelease) {
+        scssRelease.host = htmlRelease.host;
+        scssRelease.includeLocalStyles = htmlRelease.includeLocalStyles;
+        scssRelease.urlsOptimization = buildConfig.urlsOptimization;
         try {
           commonScssRelease = await scssPlugin.release(_.extend({}, scssRelease));
         } catch(e) {
@@ -290,6 +296,9 @@ module.exports = async function(args) {
           release.scssURLS = scssReleasesByPage[page];
         }
         release.page = _.find(pages, p => p.path == page);
+        if(release.page.body) {
+          delete release.page.body;
+        }
         if(iconsRelease) {
           iconsPlugin.buildConfig.svgIconsMode = iconsRelease.svgIconsMode;
         }
