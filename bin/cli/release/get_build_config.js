@@ -1,5 +1,5 @@
 const _ = require('underscore');
-module.exports = function(plugin, build_name) {
+module.exports = function(plugin, build_name, includeBuildConfig) {
 	let build = plugin.builder.config;
 	let releaseConfigs = build.release.configs;
 	let releaseBuilds = build.release.build;
@@ -19,6 +19,14 @@ module.exports = function(plugin, build_name) {
 	  }
 	} else {
 		this.logger.warning(`${build_name} release is not specified for ${plugin.id} plugin. Default configuration will be used.`, 'CLI');
+	}
+	
+	if(includeBuildConfig) {
+		let buildConfig = this.app.config.build.releases.default;
+		if(this.app.config.build.releases[build_name]) {
+			buildConfig = _.extend({}, buildConfig, this.app.config.build.releases[build_name]);
+		}
+		config = _.extend(config, buildConfig);
 	}
 	return config;
 }

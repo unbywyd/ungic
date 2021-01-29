@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 let colors = require('colors');
 let path = require("path");
+let fs = require("fs");
 let ungic = require("./bin");
 let skeleton = require('./bin/modules/skeleton');
 let readline = require('./bin/modules/readline');
@@ -312,8 +313,13 @@ class App extends skeleton {
           }
         yargs.argv;
     }    
-    let appConfig = this.app.config;
-    if(appConfig._visit) {     
+    //let appConfig = this.app.config;
+
+
+    let htmlPlugin = this.app.project.plugins.get('html');
+    let iconsPlugin = this.app.project.plugins.get('icons');
+
+    if(!fs.readdirSync(htmlPlugin.root).length && !fs.readdirSync(iconsPlugin.root).length) {
       let answers = await prompts.call(this, [{
         type: 'confirm',
         name: 'install',

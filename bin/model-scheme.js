@@ -46,6 +46,9 @@ module.exports = {
                             saveAllAssets: {
                                 type: 'boolean'
                             },
+                            host: {
+                                type: 'string'
+                            },
                             version: {
                                 type: 'string'
                             },
@@ -92,7 +95,8 @@ module.exports = {
         default: {
             releases: {
                 default: {
-                    saveAllAssets: true,            
+                    saveAllAssets: true,    
+                    host: '',        
                     scssBuildName: "default",
                     htmlBuildName: "default",
                     iconsBuildName: "default",

@@ -15,7 +15,7 @@ module.exports = async function(args, defaultConfig={}, overlayConfig={}) {
       themes: [],
       components: "*",
       excludeComponents: []
-   }, defaultConfig, getBuildConfig.call(this, scssPlugin, args.scss_build_name ? args.scss_build_name : args.release_name), overlayConfig);
+   }, defaultConfig, getBuildConfig.call(this, scssPlugin, args.scss_build_name ? args.scss_build_name : args.release_name, args.includeBuildConfig), overlayConfig);
 
 	let allScssComponents = await scssPlugin.getComponents(),
 	  	selectedComponents = release.components;

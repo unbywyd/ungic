@@ -2,7 +2,6 @@ let fse = require('fs-extra');
 let fs = require('fs');
 let fastify = require('fastify');
 let path = require('path');
-let colors = require('colors');
 const ioSockets = require('socket.io');
 const handler = require('serve-handler');
 const { promisify } = require("util");
@@ -16,6 +15,8 @@ const open = require('open');
 const Collector = require('./modules/collector.js');
 const merge = require('deepmerge');
 let URL = require('url');
+const fg = require('fast-glob');
+
 
 class finishController extends skeleton {
     constructor(config={}) {
@@ -114,10 +115,8 @@ class app extends skeleton {
             config = Object.assign(config, require(configPath), config_cmd);
         } else {
             config = Object.assign(config, config_cmd);
-        }      
-        if(args.command == 'init' || args.command == 'create') {
-            config._visit = true;
         }  
+ 
         super(require('./model-scheme'), {objectMerge: true}, config);
         this.PLUGINS_SETTINGS = PLUGINS_SETTINGS;
         config = this.config;
@@ -130,11 +129,10 @@ class app extends skeleton {
     }
     async createApp(name) {
         let ph = path.join(appPaths.root, name);
-        if(await fsp.exists(ph)) {
-            this.system(name + ' directory already exists', 'error');
+        let dirExist = await fsp.exists(ph);
+        if(dirExist && fs.readdirSync(ph).length) {
+            this.system(name + ' directory already exists and is not empty', 'error');
             return process.exit();
-        } else {
-            await fse.emptyDir(ph);
         }
         return this.initialize({
             root: ph,
@@ -144,7 +142,11 @@ class app extends skeleton {
     }
     async initialize(options={}) {
         if(appPaths.config) {
-            this.system('Project successfully initialized. Use "ungic run" command for starting', 'warning');
+            if(options.createMode) {
+                this.system('You cannot create a new project inside an existing ungic project!', 'warning');
+            } else {
+                this.system('Project successfully initialized. Use "ungic run" command for starting', 'warning');
+            }
             return process.exit();
         }
         let response;
@@ -182,9 +184,17 @@ class app extends skeleton {
                     initial: process.env.USERNAME
                 }
             ]);
+            
+            if(!response || typeof response == 'object' && !Object.keys(response).length) {
+                this.system('The action was canceled', 'warning');
+                return process.exit();
+            }
             this.setConfig(response);
         }
 
+        if(options.createMode) {
+            await fse.emptyDir(options.root);
+        }
         options.app = this;
         let prj = new ungicProject(this.config, options);
         try {
@@ -205,9 +215,17 @@ class app extends skeleton {
         }
         process.exit();
     }
+    async suitableAppDir() {
+        let dirs = await fg('**', {cwd: appPaths.root, dot: false, onlyDirectories: true, deep: 1 });
+        return !dirs.length
+    }
     async begin() {
-        if(!appPaths.config && !appPaths.package) {
-            this.system('This directory is not an ungic project. To get started use <ungic --help> command.', 'error', {exit: true});
+        if(!appPaths.config && !appPaths.package) {            
+            if(await this.suitableAppDir()) {
+                this.system('First initialize a new project with <ungic init> command before running it', 'warning', {exit: true});
+            } else {
+                this.system('This directory is not an ungic project. To get started use <ungic --help> command.', 'error', {exit: true});
+            }            
             return;
         }
         let config = this.config;
@@ -385,7 +403,11 @@ class app extends skeleton {
         } catch(e) {
             console.log(e);
         }
-        if(config.openInBrowser && !config._visit) {
+        let htmlPlugin = this.project.plugins.get('html');
+
+        let pages = await fg('**/*.html', {cwd: htmlPlugin.root, deep: 10, dot: false});
+    
+        if(config.openInBrowser && pages.length) {
             await open(this.fastify.address);
         }
         process.title = `[${config.name}] ungic project`;

@@ -137,6 +137,7 @@ module.exports = function (yargs, done) {
           let plugin = this.app.project.plugins.get('icons');
           args.icons_build_name = args.build_name ? args.build_name : args.release_name;
           args.requestVersion = true;
+          args.includeBuildConfig = true;
           let release = await iconsInquirer.call(this, args);
           if(typeof release == 'object') {
             try {

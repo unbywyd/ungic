@@ -9,7 +9,6 @@ module.exports = async function(args, defaultConfig={}) {
 	*/
 	let release = _.extend({
       pages: "*",
-      host: '/',
       excludePages: [],
       configId: "default"
    }, defaultConfig, getBuildConfig.call(this, htmlPlugin, args.html_build_name ? args.html_build_name : args.release_name));
@@ -123,14 +122,6 @@ module.exports = async function(args, defaultConfig={}) {
         }
       ]
     });
-    htmlQuestions.push({
-      type: 'string',
-      name: 'host',
-      message: `Host (replace the relative path of resources and styles from css and html with the hostname, scripts will not be processed!)`,
-      default: release.host ? release.host : '/',
-      validate: v => v.replace(/\s+/, '') !== ''
-    });
-
     response = await prompts.call(this, htmlQuestions);
     if(!response || !response.pages.length) {
       return this.logger.system('HTML pages for release were not provided', 'CLI', 'warning');

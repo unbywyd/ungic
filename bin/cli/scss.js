@@ -32,7 +32,8 @@ module.exports = function (yargs, done) {
           let plugin = this.app.project.plugins.get('scss');
           args.scss_build_name = args.build_name ? args.build_name : args.release_name;
           args.requestVersion = true;
-          let release = await scssInquirer.call(this, args);
+          args.includeBuildConfig = true;
+          let release = await scssInquirer.call(this, args);   
           if(typeof release == 'object') {
             this.logger.system(`Release build start, please wait...`);
             await plugin.release(release);

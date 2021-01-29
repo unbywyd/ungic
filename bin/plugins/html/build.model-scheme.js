@@ -77,7 +77,7 @@ module.exports = {
         patternProperties: {
           "^[A-z_]+\w*$": {
             type: "object",
-            required: ['configId', 'pages', 'host'],
+            required: ['configId', 'pages'],
             properties: {
               version: {
                 type: 'string'
@@ -98,9 +98,6 @@ module.exports = {
               },
               excludePages: {
                 type: 'array'
-              },
-              host: {
-                type: 'string'
               }
             }
           }
@@ -126,7 +123,6 @@ module.exports = {
       build: {
         default: {
           pages: "*",
-          host: '',
           excludePages: [],
           configId: "default"
         }

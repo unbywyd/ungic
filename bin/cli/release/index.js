@@ -60,17 +60,25 @@ module.exports = async function(args) {
       message: 'Version',
       default: release.version,
       validate: v => v.toString().replace(/\s+/, '') !== ''
+    }, 
+    {      
+      type: 'string',
+      name: 'host',
+      message: `Host (resources relative to hostname, use / to make paths relative to the project, empty value, does not affect paths`,
+      default: buildConfig.host ? buildConfig.host : ''
     }]);
     if(response) {
       release.version = response.version;
+      buildConfig.host = response.host;
     }
   }
-
+  
   let releaseDist = path.join(this.app.project.dist, 'releases', release.releaseName + '-v' + release.version);
 
   let htmlRelease = await htmlInquirer.call(this, args, release);
 
   htmlRelease.urlsOptimization = buildConfig.urlsOptimization;
+  htmlRelease.host = buildConfig.host;
 
   if('object' == typeof htmlRelease) {
     let pagesChosen = htmlRelease.pages, scssComponents = [], commonIcons = [], releaseByPage = {}, commonSvgIcons = [], commonSpritesIcons = [];
@@ -223,7 +231,7 @@ module.exports = async function(args) {
     // Общий релиз для стилей
     
     if(scssRelease) {
-        scssRelease.host = htmlRelease.host;
+        scssRelease.host = buildConfig.host;
         scssRelease.includeLocalStyles = htmlRelease.includeLocalStyles;
         scssRelease.urlsOptimization = buildConfig.urlsOptimization;
         try {
@@ -233,6 +241,12 @@ module.exports = async function(args) {
         }
     }
     let scssReleasesByPage = {};
+
+    if(iconsRelease) {
+      iconsRelease.host = buildConfig.host;
+      iconsRelease.includeLocalStyles = htmlRelease.includeLocalStyles;
+      iconsRelease.urlsOptimization = buildConfig.urlsOptimization;
+    }
 
     // Если в релизе несколько страниц и включен режим индивидуального билда.
     if(pagesChosen.length > 1) {
@@ -301,7 +315,7 @@ module.exports = async function(args) {
         }
         if(iconsRelease) {
           iconsPlugin.buildConfig.svgIconsMode = iconsRelease.svgIconsMode;
-        }
+        }       
         await htmlPlugin.toRelease(release);
         if(iconsRelease) {
           iconsPlugin.buildConfig.svgIconsMode = originSvgIconsMode;
