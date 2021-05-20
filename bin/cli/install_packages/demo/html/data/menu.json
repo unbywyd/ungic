@@ -11,8 +11,8 @@
             ]
         },
         {
-            "url": "#",
-            "label": "Source",
+            "url": "https://github.com/unbywyd/ungic",
+            "label": "Github",
             "attrs": [
                 {
                     "name": "target",
