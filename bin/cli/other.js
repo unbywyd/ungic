@@ -19,7 +19,11 @@ module.exports = function (yargs, done) {
     }, () => {
      done(boilerplate.bind(this));
     })
-    .command('bootstrap', 'Get started with bootstrap', () => {
+    .command('bootstrap4', 'Get started with bootstrap 4', () => {
+    }, () => {
+      done(bootstrap.bind(this, {v:4}));
+    })
+    .command('bootstrap', 'Get started with bootstrap 5', () => {
     }, () => {
       done(bootstrap.bind(this));
     })

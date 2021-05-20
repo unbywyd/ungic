@@ -58,6 +58,7 @@ module.exports.demo = async function(opts={}) {
 
 module.exports.bootstrap = async function(opts={}) {
     let hasBootstrap = false;
+    let v = opts.v || '';
     
     let appPaths = AppPaths();
     if(appPaths.node_modules) {
@@ -80,7 +81,7 @@ module.exports.bootstrap = async function(opts={}) {
     }
     let app = this.app;
     let scssPlugin = this.app.project.plugins.get('scss');
-    let sourcePath = path.join(__dirname, '../install_packages/bootstrap');
+    let sourcePath = path.join(__dirname, '../install_packages/bootstrap' + v);
     
     try {
       await intro.call(this, async()=> {
@@ -88,10 +89,6 @@ module.exports.bootstrap = async function(opts={}) {
 
         await scssPlugin.createComponent('app');
         await scssPlugin.createComponent('bootstrap');
-
-        await fse.copy(sourcePath, path.join(app.project.root, app.project.fsDirs('source')), {
-          overwrite: true
-        });
 
         let dirs = this.app.config.fs.source;            
         for(let [dir, ph] of Object.entries(dirs)) {
