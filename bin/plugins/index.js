@@ -16,6 +16,7 @@ class ungicPlugin extends skeleton {
         this.id = config.id;
         this.root = path.join(this.project.root, config.fs.dirs.source, config.fs.source[this.id]);
         this.dist = path.join(this.project.root, config.fs.dirs.dist);
+        this.relativePath = path.normalize(path.join(config.fs.dirs.source, config.fs.source[this.id])).replace(/(^\/|\/$)+/, '');
     }
     watch() {
         if(this.unwatched) {

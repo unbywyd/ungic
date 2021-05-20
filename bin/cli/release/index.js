@@ -45,6 +45,10 @@ module.exports = async function(args) {
     default: false
   }]);
 
+  if(!response) {
+    return this.logger.system(`The action was canceled`, 'CLI');
+  }
+
   let reconfig = response && response.reconfig;
   args.silently = reconfig === false;
 
@@ -70,6 +74,8 @@ module.exports = async function(args) {
     if(response) {
       release.version = response.version;
       buildConfig.host = response.host;
+    } else {
+      return this.logger.system(`The action was canceled`, 'CLI');
     }
   }
   
@@ -79,6 +85,7 @@ module.exports = async function(args) {
 
   htmlRelease.urlsOptimization = buildConfig.urlsOptimization;
   htmlRelease.host = buildConfig.host;
+  htmlRelease.noConflict = buildConfig.noConflict;
 
   if('object' == typeof htmlRelease) {
     let pagesChosen = htmlRelease.pages, scssComponents = [], commonIcons = [], releaseByPage = {}, commonSvgIcons = [], commonSpritesIcons = [];
@@ -234,6 +241,7 @@ module.exports = async function(args) {
         scssRelease.host = buildConfig.host;
         scssRelease.includeLocalStyles = htmlRelease.includeLocalStyles;
         scssRelease.urlsOptimization = buildConfig.urlsOptimization;
+        scssRelease.noConflict = buildConfig.noConflict;
         try {
           commonScssRelease = await scssPlugin.release(_.extend({}, scssRelease));
         } catch(e) {
@@ -246,13 +254,15 @@ module.exports = async function(args) {
       iconsRelease.host = buildConfig.host;
       iconsRelease.includeLocalStyles = htmlRelease.includeLocalStyles;
       iconsRelease.urlsOptimization = buildConfig.urlsOptimization;
+      iconsRelease.noConflict = buildConfig.noConflict;
     }
 
-    // Если в релизе несколько страниц и включен режим индивидуального билда.
     if(pagesChosen.length > 1) {
       for(let page in releaseByPage) {
         let data = releaseByPage[page];
-        let filename = scssRelease.releaseName + '-' + path.basename(page, path.extname(page));
+        let pageName = (page.replace(path.extname(page), '').replace(/[\/\\]+/g, '-')).trim();
+        let filename = pageName.toLowerCase() == 'index' ?  scssRelease.releaseName : scssRelease.releaseName + '-' + pageName;
+     
         if(!combineScssComponents) {
           if(Array.isArray(data.pipes) && data.pipes.length && scssRelease) {
             try {

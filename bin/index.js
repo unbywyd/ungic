@@ -263,20 +263,19 @@ class app extends skeleton {
         this.fastify.use((req, res, next) => {
             if(req.originalUrl != 'ungic' && !/^\/ungic\//.test(req.originalUrl) && !/^\/assets\//.test(req.originalUrl)) {         
                 
-                let parsed = URL.parse(req.url);
-                
+                let parsed = URL.parse(req.url);                
                 let reqUrl = parsed.pathname;
-
                 let pathToFile = path.join(appPaths.root, config.fs.dirs.dist, reqUrl);
                
-                let assetsFile = path.join(appPaths.root, config.fs.dirs.source, config.fs.source.assets, reqUrl);                   
+                let assetsFile = path.join(appPaths.root, config.fs.dirs.source, config.fs.source.assets, reqUrl);    
+                
                 if(!fs.existsSync(pathToFile) && fs.existsSync(assetsFile)) {
                     req.url = '/assets/' + req.url.replace(/^\/+/, '');
-                    req.originalUrl = '/assets/' + req.url.replace(/^\/+/, '');                    
-                } else {
+                    req.originalUrl = '/assets/' + req.url.replace(/^\/+/, '');                                   
+                } else {    
                     return handler(req, res, {
                         public: path.join(appPaths.root, config.fs.dirs.dist),
-                        renderSingle: true,
+                        renderSingle: true,                     
                         symlinks: true,
                         headers: [{
                         "source" : "**/*",
@@ -306,9 +305,11 @@ class app extends skeleton {
                     });
                 }
             } 
-            if(/^\/assets\//.test(req.originalUrl)) {
+            if(/^\/assets\//.test(req.originalUrl)) {   
+                req.originalUrl = req.originalUrl.replace(/^\/assets\//, '');
+                req.url = req.url.replace(/^\/assets\//, '');
                 return handler(req, res, {
-                    public: path.join(appPaths.root, config.fs.dirs.source),                        
+                    public: path.join(appPaths.root, config.fs.dirs.source, config.fs.source.assets),                        
                     trailingSlash: true,
                     headers: [{
                         "source" : "**/*",
@@ -340,15 +341,21 @@ class app extends skeleton {
                 next();
             }            
         });
-        let start = async port => {
-            try {
-                this.fastify.address = await this.fastify.listen(port);
-            } catch(err) {
-                this.system(err.message);
-                await start(port+1);
+
+        this.serverPort = config.server.port;
+        await new Promise(done => {
+            let start = async () => {
+                await this.fastify.listen(this.serverPort).then(address => {
+                    this.fastify.address = address;
+                    done(address);
+                }).catch(() => {
+                    this.fastify.close();
+                    this.serverPort = this.serverPort + 1;
+                    start();
+                });
             }
-        }
-        await start(config.server.port);
+            start();
+        });
 
         io.on('connection', socket => {
             this.sockets.set(socket.id, socket);
@@ -367,15 +374,22 @@ class app extends skeleton {
         this.project.on('log', (type, message, args={}) => {
             this.log(message, type, args);
         });
-        this.project.on(`watcher:${config.fs.dirs.source}:${config.fs.source.assets}`, (event, ph) => {           
-            let relative = path.relative(this.project.assets, ph).replace(/\\+/g, '/');
+        this.project.on('watcher', (event, rp, ph) => { 
+            let needPath = path.normalize(path.join(config.fs.dirs.source, config.fs.source.assets).replace(/(^\/|\/$)+/, '')); 
+            if(rp.indexOf(needPath) !== 0) {
+                return
+            }
+            let relative = path.relative(this.project.assets, ph).replace(/\\+/g, '/');      
             this.finishController.push({
                 event,
-                url: this.fastify.address + '/' + path.relative(this.project.assets, ph).replace(/\\+/g, '/'),
+                url: this.fastify.address + '/' + relative,
                 relative
             });
         });
-        this.project.on('watcher:' + config.fs.dirs.dist, (event, ph) => {
+        this.project.on('watcher', (event, rp, ph) => {                        
+            if(rp.indexOf(path.normalize(config.fs.dirs.dist).replace(/(^\/|\/$)+/, '')) !== 0) {
+                return
+            }           
             let relative = path.relative(this.project.dist, ph).replace(/\\+/g, '/');
             this.finishController.push({
                 event,

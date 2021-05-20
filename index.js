@@ -6,9 +6,10 @@ let ungic = require("./bin");
 let skeleton = require('./bin/modules/skeleton');
 let readline = require('./bin/modules/readline');
 const prompts = require('./bin/modules/prompt.js');
+const servers = require('./bin/modules/server.js');
+const Servers = new servers;
 const fg = require('fast-glob');
 const open = require('open');
-
 
 let logger = function (options) {
   this.options = options;
@@ -218,7 +219,7 @@ class App extends skeleton {
     }
     let self = this;
 
-    this.logger.system(`${this.app.config.name} app running at: ${colors.cyan.bold(this.app.fastify.address)}`);
+    this.logger.success(`${this.app.config.name} app running at: ${colors.cyan.bold(this.app.fastify.address)}`, 'Status');
     this.appMenu = async function(yargs) {
       yargs
         .command('release <release_name> [build_name]', 'Build a full release', yargs => {
@@ -252,6 +253,50 @@ class App extends skeleton {
           try {
             args.url = args.url ? args.url : '/';
             open(self.app.fastify.address + (/^\//.test(args.url) ? args.url : '/' + args.url));
+          } catch(e) {
+            console.log(e);
+          }
+        })
+        .command('server <path> [port]', 'Create or destroy a custom local server relative to this project', args => {
+          args.option('close', {
+              type: 'boolean',
+              alias: 'c'
+          });
+          args.option('open', {
+            type: 'boolean',
+            alias: 'o',
+            default: true
+        });
+        }, args => {
+          try {       
+            let publicPath = path.join(self.app.project.root, args.path); 
+            if(/\.{2,}/.test(args.path)) {
+              self.logger.system(new Error(`The path must be relative to the project`));
+              return 
+            } 
+            if(!fs.existsSync(publicPath)) {
+              self.logger.system(new Error(`${publicPath} path not exists`));
+              return 
+            }            
+            if(args.close) {
+              Servers.kill(publicPath).then(() => {
+                self.logger.log(colors.cyan.bold(`${publicPath} server successfully closed`));
+              }).catch(e => {
+                self.logger.system(e);                
+              });
+            } else {
+              this.close();
+              Servers.create(publicPath).then(e => {
+                self.logger.log(colors.cyan.bold('Server running at:' + e));
+                this.open();
+                if(args.open) {
+                  open(e);
+                }
+              }).catch(e => {
+                self.logger.system(e);
+                this.open();
+              });
+            }
           } catch(e) {
             console.log(e);
           }
@@ -342,7 +387,7 @@ class App extends skeleton {
           if(response.name == 'boilerplate') {
             await boilerplate.call(this, {silence:1});
           }
-          this.system('package installation complete');
+          this.system('Package installation completed!');
           await this.app.project.updateConfigFile(data => {
             delete data._visit;
             return data;

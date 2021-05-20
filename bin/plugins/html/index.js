@@ -248,7 +248,7 @@ class htmlPlugin extends plugin {
             for(let type of this.customTypeStorage.storage) {
                 types[type.type] = type.type;
                 let message = () => {
-                    this.log(`${type.type} custom file handler has been successfully added to HTML plugin, you can use *.${type.type} files.`, "success");
+                    this.system(`${type.type} custom file handler has been successfully added to HTML plugin, you can use *.${type.type} files.`);
                     this.off('rendered', message);
                 }                   
                 this.on('rendered', message);               
@@ -386,17 +386,16 @@ class htmlPlugin extends plugin {
                 console.log(e);
             }
         });      
-        this.on('watcher:'+ config.fs.dirs.source + ':' +config.fs.source[this.id], (event, ph, stat) => {
+        this.on('watcher', (event, rp, ph) => {            
+            if(rp.indexOf(this.relativePath) !== 0) {
+                return
+            }      
             let availableTypes = _.keys(systemConfig.supportedTypes).map(type => '.' + type);
             
-            if(availableTypes.indexOf(path.extname(ph)) != -1) {
-              
+            if(availableTypes.indexOf(path.extname(ph)) != -1) {              
                 this.setEntityByPath(event, path.relative(this.root, ph));
             }
-        });
-       /* this.on('watcher:' + config.fs.dirs.dist, (event, ph, stat) => {
-            this._dist_handler(event, path.relative(this.dist, ph));
-        });*/
+        });    
         let self = this;
         Handlebars.registerHelper("amount", function(els) {
             if(typeof els == 'object') {
@@ -446,7 +445,7 @@ class htmlPlugin extends plugin {
             }          
             let relativeSrc = options.rel;
 
-            let srcData = this.parseSrc(src);
+            let srcData = this.parseSrc(path.join('/', src));
             
             if(!srcData.sourceFile) {
                 this.log(`${src} resource not exist, required for ${rootData.page.path} page`, 'warning');
@@ -525,15 +524,33 @@ class htmlPlugin extends plugin {
                 if(options.data == 'icons' || options.icons) {
                     this.iconsDataUsed.set({page_id: source.ungic.page.id});
                     let iconsData = {};
-                    if('object' == typeof this.iconsStorage.fonts && this.iconsStorage.fonts.data) {
-                        iconsData.fonts = _.map(this.iconsStorage.fonts.data.icons, i => _.omit(i, 'svg'));
+
+                    if(!this.release) {
+                        if('object' == typeof this.iconsStorage.fonts && this.iconsStorage.fonts.data) {
+                            iconsData.fonts = _.map(this.iconsStorage.fonts.data.icons, i => _.omit(i, 'svg'));
+                        }
+                        if('object' == typeof this.iconsStorage.svgSprite && this.iconsStorage.svgSprite.data) {
+                            iconsData.svgSprite = _.map(this.iconsStorage.svgSprite.data.icons, i => _.omit(i, 'svg'));
+                        }
+                        if('object' == typeof this.iconsStorage.sprite && this.iconsStorage.sprite.data) {
+                            iconsData.sprites = this.iconsStorage.sprite.data.icons;
+                        }
+                    } else {
+                        let icons = this.release.iconsReleases;
+                        let fonts = _.find(icons, i => i.type == 'fonts');
+                        if(fonts) {
+                            iconsData.fonts = _.map(fonts.icons, i => _.omit(i, 'svg'));
+                        }
+                        let sprites = _.find(icons, i => i.type == 'sprites');
+                        if(sprites) {
+                            iconsData.sprites = sprites.icons;
+                        }
+                        let svgSprites = _.find(icons, i => i.type == 'svgSprite');
+                        if(svgSprites) {
+                            iconsData.svgSprite = _.map(svgSprites.icons, i => _.omit(i, 'svg'));
+                        }
                     }
-                    if('object' == typeof this.iconsStorage.svgSprite && this.iconsStorage.svgSprite.data) {
-                        iconsData.svgSprite = _.map(this.iconsStorage.svgSprite.data.icons, i => _.omit(i, 'svg'));
-                    }
-                    if('object' == typeof this.iconsStorage.sprite && this.iconsStorage.sprite.data) {
-                        iconsData.sprites = this.iconsStorage.sprite.data.icons;
-                    }
+
                     if(iconsData[options.icons]) {
                         source.icons = iconsData[options.icons];
                     } else {
@@ -726,7 +743,7 @@ class htmlPlugin extends plugin {
         if(this.release.urlsOptimization || host != '') { 
             return urlJoin(host, data.virtualRelativeRootSrc);
         } else {
-            return data.originalSrc;
+            return data.originalUrl;
         }
     }
     saveReleaseSource(data) {
@@ -831,6 +848,8 @@ class htmlPlugin extends plugin {
         this.mainScssPipes.clean(m => m.page_id == id);
     }
     toRelease(args) {
+        //let saveIconsStorage = this.iconsStorage;
+        //delete this.iconsStorage;    
         return new Promise(async(done, rej) => {
             try {
                 this.release = args;
@@ -848,6 +867,7 @@ class htmlPlugin extends plugin {
                         self.watch();
                     }
                     delete self.release;
+                    //this.iconsStorage = saveIconsStorage;
                     // Восстанавливаем
                     self.collection.remove(model, {silent: true});
                     await self.setEntityByPath('add', model.get('path'), {silent: true});
@@ -1313,54 +1333,9 @@ class htmlPlugin extends plugin {
                                 releaseDistPath: distPath
                             }));
  
-
-                            // Если не требуется включать внешние стили как внутренние
-                            if(!this.release.includeLocalStyles) {
-                                /*
-                                *   Подключили все стили из сасс фремворка и иконки
-                                */
-                                if(this.release.scssURLS) {
-                                    for(let {url} of this.release.scssURLS) {
-                                        $head.append(`<link rel="stylesheet" href="${url.replace(/\\+/g, '/')}">`);
-                                    }
-                                }
-                                if(this.release.iconsReleases && this.release.iconsReleases.length) {
-                                    for(let el of this.release.iconsReleases) {
-                                        if(el.css_url) {
-                                            $head.append(`<link rel="stylesheet" href="${el.css_url}">`); // .replace(/\\+/g, '/')
-                                        }
-                                    }
-                                }
-                            } else {
-                                /*
-                                *   Перекидывем все стили в инлайн стили
-                                */
-                                if(this.release.scssURLS) {
-                                    for(let {url, content} of this.release.scssURLS) {                                      
-                                        styles.push(content/*{
-                                            path: path.join(distPath, url),
-                                            url,
-                                            cssRules: content
-                                        }*/);
-                                    }
-                                }
-                              
-                                if(this.release.iconsReleases && this.release.iconsReleases.length) {
-                                    for(let el of this.release.iconsReleases) {
-                                        if(el.css_url) {
-                                            let cssRules = await fsp.readFile(path.join(distPath, el.css_url), 'UTF-8');
-                                            styles.push(cssRules/*{
-                                                path: path.join(distPath, el.css_url),
-                                                url: el.css_url,
-                                                cssRules
-                                            }*/);
-                                        }
-                                    }
-                                }
-                            }
-                           
                             let internalStyles = [];
-                            // Ищем другие подключенные локальные стили
+
+                             // Ищем другие подключенные локальные стили
                             $('link[rel="stylesheet"]').each(function() {                               
                                 let href = $(this).attr('href');
                                 if(isRelative(href)) {
@@ -1387,6 +1362,65 @@ class htmlPlugin extends plugin {
                                 }                             
                             });
 
+                            $('[src], [href], meta[content]').each(function() {
+                                let attr = $(this).attr('href') ? 'href' : 'src';
+                                if($(this).prop('tagName').toLowerCase() == 'meta') {
+                                    let src = $(this).attr('content');
+                                    if(/(.+\/)(.+\..+)/.test(src) && isRelative(src)) {
+                                        attr = 'content';
+                                    } else {
+                                        return
+                                    }
+                                }                            
+                                let src = $(this).attr(attr);                               
+                                if(isRelative(src)) {
+                                   let srcData = self.parseSrc(src);
+                                   if(!srcData.sourceFile) {
+                                        self.log(`${src} source not exist`, 'warning');
+                                   } else {
+                                        self.saveReleaseSource(srcData);
+                                        $(this).attr(attr, self.setReleaseSrc(srcData));
+                                   }
+                                }
+                            }); 
+
+
+
+                            // Если не требуется включать внешние стили как внутренние
+                            if(!this.release.includeLocalStyles) {
+                                /*
+                                *   Подключили все стили из сасс фремворка и иконки
+                                */
+                                if(this.release.scssURLS) {
+                                    for(let {url} of this.release.scssURLS) {
+                                        $head.append(`<link rel="stylesheet" href="${url.replace(/\\+/g, '/')}">`);
+                                    }
+                                }
+                                if(this.release.iconsReleases && this.release.iconsReleases.length) {
+                                    for(let el of this.release.iconsReleases) {
+                                        if(el.css_url) {
+                                            $head.append(`<link rel="stylesheet" href="${el.css_url}">`); // .replace(/\\+/g, '/')
+                                        }
+                                    }
+                                }
+                            } else {
+                                /*
+                                *   Перекидывем все стили в инлайн стили
+                                */
+                                if(this.release.scssURLS) {
+                                    for(let {url, content} of this.release.scssURLS) {                                      
+                                        styles.push(content);
+                                    }
+                                }                              
+                                if(this.release.iconsReleases && this.release.iconsReleases.length) {
+                                    for(let el of this.release.iconsReleases) {
+                                        if(el.styles) {
+                                            styles.push(el.styles);
+                                        }
+                                    }
+                                }
+                            }
+                           
                             if(this.release.optimizeInternalStyles) {
                                 postcssPlugins.push(clean(cleancssConfig));
                             }
@@ -1436,13 +1470,13 @@ class htmlPlugin extends plugin {
                             }
                         
                             if(styles.length) {
-                                cssResult = styles.join(' ');
-                                if(allInternalStyles != '') {                                    
-                                    let result = await postcss([clean({level: 1})]).process(cssResult + ' ' + allInternalStyles, {from: undefined});
+                                cssResult = styles.join(' ') + ' ' + allInternalStyles;
+                                if(this.release.optimizeInternalStyles) {
+                                    let result = await postcss([clean({level: 1})]).process(cssResult, {from: undefined});
                                     if(result.css) {
                                         cssResult = result.css.toString();
-                                    }
-                                }
+                                    }   
+                                }                                                                                   
                             }                 
 
                             if(typeof cssResult == 'string' && cssResult.trim() != '') {                                                         
@@ -1493,7 +1527,7 @@ class htmlPlugin extends plugin {
                                                         } else {
                                                             $(this).html(content);
                                                         }
-                                                        if(self.release.internalScriptsInFooter) {
+                                                        if(self.release.internalScriptsToFooter) {
                                                             $(this).appendTo('body');
                                                         }
                                                     }                                                   
@@ -1503,8 +1537,7 @@ class htmlPlugin extends plugin {
                                                 }              
                                             }
                                         }
-                                    } else if($(this).html().trim() != '') {  
-                                           
+                                    } else if($(this).html().trim() != '') {                                           
                                         if(self.release.mergeInternalScripts) {
                                             scripts.push($(this).html());
                                             $(this).remove();                                                                                                
@@ -1512,7 +1545,7 @@ class htmlPlugin extends plugin {
                                             if(self.release.optimizeInternalScripts) {
                                                 proms.push(optimizeElScripts($(this).html(), $(this)));
                                             }
-                                            if(self.release.internalScriptsInFooter) {
+                                            if(self.release.internalScriptsToFooter) {
                                                 $(this).appendTo('body');
                                             }
                                         }                                        
@@ -1532,7 +1565,7 @@ class htmlPlugin extends plugin {
                                     try {
                                         let res = await jsOptimaze(scripts);
                                         if(res.length) {
-                                            if(self.release.internalScriptsInFooter) {
+                                            if(self.release.internalScriptsToFooter) {
                                                 $body.append('<script>'+res+'</script>');
                                             } else {
                                                 $head.append('<script>'+res+'</script>');
@@ -1543,7 +1576,7 @@ class htmlPlugin extends plugin {
                                         this.log(e);
                                     }
                                 } else {
-                                    if(self.release.internalScriptsInFooter) {
+                                    if(self.release.internalScriptsToFooter) {
                                         $body.append('<script>'+scripts.join('\n')+'</script>');
                                     } else {
                                         $head.append('<script>'+scripts.join('\n')+'</script>');
@@ -1551,28 +1584,15 @@ class htmlPlugin extends plugin {
                                 }
                             }
                          
-                            if(this.release.externalScriptsInFooter) {
+                            if(this.release.externalScriptsToFooter) {
                                 $('script[src]').each(function() { 
                                     let src = $(this).attr('src');                                 
                                     if(src && src.trim() != '') {
                                         $(this).appendTo('body');
                                     }                    
                                 });
-                            }
-                            
-                            $('[src], [href]').each(function() {
-                                let attr = $(this).attr('href') ? 'href' : 'src';
-                                let src = $(this).attr(attr);                               
-                                if(isRelative(src)) {
-                                   let srcData = self.parseSrc(src);
-                                   if(!srcData.sourceFile) {
-                                        self.log(`${src} source not exist`, 'warning');
-                                   } else {
-                                        self.saveReleaseSource(srcData);
-                                        $(this).attr(attr, self.setReleaseSrc(srcData));
-                                   }
-                                }
-                            });                     
+                            }                           
+                  
 
                         }
                     } catch(e) {
@@ -1632,7 +1652,7 @@ class htmlPlugin extends plugin {
                     }
                     distPath = path.join(distPath, attrs.path);
                     await fse.outputFile(distPath, output);
-                    this.log(`${attrs.path} page successfully compiled to ${distPath}`, 'success');
+                    this.system(`${attrs.path} page successfully compiled to ${distPath}`);
                     //this.emit('one_ready', attrs);
                 }
             }
@@ -1741,7 +1761,7 @@ class htmlPlugin extends plugin {
         this.project.on('icons', async e => {          
             try {
                 let pagesReady = [];
-                let ids;
+                let ids;               
                 this.iconsStorage[e.type] = e;
                 if(this.iconsDataUsed.storage.length) {
                     for(let data of this.iconsDataUsed.storage) {

@@ -249,7 +249,7 @@ class ungicProject extends skeleton {
             awaitWriteFinish: {
                 stabilityThreshold: 100,
             },
-        }).on('all', (event, ph, stat) => {
+        }).on('all', (event, ph, stat) => {         
             if(event == 'change' && path.join(this.root, 'ungic.config.json') == ph) {
                 this.updateConfig();
             }
@@ -274,18 +274,16 @@ class ungicProject extends skeleton {
                 }
             }
             let ph_splitter = _.filter(ph.split(this.root)[1].split(path.sep), ph => ph != "");
-            let watchEvent = (storage, dir, prev="", prevdir="") => {               
-                let _dir = findDir(storage, dir);             
-                this._events.emit('watcher:' + prev + dir, event, ph, stat);
+            let watchEvent = (relativePath) => {              
+                this._events.emit('watcher', event, relativePath, ph, stat);
                 if(this.plugins.size) {
-                    this.plugins.forEach(plugin=>plugin.emit('watcher:' + prev + dir, event, ph, stat));
-                }
-                if(_dir) { 
-                    watchEvent(_dir, ph_splitter.shift(), prev + dir + ':', dir);
+                    this.plugins.forEach(plugin=>plugin.emit('watcher', event, relativePath, ph, stat));
                 }
             }
+          
+            let relativePath = path.relative(this.root, ph);            
             if(ph_splitter.length > 1) {
-                watchEvent(config.fs, ph_splitter.shift());
+                watchEvent(relativePath);
             } else {
                 this._events.emit('watcher:root', event, ph, stat);
             }

@@ -26,7 +26,8 @@ const srcReplacer = require('../../modules/postcss-src-replacer');
 const rtl = require('postcss-rtl');
 const autoprefixer = require('autoprefixer');
 const Storage = require('../../modules/storage');
-const rgbHex = require('rgb-hex');
+const {urlJoin} = require('../../modules/url-join');
+
 
 class builder extends skeleton {
     constructor(scheme, config = {}) {
@@ -678,6 +679,18 @@ class scssPlugin extends plugin {
         }
         return params;
     }
+    generateDistSrc(relativePath) {
+        if(!this.activeRelease) {
+            return urlJoin(this.project.fastify.address, relativePath);
+        }
+        let host = this.activeRelease.host;
+       
+        if(host != '') { 
+            return urlJoin(host, relativePath);
+        } else {
+            return urlJoin('/', relativePath);
+        }
+    }
     async _renderComponents(components, release) {
         for (let cid of components) {           
             if (!await this.componentHasRender(cid)) {
@@ -832,7 +845,7 @@ class scssPlugin extends plugin {
                 data.unshift(Buffer.from(vars));            
                
                 let result = await this._postcss(Buffer.concat(data), releaseData, release);
-                let versionName = releaseData.versionInFilename ? ('v' + moment().unix() + '-') : '';
+                let versionName = releaseData.noConflict ? ('v' + moment().unix() + '-') : '';
 
     
                 for (let r of result) {
@@ -846,10 +859,12 @@ class scssPlugin extends plugin {
                             await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
                         }
                         this.releaseResults.push({
-                            url,
+                            url: this.generateDistSrc(url),
+                            order: 0,
                             content: output
                         });
                     } else {
+                        let number = 1;
                         for (let e of r) {
                             if (e.root) {
                                 let output = await this.getReleseLabel(releaseData, e.root);
@@ -861,7 +876,8 @@ class scssPlugin extends plugin {
                                         await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
                                     }
                                     this.releaseResults.push({
-                                        url,
+                                        url: this.generateDistSrc(url),
+                                        order: number,
                                         content: output
                                     });
                                 } catch (e) {
@@ -880,13 +896,15 @@ class scssPlugin extends plugin {
                                         await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
                                     }    
                                     this.releaseResults.push({
-                                        url,
+                                        url: this.generateDistSrc(url),
+                                        order: number + 1,
                                         content: output
                                     });
                                 } catch (e) {
                                     this.log(e, 'error');
                                 }
-                            }
+                            } 
+                            number  = number + 2;                           
                         }
                     }
                 }
@@ -939,6 +957,8 @@ class scssPlugin extends plugin {
         let data = this.releaseResults;
         delete this.releaseResults;
         delete this.activeRelease;
+        //console.log(data);
+        data = _.sortBy(data, 'order');
         return data;
     }
     async _render(events) {
@@ -949,7 +969,7 @@ class scssPlugin extends plugin {
             try {
                 let success = await this._renderComponents(event.components);
                 if (success) {
-                    this.log(`Styles for ${event.components.join(',')} component(s) were successfully generated!`, 'success');
+                    this.system(`Styles for ${event.components.join(',')} component(s) were successfully generated!`);
                 }
             } catch (e) {
                 console.log(e);
@@ -969,7 +989,10 @@ class scssPlugin extends plugin {
                 this.log(message, type);
             }
         });
-        this.on('watcher:' + config.fs.dirs.source + ':' + config.fs.source[this.id], (event, ph, stat) => {
+        this.on('watcher', (event, rp, ph, stat) => {
+            if(rp.indexOf(this.relativePath) !== 0) {
+                return
+            } 
             if (path.extname(ph) == '.scss') {
                 this.watchController.emit('bind', event, ph);
             }

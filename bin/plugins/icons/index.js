@@ -26,6 +26,8 @@ const sass = require('sass');
 const spriteSmith = require('spritesmith');
 const resizeImg = require('resize-img');
 var sizeOf = require('image-size');
+const {urlJoin} = require('../../modules/url-join');
+
 hbs.registerHelper("coordinate", function(val) {
     return !val ? val : val * -1 + 'px';
 });
@@ -174,6 +176,10 @@ class iconsPlugin extends plugin {
 
         this.fontsDist = path.join(this.dist, config.fs.dist.fonts);
         this.spritesDist = path.join(this.dist, config.fs.dist.img, 'sprites');
+
+        this.fontsDistRelative = config.fs.dist.fonts;
+        this.spritesDistRelative = path.join(config.fs.dist.img, 'sprites');
+
         let collection = Collection(model);
 
         this.collection = new collection();
@@ -447,8 +453,8 @@ class iconsPlugin extends plugin {
                 if(title) {
                     entityData.title = title.textContent;
                     title.remove();
-                }
-                entityData.svg = cheerio.html($svg);
+                }             
+                entityData.svg = $svg.parent().html();
                 entityData.codepoint = this.getCodepoint(entityData);
                 entityData.unicode = String.fromCharCode(entityData.codepoint)
             } catch(e) {
@@ -530,7 +536,7 @@ class iconsPlugin extends plugin {
                 }
             }
         }
-        let svg = cheerio.html($svg);
+        let svg = $svg.parent().html();
 
         let label = '';
         if(options.label) {
@@ -624,7 +630,7 @@ class iconsPlugin extends plugin {
             $symbol.attr('class', $svg.attr('class'));
         }
         $symbol.html($svg.html());
-        return cheerio.html($symbol);
+        return $symbol.parent().html();
     }
     fontConfiguration() {
         let config = this.config;
@@ -680,7 +686,7 @@ class iconsPlugin extends plugin {
         }
         let results = {
             releases: []
-        }
+        }        
         let {version, releaseName, svgIconsMode} = releaseData;
         let currentBuild = this.buildConfig;
         this.buildConfig = releaseData;
@@ -699,7 +705,8 @@ class iconsPlugin extends plugin {
         if(!releaseData.combineIcons) {
             this.buildSuffix = releaseData.filename ? releaseData.filename : releaseData.releaseName;
         }
-        this.buildSuffix = this.buildSuffix + 'v' + moment().unix();
+        
+        this.buildSuffix = this.buildSuffix + (releaseData.noConflict ? 'v' + moment().unix() : '');
         try {
             if(releaseData.svgIcons && Array.isArray(releaseData.svgIcons)) {
                 let icons = releaseData.svgIcons;
@@ -731,7 +738,7 @@ class iconsPlugin extends plugin {
         }
         this.buildConfig = currentBuild;
         this.buildSuffix = '';
-        this.system(`${releaseData.type} release successfully generated to ${this.dist}`, 'success');
+        this.system(`${releaseData.type} release successfully generated to ${this.dist}`);
         this.dist = dist;
         this.fontsDist = fontsDist;
         this.spritesDist = spritesDist;
@@ -791,35 +798,45 @@ class iconsPlugin extends plugin {
         this.collection.add(items, {lastEvent: true});
         return true
     }
-    async generateSpriteSass(icons, local) {
+    generateDistSrc(relativePath) {   
+        /*
+        *   Для облегчения задачи, будем возвращать путь относительно корня проекта, а не CSS файла.
+        */
+        if(!this.releaseData) {
+            return urlJoin(this.project.fastify.address, relativePath);
+        }
+        let host = this.releaseData.host;
+       
+        if(host != '') { 
+            return urlJoin(host, relativePath);
+        } else {
+            return urlJoin('/', relativePath);
+        }
+    }
+    getPathToCSS() {
+        let config = this.config;
+        if(this.releaseData && this.releaseData.includeLocalStyles) {
+            return '/';
+        }
+        return config.fs.dist.css;
+    }
+    async generateSpriteSass(icons) {
         let template = path.join(__dirname, 'templates', 'sprites_sass.hbs');
         let config = this.config;
         let prefix = this.buildSuffix != '' ? (this.buildSuffix + '-') : '';
-
-        let dist =  path.join(this.spritesDist, prefix + config.sprites.className + '.png');
-
-        let toPath =  path.relative(path.join(this.dist, config.fs.dist.css), dist).replace(/\\+/g, '/');
-        if(local) {
-            toPath = this.project.fastify.address + '/' + path.relative(this.project.dist, dist).replace(/\\+/g, '/');
-        }
         let source = {
             config: {
                 className: config.sprites.className
             },
             icons,
-            path: toPath
+            path: this.generateDistSrc(path.join(this.spritesDistRelative, prefix + config.sprites.className + '.png'))
         }
         template = await fsp.readFile(template, 'UTF-8');
         let content = hbs.compile(template)(source);
         return content;
     }
-    async getFontsSass(models, local) {
-        let template = path.join(__dirname, 'templates', 'fonts_sass.hbs');
-        let config = this.config;
-        let toPath = path.relative(path.join(this.dist, config.fs.dist.css), this.fontsDist).replace(/\\+/g, '/') + '/';
-        if(local) {
-            toPath = this.project.fastify.address + '/' + path.relative(this.project.dist, this.fontsDist).replace(/\\+/g, '/') + '/'
-        }
+    async getFontsSass(models) {
+        let template = path.join(__dirname, 'templates', 'fonts_sass.hbs');        
         let source = {
             config: this.fontConfiguration(),
             icons: _.map(models, m => {
@@ -827,7 +844,7 @@ class iconsPlugin extends plugin {
                 data.unicode = data.codepoint.toString(16);
                 return data;
             }),
-            fonts_path: toPath
+            fonts_path: this.generateDistSrc(path.join(this.fontsDistRelative, '/'))
         }
         template = await fsp.readFile(template, 'UTF-8');
         let content = hbs.compile(template)(source);
@@ -899,7 +916,9 @@ class iconsPlugin extends plugin {
             sass: sassSource
         }
         let prefix = this.buildSuffix != '' ? (this.buildSuffix + '-') : '';
-        callbackData.css_url = path.join(config.fs.dist.css, prefix + 'fonts-' + config.fonts.name  + '.css').replace(/\\+/g, '/');
+        let relativePath = path.join(this.getPathToCSS(), prefix + 'fonts-' + config.fonts.name  + '.css');
+        callbackData.css_url = this.generateDistSrc(relativePath);
+
 
         if(!this.skipIconsEvent) {
             this.emit('icons', {
@@ -925,7 +944,10 @@ class iconsPlugin extends plugin {
             if(!css) {
                 this.error('Icon sass generation error');
             }
-            await fse.outputFile(path.join(this.dist, path.normalize(callbackData.css_url)), css);
+            callbackData.styles = css;
+            if(!this.releaseData || (this.releaseData && !this.releaseData.includeLocalStyles)) {
+                await fse.outputFile(path.join(this.dist, relativePath), css);
+            }
         }
 
         let svgStreams = [];
@@ -982,7 +1004,7 @@ class iconsPlugin extends plugin {
         fontStream.end();
         await Promise.all(Proccess).then(r => {
             if(r) {
-                this.log('Font icons successfully generated!', 'success');
+                this.system('Font icons successfully generated!');
             }
         }).catch(e => {
             console.log(e);
@@ -1086,7 +1108,10 @@ class iconsPlugin extends plugin {
         } catch(e) {
             console.log(e);
         }
-        this.on('watcher:'+ config.fs.dirs.source + ':' +config.fs.source.icons, (event, ph, stat) => {
+        this.on('watcher', (event, rp, ph) => {
+            if(rp.indexOf(this.relativePath) !== 0) {
+                return
+            }
             let supports = ['.png', '.svg', '.jpeg', '.jpg'];
             if(supports.indexOf(path.extname(ph)) != -1) {
                 this.watchController.emit('bind', event, ph);
@@ -1105,7 +1130,7 @@ class iconsPlugin extends plugin {
         for(let model of models) {
             $svg.append(this.getSymbol(model));
         }
-        let svgContent = cheerio.html($svg);
+        let svgContent = $svg.parent().html();
         if(config.svgSprite.external || this.skipIconsEvent) {
             let prefix = this.buildSuffix != '' ? (this.buildSuffix + '-') : '';
             if(this.releaseData) {
@@ -1176,11 +1201,14 @@ class iconsPlugin extends plugin {
                             type: 'sprites',
                             icons: storage,
                             sass: sassOut,
-                            dist: distPath,
-                            dist_url: path.relative(path.join(this.dist, config.fs.dist.css), distPath).replace(/\\+/g, '/')
+                            //dist: distPath,
+                            //dist_url: this.generateDistSrc(distPath)
+                            //path.relative(path.join(this.dist, this.getPathToCSS()), distPath).replace(/\\+/g, '/')
                         }
                         //let prefix = this.buildSuffix != '' ? (this.buildSuffix + '-') : '';
-                        callbackData.css_url = path.join(config.fs.dist.css, prefix + 'sprites-' + config.sprites.className  + '.css').replace(/\\+/g, '/');
+                        let relativePath = path.join(this.getPathToCSS(), prefix + 'sprites-' + config.sprites.className  + '.css');
+                        callbackData.css_url = this.generateDistSrc(relativePath);   
+                        //path.join(this.getPathToCSS(), ).replace(/\\+/g, '/');
 
                         if(!this.skipIconsEvent) {
                             this.emit('icons', {
@@ -1206,12 +1234,15 @@ class iconsPlugin extends plugin {
                                 if(!css) {
                                     this.error('Icon sass generation error');
                                 }
-                                await fse.outputFile(path.join(this.dist, path.normalize(callbackData.css_url)), css);
+                                callbackData.styles = css;
+                                if(!this.releaseData || (this.releaseData && !this.releaseData.includeLocalStyles)) {
+                                    await fse.outputFile(path.join(this.dist, relativePath), css);
+                                }
                             } catch(e) {
                                 console.log(e);
                             }
                         }
-                        this.log('Sprites successfully generated!', 'success');
+                        this.system('Sprites successfully generated!');
                     }
                     done();
                 } catch(e) {
@@ -1249,7 +1280,7 @@ class iconsPlugin extends plugin {
                     data: callbackData
                 });
             }
-            this.log('Svg sprite successfully generated!', 'success');
+            this.system('Svg sprite successfully generated!');
         } catch(e) {
             console.log(e);
         }

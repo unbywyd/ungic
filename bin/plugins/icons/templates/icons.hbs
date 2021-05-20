@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Demo icons</title>
     <style>
-        body{background-color:#fff;color:#363638;margin:0}.ungic_icons-desc{font-family: Arial, Helvetica, sans-serif; color: gray; font-size: 14px; background-color: #fafafa; border-left: 3px solid #CCC; padding: 10px 10px 10px 20px}.ungic_icons-page{max-width:1000px;margin:20px auto}.ungic_icons-page h2{font-size:2em;margin-bottom:1em;color:#282a2f;font-weight:400}.ungic_icons-page .icon-name{display:block;line-height:1;margin-top:.5em;color:#3f3f43}.ungic_icons-items{display:flex;flex-wrap:wrap;margin-bottom:2em;padding-bottom:2em}.ungic_icons-items:not(:last-child){border:none;border-bottom:2px solid #f8f8f8}.ungic_icons-item{padding:1.5em;text-align:center;transition:all .2s}.ungic_icons-item:hover{transform:scale(1.2)}.no-icons{text-align:center;padding:20px}
+        body{background-color:#fff;color:#363638;margin:0}.ungic_icons-desc{font-family: Arial, Helvetica, sans-serif; color: gray; font-size: 14px; background-color: #fafafa; border-left: 3px solid #CCC; padding: 10px 10px 10px 20px}.ungic_icons-page{max-width:1000px;margin:20px auto}.ungic_icons-page h2{font-size:2em;margin-bottom:1em;color:#282a2f;font-weight:400}.ungic_icons-page .icon-name{display:block;line-height:1;margin-top:.5em;color:#3f3f43}.ungic_icons-items{display:flex;flex-wrap:wrap;margin-bottom:2em;padding-bottom:2em}.ungic_icons-items:not(:last-child){border:none;border-bottom:2px solid #f8f8f8}.ungic_icons-item{padding:1.5em;background:transparent;cursor:pointer;font-size:inherit;text-align:center;border:none;transition:all .2s}.ungic_icons-item:hover{transform:scale(1.2);background:#fafafa}.no-icons{text-align:center;padding:20px}
     </style>
     {{#unless release}}
     <link rel="stylesheet" href="{{address}}/ungic/font-icons">
@@ -30,9 +30,9 @@
         <h2>Svg sprite</h2>
         <div class="ungic_icons-items">
             {{#each icons.svgSprite}}
-            <div role="button" title="{{{id}}}" class="ungic_icons-item" data-id="{{id}}">
+            <button title="{{{id}}}" class="ungic_icons-item" data-id="{{id}}">
                 {{{icons_icon id}}}
-            </div>
+            </button>
             {{/each}}
         </div>
         {{/if}}
@@ -40,9 +40,9 @@
         <h2>Image sprite</h2>
         <div class="ungic_icons-items">
             {{#each icons.sprites}}
-            <div role="button" title="{{{id}}}" class="ungic_icons-item" data-id="{{id}}">
+            <button title="{{{id}}}" class="ungic_icons-item" data-id="{{id}}">
                 {{{icons_icon id}}}
-            </div>
+            </button>
             {{/each}}
         </div>
         {{/if}}
@@ -50,9 +50,9 @@
         <h2>Font icons</h2>
         <div class="ungic_icons-items">
             {{#each icons.fonts}}
-            <div role="button" title="{{{id}}}" class="ungic_icons-item" data-id="{{id}}">
+            <button title="{{{id}}}" class="ungic_icons-item" data-id="{{id}}">
                 {{{icons_icon id}}}
-            </div>
+            </button>
             {{/each}}
         </div>
         {{/if}}

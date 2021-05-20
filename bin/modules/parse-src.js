@@ -11,6 +11,7 @@ module.exports = function({src, virtualRelativeDist, relativeDist, dist, assets,
     let output = {
         isRelative: false,
         originalSrc: src,
+        originalUrl: src.replace(/\\+/g, '/'),
         releaseDistPath
     }
     if(isRelative(src)) {  

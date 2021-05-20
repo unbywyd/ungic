@@ -179,15 +179,15 @@ module.exports = async function(args, defaultConfig={}) {
       });
       htmlQuestions.push({
         type: 'confirm',
-        name: 'internalScriptsInFooter',
+        name: 'internalScriptsToFooter',
         message: `Move all internal scripts to footer?`,
-        default: !!(release.internalScriptsInFooter)
+        default: !!(release.internalScriptsToFooter)
       });
       htmlQuestions.push({
         type: 'confirm',
-        name: 'externalScriptsInFooter',
+        name: 'externalScriptsToFooter',
         message: `Move all external scripts to footer?`,
-        default: !!(release.externalScriptsInFooter)
+        default: !!(release.externalScriptsToFooter)
       });
       htmlQuestions.push({
         type: 'confirm',

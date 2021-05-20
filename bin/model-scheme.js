@@ -1,3 +1,5 @@
+const { FAILSAFE_SCHEMA } = require("js-yaml");
+
 module.exports = {
     mode: {
         type: 'string',
@@ -44,6 +46,9 @@ module.exports = {
                         required: ['scssBuildName', 'htmlBuildName', 'iconsBuildName'],
                         properties: {
                             saveAllAssets: {
+                                type: 'boolean'
+                            },
+                            noConflict: {
                                 type: 'boolean'
                             },
                             host: {
@@ -97,6 +102,7 @@ module.exports = {
                 default: {
                     saveAllAssets: true,    
                     host: '',        
+                    noConflict: true,
                     scssBuildName: "default",
                     htmlBuildName: "default",
                     iconsBuildName: "default",
@@ -184,7 +190,7 @@ module.exports = {
                 "js": "js"
             },
             "source": {
-                "scss": "styles",
+                "scss": "scss",
                 "html": "pages",
                 "icons": "icons",
                 "assets": "assets"

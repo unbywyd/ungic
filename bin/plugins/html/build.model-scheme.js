@@ -56,10 +56,10 @@ module.exports = {
               includeLocalScripts: {
                 type: 'boolean'
               },
-              internalScriptsInFooter: {
+              internalScriptsToFooter: {
                 type: 'boolean'
               },
-              externalScriptsInFooter: {
+              externalScriptsToFooter: {
                 type: 'boolean'
               },
               mergeInternalScripts: {
@@ -114,8 +114,8 @@ module.exports = {
           mergeInternalStyles: false,
           optimizeInternalStyles: false,
           includeLocalScripts: false,
-          internalScriptsInFooter: false,
-          externalScriptsInFooter: false,
+          internalScriptsToFooter: false,
+          externalScriptsToFooter: false,
           mergeInternalScripts: false,
           optimizeInternalScripts: false
         }

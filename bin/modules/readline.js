@@ -21,7 +21,7 @@ function ungicReadline(callback, options={}) {
         } else {      
           let _yargs = yargs.call(context, input);
 
-          _yargs.command('exit', 'Exit from application', yargs => {}, args => {
+          _yargs.command('exit', 'Exit from ungic', yargs => {}, args => {
             // Close command
             this.close().then(() => {
               process.exit(0);

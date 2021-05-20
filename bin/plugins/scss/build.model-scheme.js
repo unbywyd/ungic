@@ -46,10 +46,6 @@ module.exports = {
                 type: "boolean",
                 default: true
               },
-              versionInFilename: {
-                type: 'boolean',
-                default: true
-              },
               inverse: {
                 type: "boolean"
               },              
@@ -140,7 +136,6 @@ module.exports = {
           inverseMode: "combined",
           inverse: true,
           defaultInverse: false,
-          versionInFilename: true,
           autoprefixer: true,
           direction: 'ltr',
           oppositeDirection: true
