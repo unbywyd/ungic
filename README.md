@@ -3,12 +3,12 @@
 | --- |
 
 # About ungic packer
-Ungic layout's packer is a development environment for web coder! Ungic packer is based on its own modular [Dart Sass](https://sass-lang.com/dart-sass) framework and designed to work with web icons, css styles and html documents. About the features of this project, see the [official website](https://ungic.com)
+Ungic packer is a development environment for web templates! Ungic packer is based on its own modular [Dart Sass](https://sass-lang.com/dart-sass) framework and designed to work with web icons, css styles and html documents. About the features of this project, see the [official website](https://ungic.com)
 
 ## Documentation and other links
 For more information you can visit the [project website](https://ungic.com).
 
-Source code in a [bitbucket](https://bitbucket.org/ungic/ungic-packer-public/src/master/)
+Source code in a [github](https://github.com/unbywyd/ungic)
 
 [Demo](https://ungic.com/demo/)
 
