@@ -56,13 +56,15 @@ module.exports = function (yargs, done) {
       }      
     }, args => {
       done(async() => {
-        args = _.omit(args, '_', '$0');
+        args = _.omit(args, function(value, key, object) {
+          return !/^[A-Za-z\d]+$/.test(key)
+        });   
         if(!Object.keys(args).length) {
           return this.logger.system('Parameters not specified, use dev --help command to view supported parameters', 'CLI');
         }
         let plugin = this.app.project.plugins.get('scss');
         let config = plugin.builder.config;
-        try {          
+        try {     
           plugin.builder.setConfig({dev: _.extend(config.dev, args)});
           let components = await plugin.getComponents();
           if (components.length) {
