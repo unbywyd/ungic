@@ -282,6 +282,30 @@ class iconsPlugin extends plugin {
             this.system(`No icons`);
         }
     }
+    async generateIconsJS(models) {
+        let template = path.join(__dirname, 'templates', 'iconsJs.hbs');
+        template = await fsp.readFile(template, 'UTF-8');
+        if(models.size()) {
+            let icons = models.toJSON();
+let data = `
+export const icons = ${JSON.stringify(icons)};
+export const iconsMode = '${this.buildConfig.svgIconsMode}';
+export const config = ${JSON.stringify(this.config)};
+export const fontConfig = ${JSON.stringify(this.fontConfiguration())};
+export const svgSprite = \`${this.getSvgSprite(this.collection.filter(m => m.has('svg'), true))}\`;
+`;
+           let iconsRendered = '';
+           let cap = (str) => {
+               return str.charAt(0).toUpperCase() + str.slice(1);
+           }
+           for(let icon of models.toJSON()) {
+            iconsRendered += `\nexport const icon${cap(icon.id)} = \`${this.getIconForRender(icon.id)}\`;`;
+           }
+           let output = data + '\n' + template + iconsRendered;
+           await fse.outputFileSync(path.join(this.dist, 'exports', 'ungic-icons.module.js'), output);
+        }
+        
+    }
     async generateHTMLPage(data={}) {
         let template = path.join(__dirname, 'templates', 'icons.hbs');
             template = await fsp.readFile(template, 'UTF-8');
@@ -291,9 +315,17 @@ class iconsPlugin extends plugin {
         }
 
         source.release = this.releaseData;
-
+        let config = this.config;
+        
         if(this.collection.size()) {
-            if(data.svgSpriteData && data.svgSpriteData.sprite) {
+            // Generate Icons JS
+            try {
+                await this.generateIconsJS(this.collection);
+            } catch(e) {
+                console.log(e);
+            }
+
+            if(data.svgSpriteData && data.svgSpriteData.sprite  && !config.svgSprite.external) {
                 source.svgSprite = data.svgSpriteData.sprite;
             }
             if(this.releaseData) {
@@ -313,11 +345,11 @@ class iconsPlugin extends plugin {
                         source.icons.svgSprite = this.releaseData.svgIcons.map(m => m.toJSON());
                     }
                 }
-                if(hasSprites) {
+                if(hasSprites) {                    
                     source.icons.sprites = this.releaseData.sprites.map(m => m.toJSON());
                 }                
             } else {               
-                if(this.iconsStorage.svgSprite && this.iconsStorage.svgSprite.data) {
+                if(this.iconsStorage.svgSprite && this.iconsStorage.svgSprite.data  && !config.svgSprite.external) {
                     source.svgSprite = this.iconsStorage.svgSprite.data.sprite;
                 }         
                 let hasSvg = this.collection.find(m => m.has('svg')), hasSprites = this.collection.find(m => !m.has('svg'));
@@ -432,6 +464,7 @@ class iconsPlugin extends plugin {
                 let $ = cheerio.load(svgSource.data);
                 let $svg = $('svg');
                 $svg.attr('id', entityData.id);
+                $svg.removeAttr('data-name');
                 $svg.removeAttr('style');
                 $svg.find('symbol').each(function() {
                     $(this).before($(this).html());
@@ -491,8 +524,7 @@ class iconsPlugin extends plugin {
         let model = id;
         if(typeof id != 'object') {
             model = this.collection.findByID(id);
-        }
-        let fontConfig = this.fontConfiguration();
+        }  
         let config = this.config;
         let $domSvgOrigin = cheerio.load(model.get('svg'));
         let $svgOrigin = $domSvgOrigin('svg');
@@ -509,14 +541,21 @@ class iconsPlugin extends plugin {
         if(!options.presentation && title) {
             $svg.attr('aria-labelledby', uniqid);
             $svg.append(`<title id="${uniqid}">${title}</title>`);
-        } else {
+        } else if(!title || options.presentation) {
             $svg.attr('aria-hidden', true);
         }
         let url = '#' + className + '-' + model.get('id');
         if(config.svgSprite.external && !this.releaseData) {
-            url = 'ungic-sprite.svg' + url;
+            url = 'exports/ungic-sprite.svg' + url;
             if(!options.relativeSrc) {
                 url = this.project.fastify.address + '/' + url;
+            }
+        } else if(this.releaseData && config.svgSprite.external) {
+            let prefix = this.buildSuffix != '' ? (this.buildSuffix + '-') : '';            
+            url = '/exports/' + prefix + 'ungic-sprite.svg' + url;
+            let host = this.releaseData.host;       
+            if(host != '') { 
+                url = urlJoin(host, url);
             }
         }
         $svg.append(`<use xlink:href="${url}" />`);
@@ -538,12 +577,13 @@ class iconsPlugin extends plugin {
         }
         let svg = $svg.parent().html();
 
-        let label = '';
-        if(options.label) {
-            label = options.label;
-        }
+      
         if(options.href) {
-            return `<a href="${options.href}">${svg}${label}</a>`;
+            let attrs = '';
+            if(options.presentation) {
+                attrs = 'aria-hidden="true"';
+            }   
+            return `<a ${attrs} href="${options.href}">${svg}</a>`;
         } else {
             return svg;
         }
@@ -559,24 +599,30 @@ class iconsPlugin extends plugin {
         if(options.title) {
             title = options.title;
         }
-        title = `<span class="${fontConfig.font.class}-label">${title}</span>`;
-        if(options.presentation) {
-           title = '';
-        }
-        let label = '';
-        if(options.label) {
-            label = options.label;
-        }
-        let config = this.config;
-        if(!config.fonts.lables) {
-            title = '';
-        }
+        
+        if(title) {            
+            let classTitle = [];         
+            classTitle.push(`${fontConfig.font.class}-label`);
+
+            let attrs = '';
+            if(options.presentation) {
+                attrs = 'aria-hidden="true"';
+            }            
+            title = `<span ${attrs} class="${classTitle.join(' ')}">${title}</span>`;
+        }  
+  
         let classes = "";
         if(options.class) {
             classes = options.class;
         }
+
+        let config = this.config;
+        if(!config.fonts.lables) {
+           title = '';
+        }
+      
         if(options.href) {
-            return `<a href="${options.href}"><i aria-hidden="true" class="${classes} ${fontConfig.font.class} ${fontConfig.font.class}-${model.get('id')}"></i>${title}${label}</a>`;
+            return `<a href="${options.href}"><i aria-hidden="true" class="${classes} ${fontConfig.font.class} ${fontConfig.font.class}-${model.get('id')}"></i>${title}</a>`;
         } else {
             return `<i aria-hidden="true" class="${classes} ${fontConfig.font.class} ${fontConfig.font.class}-${model.get('id')}"></i>${title}`;
         }
@@ -592,20 +638,19 @@ class iconsPlugin extends plugin {
         if(options.title) {
             title = options.title;
         }
-        title = `<span class="${config.sprites.className}-label">${title}</span>`;
+        
         if(options.presentation) {
-           title = '';
+            title = `<span aria-hidden=true" class="${config.sprites.className}-label">${title}</span>`;
+        } else {
+            title = `<span class="${config.sprites.className}-label">${title}</span>`;
         }
-        let label = '';
-        if(options.label) {
-            label = options.label;
-        }
+       
         let classes = "";
         if(options.class) {
             classes = options.class;
-        }
+        }       
         if(options.href) {
-            return `<a href="${options.href}"><i aria-hidden="true" class="${classes} ${config.sprites.className}-${model.get('id')}"></i>${title}${label}</a>`;
+            return `<a href="${options.href}"><i aria-hidden="true" class="${classes} ${config.sprites.className}-${model.get('id')}"></i>${title}</a>`;
         } else {
             return `<i aria-hidden="true" class="${classes} ${config.sprites.className}-${model.get('id')}"></i>${title}`;
         }
@@ -1118,7 +1163,7 @@ class iconsPlugin extends plugin {
             }
         });
     }
-    getSvgSprite(models) {
+    getSvgSprite(models, noFile) {
         let config = this.config;
         if(!models.length) {
             this.warning('No icons');
@@ -1131,12 +1176,13 @@ class iconsPlugin extends plugin {
             $svg.append(this.getSymbol(model));
         }
         let svgContent = $svg.parent().html();
-        if(config.svgSprite.external || this.skipIconsEvent) {
+       
+       if(!noFile) { 
             let prefix = this.buildSuffix != '' ? (this.buildSuffix + '-') : '';
             if(this.releaseData) {
                 fse.outputFileSync(path.join(this.dist, 'exports', prefix + 'ungic-sprite.svg'), svgContent);
             } else {
-                fse.outputFileSync(path.join(this.dist, 'ungic-sprite.svg'), svgContent);
+                fse.outputFileSync(path.join(this.dist, 'exports', 'ungic-sprite.svg'), svgContent);
             }
         }
         return svgContent;
@@ -1147,7 +1193,7 @@ class iconsPlugin extends plugin {
             this.error(`getIconForRender error. ${id} icon not exists`);
             return
         }
-        let config = this.config;
+        //let config = this.config;
         let svg =  model.has('svg');
         if(!svg) {
             return this.getHTMlSpriteIcon(model, options);

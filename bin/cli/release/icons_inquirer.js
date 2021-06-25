@@ -108,7 +108,9 @@ module.exports = async function(args, defaultConfig={}, overlayConfig={}) {
     return iconsChoosed;
   }
 
+  
   let parseDefaultValues = async () => {
+
     if(release.sprites) {
       let _icons = await getDefaultIcons(false);
       if(!_icons.length) {
@@ -219,14 +221,16 @@ module.exports = async function(args, defaultConfig={}, overlayConfig={}) {
         release[storageName] = false;
       }
     }
+    await parseDefaultValues();
+    
     if(hasSvg) {
       if(!args.commonRelease) {
         await iconsRequest(true);
-      } else {
+      } /*else {
         if((release.sprites && !Array.isArray(release.sprites)) || (release.svgIcons && !Array.isArray(release.svgIcons))) {
           await parseDefaultValues();
         }
-      }
+      }*/
       if(release.svgIcons) {
         response = await prompts.call(this, [{
           type: 'list',

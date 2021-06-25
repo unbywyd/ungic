@@ -1293,6 +1293,7 @@ class htmlPlugin extends plugin {
                             if(this.iconsStorage.sprite && this.iconsStorage.sprite.data && this.iconsStorage.sprite.data.icons.length) {
                                 $head.append(`<link rel="stylesheet" href="${this.project.fastify.address + '/ungic/sprites'}">`);
                             }
+                            //console.log(this.iconsStorage.svgSprite.data);
                             if(this.iconsStorage.svgSprite  && this.iconsStorage.svgSprite.data && this.iconsStorage.svgSprite.data.icons.length && !this.iconsStorage.svgSprite.data.external) {
                                 $body.append(this.iconsStorage.svgSprite.data.sprite);
                             }
@@ -1319,7 +1320,7 @@ class htmlPlugin extends plugin {
 
                             if(this.release.iconsReleases && this.release.iconsReleases.length) {
                                 let svgSprite = _.find(this.release.iconsReleases, {type: 'svgSprite'});
-                                if(svgSprite) {
+                                if(svgSprite && !svgSprite.external) {
                                     $body.append(svgSprite.sprite);
                                 }
                             }
