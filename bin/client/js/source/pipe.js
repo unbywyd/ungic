@@ -43,35 +43,54 @@ document.addEventListener("DOMContentLoaded", function() {
     const resource = window.performance ? window.performance.getEntriesByType("resource") : [];
     const pagesrc = document.querySelector('[data-connect]').getAttribute('data-src');
     socket.on('change', (events) => {
-        for(let e of events) {           
-            let {events, relative, url}  = e;
-            if(relative == pagesrc) {
-                reload();                
-                return
+        for(let e of events) { 
+            let {event, relative, url, data}  = e;
+            if(event == 'iconsReload') {
+                if(data.data.sprite) {
+                    let prev = document.querySelector('.ungic-svg-sprite'), wrap = document.querySelector('.ungic-svg-sprite-wrap');
+                    let anchor = wrap ? wrap : prev;    
+
+                    let el = document.createElement('div');
+                        el.classList.add('ungic-svg-sprite-wrap');
+                        el.innerHTML = data.data.sprite;
+
+                    if(anchor) {                        
+                        anchor.parentNode.insertBefore(el, anchor);
+                        anchor.remove();
+                    } else {
+                        document.querySelector('body').appendChild(el);
+                    }
+                }  
             }
-            let skips = [];
-            if(relative.indexOf('.css') != -1) {
-                let links = document.querySelectorAll('[href*="'+relative+'"]');
-                if(links.length) {
-                    for(let link of links) {
-                        link.setAttribute('href', url + '?v=' + Date.now());
-                        skips.push(link);
+            if(relative) {
+                if(relative == pagesrc) {
+                    reload();                
+                    return
+                }
+                let skips = [];
+                if(relative.indexOf('.css') != -1) {
+                    let links = document.querySelectorAll('[href*="'+relative+'"]');
+                    if(links.length) {
+                        for(let link of links) {
+                            link.setAttribute('href', url + '?v=' + Date.now());
+                            skips.push(link);
+                        }
                     }
                 }
-            }
-            for(let res of resource) {
-                if(res.name.indexOf(url) != -1) {
-                    if(res.initiatorType == 'link') {
-                        let links = document.querySelectorAll('[href*="'+relative+'"]');
-                        if(links.length) {
-                            for(let link of links) {
-                                if(skips.indexOf(link) == -1) {
-                                    link.setAttribute('href', url + '?v=' + Date.now());
+                for(let res of resource) {
+                    if(res.name.indexOf(url) != -1) {
+                        if(res.initiatorType == 'link') {
+                            let links = document.querySelectorAll('[href*="'+relative+'"]');
+                            if(links.length) {
+                                for(let link of links) {
+                                    if(skips.indexOf(link) == -1) {
+                                        link.setAttribute('href', url + '?v=' + Date.now());
+                                    }
                                 }
                             }
+                        } else {
+                            reload();
                         }
-                    } else {
-                        reload();
                     }
                 }
             }

@@ -295,11 +295,9 @@ export const fontConfig = ${JSON.stringify(this.fontConfiguration())};
 export const svgSprite = \`${this.getSvgSprite(this.collection.filter(m => m.has('svg'), true))}\`;
 `;
            let iconsRendered = '';
-           let cap = (str) => {
-               return str.charAt(0).toUpperCase() + str.slice(1);
-           }
+
            for(let icon of models.toJSON()) {
-            iconsRendered += `\nexport const icon${cap(icon.id)} = \`${this.getIconForRender(icon.id)}\`;`;
+            iconsRendered += `\nexport const icon_${icon.id} = \`${this.getIconForRender(icon.id)}\`;`;
            }
            let output = data + '\n' + template + iconsRendered;
            await fse.outputFileSync(path.join(this.dist, 'exports', 'ungic-icons.module.js'), output);

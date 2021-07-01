@@ -374,6 +374,12 @@ class app extends skeleton {
         this.project.on('log', (type, message, args={}) => {
             this.log(message, type, args);
         });
+        this.project.on('icons', async e => {           
+            this.finishController.push({
+                event: 'iconsReload',
+                data: e
+            });
+        });
         this.project.on('watcher', (event, rp, ph) => { 
             let needPath = path.normalize(path.join(config.fs.dirs.source, config.fs.source.assets).replace(/(^\/|\/$)+/, '')); 
             if(rp.indexOf(needPath) !== 0) {

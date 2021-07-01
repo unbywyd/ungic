@@ -153,6 +153,7 @@ class htmlPlugin extends plugin {
         this.sassUsed = new Storage;
         this.pipes = new Storage;
         this.mainScssPipes = new Storage;
+        this.pipeStorage = new Storage;
         this.iconsUsed = new Storage;
         this.iconsDataUsed = new Storage;
         this.slotsStorage = new Storage;
@@ -381,6 +382,12 @@ class htmlPlugin extends plugin {
                         }
                     }
                 }
+
+                attrs = _.extend(attributes, attrs);
+                this.pipeStorage.set({
+                    page_id: args.id,
+                    attrs
+                });
                 return output;
             } catch(e) {
                 console.log(e);
@@ -1760,8 +1767,9 @@ class htmlPlugin extends plugin {
         });
 
         this.project.on('icons', async e => {          
-            try {
+            try {                                
                 let pagesReady = [];
+                let pagesToRebuild = [];
                 let ids;               
                 this.iconsStorage[e.type] = e;
                 if(this.iconsDataUsed.storage.length) {
@@ -1773,9 +1781,6 @@ class htmlPlugin extends plugin {
                             await this.setEntityByPath('add', page.get('path'));
                         }
                     }
-                }
-                if(this.iconsUsed.storage.length) {
-                    let pagesToRebuild = [];
                     let pages = _.groupBy(this.iconsUsed.storage, 'page_id');
             
                     for(let pageId in pages) {
@@ -1790,13 +1795,29 @@ class htmlPlugin extends plugin {
                             }
                         }
                     }
-                    if(pagesToRebuild.length) {                       
-                        for(let pageId of pagesToRebuild) {
-                            let page = this.collection.findByID(pageId);
-                            if(page) {
-                                this.collection.remove(pageId, {silent: true});
-                                await this.setEntityByPath('add', page.get('path'));
+                }
+                
+                let forcePages = _.filter(this.pipeStorage.storage, el => el.attrs['force-all-icons']);
+
+              
+                if(forcePages && forcePages.length) {
+                    let forceIconsPages = _.pluck(forcePages, 'page_id');                   
+                    if(forceIconsPages && forceIconsPages.length) {
+                        for(let pid of forceIconsPages) {
+                            if(!pagesToRebuild.includes(pid)) {
+                                pagesToRebuild.push(pid);
                             }
+                        }
+                    }      
+                }          
+                    
+
+                if(pagesToRebuild.length) {                       
+                    for(let pageId of pagesToRebuild) {
+                        let page = this.collection.findByID(pageId);
+                        if(page) {
+                            this.collection.remove(pageId, {silent: true});
+                            await this.setEntityByPath('add', page.get('path'));
                         }
                     }
                 }
