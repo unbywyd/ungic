@@ -17,7 +17,7 @@ const watchGrouping = require('../../modules/watch-grouping');
 const { extend: Collection } = require('../../modules/collection-sync');
 const { extend: Model } = require('../../modules/model');
 const sass = require("sass");
-const Fiber = require("fibers");
+//const Fiber = require("fibers");
 const encodeFunction = require('../../modules/sass-json');
 const postcss = require('postcss');
 const clean = require('../../modules/postcss-clean');
@@ -526,9 +526,9 @@ class scssPlugin extends plugin {
             functions,
         }, config);
 
-        if (process.env.NODE_ENV == 'development') {
+        /*if (process.env.NODE_ENV == 'development') {
             renderConfig.fiber = Fiber
-        }
+        }*/
         if (this.activeRelease) {
             renderConfig.sourceMap = "string";
             renderConfig.sourceMapContents = true;

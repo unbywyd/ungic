@@ -58,7 +58,6 @@
     "fast-glob": "^3.2.5",
     "fastify": "^2.15.3",
     "fastify-static": "^2.7.0",
-    "fibers": "^4.0.3",
     "fs-extra": "^8.1.0",
     "handlebars": "^4.7.7",
     "html-minifier": "^4.0.0",
