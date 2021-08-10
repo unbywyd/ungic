@@ -374,6 +374,12 @@ class scssPlugin extends plugin {
             }
         })();
     }
+    rebuild(cids) {
+        this.renderMaster.add({
+            description: `${cids} components`,
+            components: cids
+        });
+    }
     generateVars(cids, source) {
         let config = this.config;       
         let colors = new Map;

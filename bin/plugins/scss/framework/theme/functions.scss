@@ -131,7 +131,7 @@ $theme: meta.module-variables(theme);
     $light-color: un-meta.lightest($background-color, $text-color);
 
     $d: list.nth(un-meta.hsl($light-color), 3);
-    $l: ((($d - $l) * $intensity) / 100) + $l;
+    $l: math.div((($d - $l) * $intensity), 100) + $l;
     @return hsl($h, $s * 1%, strip-unit($l) * 1%);
 }
 
@@ -164,7 +164,7 @@ $theme: meta.module-variables(theme);
     $background-color: colors(background-color);
     $dark-color: un-meta.darkest($background-color, $text-color);
     $d: list.nth(un-meta.hsl($dark-color), 3);
-    $l: $l - (($l - $d) * $intensity) / 100;
+    $l: $l - math.div((($l - $d) * $intensity), 100);
     @return hsl($h, $s * 1%, strip-unit($l) * 1%);
 }
 
@@ -247,13 +247,13 @@ $theme: meta.module-variables(theme);
     @if $hue-offset != 0 {
         $offset: $hue-offset;
     } @else {
-        $offset: ($offset * strip-unit($intensity) / 100);
+        $offset: math.div($offset * strip-unit($intensity), 100);
     }
 
     $color: color.adjust(darken($color, $intensity), $hue: $offset);
     $hsl: un-meta.hsl($color);
 
-    $s: list.nth($hsl, 2) - ((100 - list.nth($hsl, 2)) * strip-unit($intensity) / 100);
+    $s: list.nth($hsl, 2) - math.div((100 - list.nth($hsl, 2)) * strip-unit($intensity), 100);
     $result: hsl(list.nth($hsl, 1), $s * 1%, list.nth($hsl, 3) * 1%);
 
     $change-saturation: $saturation;
@@ -317,7 +317,7 @@ $theme: meta.module-variables(theme);
     @if $hue-offset != 0 {
         $offset: $hue-offset;
     } @else {
-        $offset: ($offset * strip-unit($intensity) / 100);
+        $offset: math.div($offset * strip-unit($intensity), 100);
     }
 
     $color: color.adjust(lighten($color, $intensity), $hue: $offset);

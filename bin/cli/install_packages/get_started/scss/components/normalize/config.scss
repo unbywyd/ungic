@@ -11,7 +11,7 @@
 $base-bdrds-sm: 3px;
 $base-border-width: 1px;
 $base-light-gray-color: gray(.9);
-$base-margin: prop(margin-top) / 2;
+$base-margin: prop(margin-top) * 0.5;
 $base-tab-size: 10;
 $base-line-height-sm: 1.2;
 $base-color-system-name: system;
@@ -33,7 +33,7 @@ $heading-line-height: $base-line-height-sm;
 
 // Pre
 $pre-margin: $base-margin 0;
-$pre-padding: prop(padding, top) / 2;
+$pre-padding: prop(padding, top) * 0.5;
 $pre-bgc: $base-light-gray-color;
 $pre-tab-size: $base-tab-size;
 $pre-color: color(text-color);
@@ -65,7 +65,7 @@ $dt-margin-bottom: $base-margin;
 $fieldset-border: $base-border-width solid $base-light-gray-color;
 $fieldset-padding: prop(padding);
 
-$legend-side-space: prop(padding-left) / 2;
+$legend-side-space: prop(padding-left) * 0.5;
 
 
 // Paragraph

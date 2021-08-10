@@ -90,23 +90,23 @@ h1 {
 }
 
 h2 {
-  font-size: strip-unit(strip-unit(this.config(heading-max-size)) * 90% / 100) + 0em;
+  font-size: strip-unit(strip-unit(this.config(heading-max-size)) * 90% * 0.01) + 0em;
 }
 
 h3 {
-  font-size: strip-unit(strip-unit(this.config(heading-max-size)) * 80% / 100) + 0em;
+  font-size: strip-unit(strip-unit(this.config(heading-max-size)) * 80% * 0.01) + 0em;
 }
 
 h4 {
-  font-size: strip-unit(strip-unit(this.config(heading-max-size)) * 70% / 100) + 0em;
+  font-size: strip-unit(strip-unit(this.config(heading-max-size)) * 70% * 0.01) + 0em;
 }
 
 h5 {
-  font-size: strip-unit(strip-unit(this.config(heading-max-size)) * 60% / 100) + 0em;
+  font-size: strip-unit(strip-unit(this.config(heading-max-size)) * 60% * 0.01) + 0em;
 }
 
 h6 {
-  font-size: strip-unit(strip-unit(this.config(heading-max-size)) * 50% / 100) + 0em;
+  font-size: strip-unit(strip-unit(this.config(heading-max-size)) * 50% * 0.01) + 0em;
 }
 
 h1,
@@ -200,7 +200,7 @@ legend {
   padding: this.config(legend-side-space);
   white-space: normal;
   display: block;
-  margin-left: negative(this.config(legend-side-space) / 2);
+  margin-left: negative(this.config(legend-side-space) * 0.5);
 }
 
 progress {
@@ -284,7 +284,7 @@ samp {
 
 code,
 .code {
-  padding: 0 this.prop(font-size) / 4;
+  padding: 0 this.prop(font-size) * 0.25;
   border-radius: this.config(code-bdrds);
   tab-size: this.config(code-tab-size);
   color: color(this.config(code-color-name));
@@ -338,7 +338,7 @@ var,
   font-family: monospace;
   font-style: normal;
   border-radius: this.config(var-bdrds);
-  padding: 0 this.prop(font-size) / 4;
+  padding: 0 this.prop(font-size) * 0.25;
   background-color:this.config(var-bgc);
   color: this.config(var-color);
 }
@@ -361,7 +361,7 @@ em {
 kbd {
   color: this.config(kbd-color);
   border-radius: this.config(kbd-bdrds);;
-  padding: 0 this.prop(font-size) / 4;
+  padding: 0 this.prop(font-size) * 0.25;
   background-color: this.config(kbd-bgc);
 }
 

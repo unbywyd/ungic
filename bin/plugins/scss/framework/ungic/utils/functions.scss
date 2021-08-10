@@ -38,7 +38,7 @@
 }
 
 @function em($px, $def) {
-    @return (strip-unit($px) / strip-unit($def)) + 0em;
+    @return math.div(strip-unit($px), strip-unit($def)) + 0em;
 }
 
 @function merge($maps...) {
@@ -93,7 +93,7 @@
 
 @function strip-unit($number) {
     @if type-of($number) == 'number' and not math.is-unitless($number) {
-        @return $number / ($number * 0 + 1);
+        @return math.div($number, ($number * 0 + 1));
     }
 
     @return $number;

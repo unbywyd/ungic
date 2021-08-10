@@ -6,6 +6,8 @@
 */
 
 // SASS native modules
+@use "sass:math";
+
 @use "sass:meta" as meta;
 @use "sass:map" as map;
 @use "sass:list" as list;
@@ -303,7 +305,7 @@
             font-size: 1.4em;
         }
         &-color {                   
-            width: 100% / list.length(colors());
+            width: math.div(100%, list.length(colors()));
             &-name {
                 font-size: .8em;
                 line-height: 1.2;
@@ -325,7 +327,7 @@
                 }    
             }
             &.gray {
-                width: 100 / 21 + 0%;
+                width: math.div(100, 21) + 0%;
             }
             @for $i from -10 through 10 {
                 &.bgc-gray-#{$i} {             
@@ -333,7 +335,7 @@
                         &-colors-color-box {
                             display: block;
                             padding: 2em 0;
-                            background-color: color(gray, $i / 10);
+                            background-color: color(gray, $i * 0.1);
                         }
                     }
                 }   

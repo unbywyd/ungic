@@ -240,30 +240,22 @@ class ungicProject extends skeleton {
         } catch(e) {
             console.log(e);
             this.error(e);
-        }
-
-        this.watcher = chokidar.watch(this.root, {
-            ignoreInitial: true,
-            ignorePermissionErrors: true,
-            ignored: (ph) => ph.includes('node_modules') || ph.includes('.git') || path.extname(ph).toLowerCase() == '.tmp',
-            awaitWriteFinish: {
-                stabilityThreshold: 100,
-            },
-        }).on('all', (event, ph, stat) => {         
+        }     
+        this.createWatcher({
+            ignoreInitial: true
+        });  
+        this.begined = true;
+    }
+    createWatcher(cfg) {
+        this.watcher = chokidar.watch(this.root, Object.assign({                        
+                ignorePermissionErrors: true,
+                ignored: (ph) => ph.includes('node_modules') || ph.includes('.git') || path.extname(ph).toLowerCase() == '.tmp',
+                awaitWriteFinish: {
+                    stabilityThreshold: 100,
+                },
+            }, cfg)).on('all', (event, ph, stat) => {         
             if(event == 'change' && path.join(this.root, 'ungic.config.json') == ph) {
                 this.updateConfig();
-            }
-            let findDir = (fs, name) => {
-                if(fs.dirs) {
-                    for(let dir in fs.dirs) {
-                        let dirLabel = fs.dirs[dir];
-                        if(dirLabel == name) {
-                            return config.fs[dir];
-                        }
-                    }
-                } else {
-                   return fs[name];
-                }
             }
             let paths = [...this.skipWatch.values()];
             if(paths.length) {
@@ -288,7 +280,7 @@ class ungicProject extends skeleton {
                 this._events.emit('watcher:root', event, ph, stat);
             }
         });
-        this.begined = true;
+        return this.watcher;
     }
     unwatch(plugin) {
         this.skipWatch.add(plugin.root);
@@ -297,7 +289,7 @@ class ungicProject extends skeleton {
         this.skipWatch.delete(plugin.root);
     }
     destroy() {
-        this.watcher.close();
+        return this.watcher.close();
     }
     fsDirs(dirname) {
         let config = this.config;

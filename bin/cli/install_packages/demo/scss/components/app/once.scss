@@ -16,7 +16,7 @@
 
 $gray: ();
 @for $i from -10 through 10  {
-    $value: $i / 10;
+    $value: $i * 0.1;
     @if($value == 0) {
         $value: 'gray';
     }
