@@ -10,6 +10,9 @@
 
 $theme: meta.module-variables(theme);
 
+@function percentToDeg($num) {    
+    @return math.div((strip-unit($num) * 360), 100) + 0deg;
+}
 /*
 *   check if the color has a palette
 */
@@ -90,7 +93,7 @@ $theme: meta.module-variables(theme);
             @return colors($color-name);
         }
         $color: map.get($palette, $tint-name);
-        @return color.adjust($color, $hue: $hue-offset);
+        @return color.adjust($color, $hue: percentToDeg($hue-offset));
     } @else {
         @if type-of($color-name) != string {
             @return transparent;
@@ -250,7 +253,7 @@ $theme: meta.module-variables(theme);
         $offset: math.div($offset * strip-unit($intensity), 100);
     }
 
-    $color: color.adjust(darken($color, $intensity), $hue: $offset);
+    $color: color.adjust(darken($color, $intensity), $hue: percentToDeg($offset));
     $hsl: un-meta.hsl($color);
 
     $s: list.nth($hsl, 2) - math.div((100 - list.nth($hsl, 2)) * strip-unit($intensity), 100);
@@ -320,7 +323,7 @@ $theme: meta.module-variables(theme);
         $offset: math.div($offset * strip-unit($intensity), 100);
     }
 
-    $color: color.adjust(lighten($color, $intensity), $hue: $offset);
+    $color: color.adjust(lighten($color, $intensity), $hue: percentToDeg($offset));
     $hsl: un-meta.hsl($color);
 
     $result: hsl(list.nth($hsl, 1), list.nth($hsl, 2) * 1%, list.nth($hsl, 3) * 1%);
@@ -408,7 +411,7 @@ $theme: meta.module-variables(theme);
         }
     }
     $color: hsl(list.nth($hsl, 1), strip-unit($saturation) * 1%, strip-unit($light) * 1%);
-    @return color.adjust($color, $hue: $amount * map.get($options, hue-offset));
+    @return color.adjust($color, $hue: percentToDeg($amount * map.get($options, hue-offset)));
 }
 
 /*
