@@ -845,11 +845,10 @@ export const svgSprite = \`${this.getSvgSprite(this.collection.filter(m => m.has
         /*
         *   Для облегчения задачи, будем возвращать путь относительно корня проекта, а не CSS файла.
         */
-        if(!this.releaseData) {
-            return urlJoin(this.project.fastify.address, relativePath);
+       if(!this.releaseData) {     
+           return urlJoin(this.project.fastify.address, relativePath);
         }
         let host = this.releaseData.host;
-       
         if(host != '') { 
             return urlJoin(host, relativePath);
         } else {
@@ -874,7 +873,7 @@ export const svgSprite = \`${this.getSvgSprite(this.collection.filter(m => m.has
             icons,
             path: this.generateDistSrc(path.join(this.spritesDistRelative, prefix + config.sprites.className + '.png'))
         }
-        template = await fsp.readFile(template, 'UTF-8');
+        template = await fsp.readFile(template, 'UTF-8');    
         let content = hbs.compile(template)(source);
         return content;
     }
@@ -926,7 +925,7 @@ export const svgSprite = \`${this.getSvgSprite(this.collection.filter(m => m.has
             this.error('No generated sprites');
             return ' ';
         }
-        let sassSource = await this.generateSpriteSass(this.iconsStorage.sprite.data.icons, true);
+        let sassSource = await this.generateSpriteSass(this.iconsStorage.sprite.data.icons);
         if(!this.lastSpritesCSSGeneratedDate || this.lastSpritesCSSGeneratedDate != this.iconsStorage.sprite.date) {
             this.lastSpritesCSSGeneratedDate = this.iconsStorage.sprite.date;
             try {

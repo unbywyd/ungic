@@ -126,7 +126,7 @@ module.exports = async function(args) {
     if(commonIcons.length) {
       for(let id of commonIcons) {      
         let icon = iconsPlugin.collection.get(id);
-        if(icon.has('svg')) {
+        if(icon && icon.has('svg')) {
           commonSvgIcons.push(id);
         } else {
           commonSpritesIcons.push(id);

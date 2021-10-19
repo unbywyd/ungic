@@ -17,7 +17,6 @@ const merge = require('deepmerge');
 let URL = require('url');
 const fg = require('fast-glob');
 
-
 class finishController extends skeleton {
     constructor(config={}) {
         super({}, {objectMerge: true}, config);
@@ -349,7 +348,6 @@ class app extends skeleton {
                     this.fastify.address = address;
                     done(address);
                 }).catch(() => {
-                    this.fastify.close();
                     this.serverPort = this.serverPort + 1;
                     start();
                 });
