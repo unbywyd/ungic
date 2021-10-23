@@ -1036,6 +1036,7 @@ class htmlPlugin extends plugin {
         template = await fsp.readFile(template, 'UTF-8');
         if(path.extname(name) != '') {
             name = path.basename(name, path.extname(name));
+            args.name = name;
         }
         let rootPath = path.join(this.root, name + '.html');
         if(await fsp.exists(rootPath)) {
