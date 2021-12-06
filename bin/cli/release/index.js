@@ -229,7 +229,9 @@ module.exports = async function(args) {
     // Вот тут надо тупо скопировать все файлы в дист
     if(buildConfig.saveAllAssets) {
       if(await fse.pathExists(this.app.project.assets)) {
+        this.logger.system(`Start copying assets files...`);
         await fse.copy(this.app.project.assets, releaseDist);
+        this.logger.system(`Assets files copied successfully`);
       }
     }
 
@@ -244,6 +246,7 @@ module.exports = async function(args) {
         scssRelease.noConflict = buildConfig.noConflict;
         try {
           commonScssRelease = await scssPlugin.release(_.extend({}, scssRelease));
+          this.logger.system(`Common styles have been generated`);
         } catch(e) {
           this.logger.system(`CSS release completed with an error: ${e.message}`, 'CLI', 'error');
         }
@@ -285,6 +288,7 @@ module.exports = async function(args) {
                 filename
               }));
               data.iconsReleases = release.releases;
+              this.logger.system(`Icons have been generated`);
             } catch(e) {
               this.logger.system(`ICONS release completed with an error: ${e.message}`, 'CLI', 'error');
             }
@@ -302,6 +306,7 @@ module.exports = async function(args) {
           svgIcons,
           sprites
         }));
+        this.logger.system(`Icons have been generated`);
       } catch(e) {
         this.logger.system(`ICONS release completed with an error: ${e.message}`, 'CLI', 'error');
       }

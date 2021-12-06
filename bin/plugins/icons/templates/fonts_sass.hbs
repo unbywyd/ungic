@@ -101,13 +101,15 @@ $_icons: (
 }
 
 @mixin icon-label {
-    display: block;
-    text-align: center;
-    text-overflow: ellipsis;
+    border: 0;
+    clip: rect(1px, 1px, 1px, 1px);
+    clip-path: inset(50%);
+    height: 1px;
+    margin: -1px;
     overflow: hidden;
-    white-space: nowrap;
-    font-size: 10px;
-    display: block;    
+    padding: 0;
+    position: absolute;
+    width: 1px;
     word-wrap: normal !important;
 }
 

@@ -52,6 +52,8 @@ module.exports = async function(args, defaultConfig={}, overlayConfig={}) {
   }
 
   let themes = await scssPlugin.getThemes();
+
+  
   /*
   *   Если в проекте нет темы по умолчанию прервать релиз
   */
@@ -59,6 +61,7 @@ module.exports = async function(args, defaultConfig={}, overlayConfig={}) {
     this.logger.system(`To create a CSS release, the default theme is required`, 'CLI', 'warning');
     return
   }
+
   if(themes.length > 1) {
   	/*
   	*		Если в проекте больше чем одна тема.
@@ -336,8 +339,10 @@ module.exports = async function(args, defaultConfig={}, overlayConfig={}) {
     /*
     *   Если выбрана только одна тема, сделать её по умолчанию и не генерировать больше тем.
     */
-    if(release.themes && release.themes.length == 1) {
-      release.defaultTheme = release.themes.shift();
+    
+    if(themes.length == 1) {
+      release.defaultTheme = themes.shift();
+      release.themes = _.reject(themes, t => t == release.defaultTheme);
     }
 
     /*
@@ -363,5 +368,6 @@ module.exports = async function(args, defaultConfig={}, overlayConfig={}) {
       release.components = componentsToRelease;
     }
   }
+ 
  	return release;
 }

@@ -18,8 +18,6 @@
 @use "functions"as *;
 @use "mixins"as *; 
 
-@forward "tools";
-
 $breakpoints: breakpoints(keys);
 $only-max-width-container: this.config(container-max-width-only);
 .#{this.config(class-names, container)} {
@@ -86,8 +84,6 @@ $only-max-width-container: this.config(container-max-width-only);
         $px in this.config(gap-custom) {
             $margin: $px;
             &-gap-custom-#{$class-name} {
-                margin-top: u(negative($margin));
-                margin-bottom: u(negative($margin));
                 padding-left: u($margin);
                 padding-right: u($margin);
                 &,
@@ -112,8 +108,6 @@ $only-max-width-container: this.config(container-max-width-only);
             @for $i from 1 through this.config(gap-steps) {
                 &-#{$i} {
                     $margin: this.config(gap-space) * $i;
-                    margin-top: u(negative($margin));
-                    margin-bottom: u(negative($margin));
                     padding-left: u($margin);
                     padding-right: u($margin);
                     &,
@@ -144,8 +138,8 @@ $only-max-width-container: this.config(container-max-width-only);
 .row {
     flex-wrap: wrap;
     display: flex;
-    align-items: center;
     flex-direction: row;
+    align-items: center;
     &-nowrap, &.nowrap {
         flex-wrap: nowrap;
     }
@@ -172,3 +166,4 @@ $only-max-width-container: this.config(container-max-width-only);
         display: inline-flex;
     }
 }
+@import "tools"; 
