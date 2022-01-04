@@ -33,7 +33,7 @@ $grays: (
   "700": $gray-700,
   "800": $gray-800,
   "900": $gray-900
-) !default;
+);
 // scss-docs-end gray-colors-map
 // fusv-enable
 
@@ -65,7 +65,7 @@ $colors: (
   "white":      $white,
   "gray":       $gray-600,
   "gray-dark":  $gray-800
-) !default;
+);
 // scss-docs-end colors-map
 
 // scss-docs-start theme-color-variables
@@ -89,7 +89,7 @@ $theme-colors: (
   "danger":     $danger,
   "light":      $light,
   "dark":       $dark
-) !default;
+);
 // scss-docs-end theme-colors-map
 
 // The contrast ratio to reach against white, to determine if color changes from "light" to "dark". Acceptable values for WCAG 2.0 are 3, 4.5 and 7.

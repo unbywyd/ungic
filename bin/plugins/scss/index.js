@@ -22,7 +22,7 @@ const encodeFunction = require('../../modules/sass-json');
 const postcss = require('postcss');
 const clean = require('../../modules/postcss-clean');
 const srcReplacer = require('../../modules/postcss-src-replacer');
-
+const rgbcolor = require('rgb-color');
 const rtl = require('postcss-rtl');
 const autoprefixer = require('autoprefixer');
 const Storage = require('../../modules/storage');
@@ -446,6 +446,21 @@ class scssPlugin extends plugin {
     _sassRender(data, cids, config = {}) {        
         let exportsStorage = [];
         let functions = _.extend(encodeFunction, {
+            "provide-color($color)": (color) => {
+                let sassString = sass.types.String;
+                let sassColor = sass.types.Color;
+                if(color instanceof sass.types.Color) {
+                    return color
+                } else {
+                    let varName = color.getValue();
+                    let colorFound = _.find(this.colorsVars.storage, e => e.cssVarName == varName);
+                    if(colorFound) {
+                        let obj = rgbcolor(colorFound.color).channels();
+                        return new sassColor(obj.r, obj.g, obj.b);
+                    }
+                }
+                return new sassString("");
+            },
             "is-release()": () => {
                 if (config.release) {
                     return sass.types.Boolean.TRUE
@@ -488,6 +503,7 @@ class scssPlugin extends plugin {
                         this.colorsVars.set({
                             cid,                            
                             varName,
+                            cssVarName: 'var('+varName+')',
                             source,
                             ...payload                  
                         }); 

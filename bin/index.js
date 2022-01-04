@@ -127,15 +127,16 @@ class app extends skeleton {
         this.finishController.parent = this;
     }
     async createApp(name) {
-        let ph = path.join(appPaths.root, name);
+        let ph = path.join(appPaths.cwd, name);
         let dirExist = await fsp.exists(ph);
+  
         if(dirExist && fs.readdirSync(ph).length) {
-            this.system(name + ' directory already exists and is not empty', 'error');
+            this.system(ph + ' directory already exists and is not empty', 'error');
             return process.exit();
-        }
+        }        
         return this.initialize({
             root: ph,
-            name,
+            name: path.basename(ph),
             createMode: true
         });
     }
@@ -148,22 +149,22 @@ class app extends skeleton {
             }
             return process.exit();
         }
-        let response;
-        if(!appPaths.config && !appPaths.package) {           
-            if(!options.createMode) {
-                this.system('Note! Recommended to create package.json using npm init command.', 'warning');
-                response = await prompts({
-                    type: 'confirm',
-                    name: 'next',
-                    message: 'Do you want to continue without installation npm package.json?',
-                    initial: true
-                });
-                if(!response.next) {
-                    this.system('Please initialize npm first', 'Note');
-                    return process.exit();
-                }
-            }
 
+        let response;
+        if(!appPaths.config && !appPaths.package && !options.createMode) {           
+            this.system('Note! Recommended to create package.json using npm init command.', 'warning');
+            response = await prompts({
+                type: 'confirm',
+                name: 'next',
+                message: 'Do you want to continue without installation npm package.json?',
+                initial: true
+            });
+            if(!response.next) {
+                this.system('Please initialize npm first', 'Note');
+                return process.exit();
+            }
+        }
+        if(options.createMode) {
             response = await prompts([
                 {
                     type: 'text',

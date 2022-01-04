@@ -26,6 +26,8 @@
 // you must include any style files here
 // or write them in this file
 
+@use "ungic.components.bootstrap" as *; 
+
 @include this.component {
   h1 {
     color: theme.color(primary, -.5);
