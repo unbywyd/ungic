@@ -363,8 +363,9 @@ class App extends skeleton {
 
     let htmlPlugin = this.app.project.plugins.get('html');
     let iconsPlugin = this.app.project.plugins.get('icons');
+    let scssPlugin = this.app.project.plugins.get('scss');
 
-    if(!fs.readdirSync(htmlPlugin.root).length && !fs.readdirSync(iconsPlugin.root).length) {
+    if(!fs.readdirSync(htmlPlugin.root).length && !fs.readdirSync(iconsPlugin.root).length && !fs.readdirSync(scssPlugin.root).length) {
       let answers = await prompts.call(this, [{
         type: 'confirm',
         name: 'install',
