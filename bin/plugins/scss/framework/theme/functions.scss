@@ -629,6 +629,7 @@ $theme: meta.module-variables(theme);
         $color: "#{color.red($color)}, #{color.green($color)}, #{color.blue($color)}";
         $colorName: "#{$colorName}-rgb";
     }
+    
     $save-color: ungic-save-color((
         'color': meta.inspect($color),
         'colorName': meta.inspect($colorName),
@@ -640,6 +641,7 @@ $theme: meta.module-variables(theme);
         'themeName': meta.inspect(get('name')),
         'themePrefix': get('theme-prefix')
     ));
+
     @return var(string.unquote($save-color));
 }
 

@@ -474,13 +474,13 @@ class scssPlugin extends plugin {
                 for (let i = 0; i < data.getLength(); i++ ) {
                     let key = data.getKey(i).getValue();                  
                     let value = data.getValue(i).getValue();
-                    let nums = ['colorTint', 'hueOffset', 'saturation'];
+                    let nums = ['hueOffset', 'saturation'];
                     if(key == 'colorName' || key == 'color') {
                         value = value.replace(/'|"/g, '');
-                    }
-                    payload[key] = nums.includes(key) ? parseFloat(value) : value;                    
+                    }                 
+                    payload[key] = (typeof value == 'number') ? parseFloat(value) : value;     
+                                
                 }         
-
                 let source = JSON.stringify(_.omit(payload, 'color'));
                 let toID = (num) => {
                     return num.toString().replace('.', '0');
@@ -488,7 +488,7 @@ class scssPlugin extends plugin {
                 
                 let varName = `--uc-${payload.colorName}`;
                 
-                if(payload.colorTint !== 0) {
+                if(payload.colorTint !== 0) {                    
                     varName = varName + `-${toID(payload.colorTint)}t`;
                 }    
                 if(payload.hueOffset !== 0) {
