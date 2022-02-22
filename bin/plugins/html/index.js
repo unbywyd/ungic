@@ -470,6 +470,10 @@ class htmlPlugin extends plugin {
             }
         });
         Handlebars.registerHelper("icon", (id, context) => {
+            if(!context) {
+                this.error(`Incorrect use of icon rendering: context is required, please use {{{icon "name-icon"}}}`);
+                return '';
+            }
             let rootData = context.data.root.ungic;
             let options = context.hash ? context.hash: {};
             let config = this.config;
@@ -1087,6 +1091,7 @@ class htmlPlugin extends plugin {
                         ungic: source
                     });
                 } catch(e) {
+                    console.log(e);
                     this.log(`Handlebars compile error in ${attrs.path} page: ${e.message}`, 'error');
                 }
                 let distPath = this.dist;
