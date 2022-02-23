@@ -13,22 +13,25 @@ module.exports = postcss.plugin('ungic-src-replacer', function (opts) {
             let regexp = regexps.find(regexp => decl.value.search(regexp) != -1);
             if(regexp) {
                 let value = decl.value.replace(regexp, function(str, before, src, after) {       
-                    
+                    let virtualRelativeDist = opts.virtualRelativeDist;
+                    if(!virtualRelativeDist) {
+                        virtualRelativeDist = opts.release.includeLocalStyles ? '' : (opts.relativeDist || '')
+                    }
                     let data = parseSrc({
                         assets: opts.assets,
                         src,
                         dist: opts.dist,
                         relativeDist: opts.relativeDist,
                         releaseDistPath: opts.releaseDistPath,
-                        virtualRelativeDist: opts.release.includeLocalStyles ? '' : (opts.relativeDist || ''),
+                        virtualRelativeDist,
                         urlsOptimization: opts.release.urlsOptimization
                     });
-                    
                     if(data.isRelative) {
                         /*
                         *   Если файл не найден и требуется оптимизация удаляем правило
                         */
-                      
+                        
+                        //console.log(data);
                         if(!data.sourceFile && opts.release.urlsOptimization) {
                             if(opts.log) {
                                 opts.log(`${src} resource not found and ${decl.prop} property will be removed`, 'warning');
@@ -42,7 +45,8 @@ module.exports = postcss.plugin('ungic-src-replacer', function (opts) {
                         }    
                         
                         let host = opts.release.host || '';                     
-                        if(opts.release.urlsOptimization || host != '') {                                    
+                        if(opts.release.urlsOptimization || host != '') {   
+                            //console.log(str, `${before}${urlJoin(host, data.virtualRelativeRootSrc)}${after}`);                                 
                             return `${before}${urlJoin(host, data.virtualRelativeRootSrc)}${after}`;
                         } else {
                             return str;

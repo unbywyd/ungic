@@ -1343,12 +1343,13 @@ class htmlPlugin extends plugin {
                                 release: this.release,
                                 relativeDist: '',
                                 dist: this.dist,            
-                                log: this.log.bind(this),                
+                                log: this.log.bind(this),            
                                 releaseDistPath: distPath
                             }));
  
                             let internalStyles = [];
 
+                            let internalStylesToPostCSS = [];
                              // Ищем другие подключенные локальные стили
                             $('link[rel="stylesheet"]').each(function() {                               
                                 let href = $(this).attr('href');
@@ -1368,13 +1369,37 @@ class htmlPlugin extends plugin {
                                         if(!self.release.includeLocalStyles) {                                                                                      
                                             self.saveReleaseSource(data);
                                             $(this).attr('href', self.setReleaseSrc(data));                                            
-                                        } else {                                            
-                                            internalStyles.push(fs.readFileSync(data.sourceFile, 'UTF-8'));
+                                        } else {            
+                                            let relativePath = path.relative(self.project.assets, path.dirname(data.sourceFile));    
+                                          
+                                            let cssRules = fs.readFileSync(data.sourceFile, 'UTF-8');                                          
+                                            
+                                            internalStylesToPostCSS.push({
+                                                cssRules, relativePath
+                                            });
                                             $(this).remove();
                                         }
                                     }
                                 }                             
                             });
+
+                            if(internalStylesToPostCSS.length) {
+                                for(let {relativePath, cssRules} of internalStylesToPostCSS) {                                              
+                                    let result = await postcss([
+                                        srcReplacer({
+                                            assets: this.project.assets,
+                                            release: this.release,
+                                            relativeDist: relativePath,
+                                            virtualRelativeDist: relativePath,
+                                            dist: this.dist,            
+                                            log: this.log.bind(this),            
+                                            releaseDistPath: distPath
+                                        })
+                                    ]).process(cssRules, {from: undefined});                                    
+                                    internalStyles.push(result.css);
+                                }
+                            }
+
 
                             $('[src], [href], meta[content]').each(function() {
                                 let attr = $(this).attr('href') ? 'href' : 'src';
