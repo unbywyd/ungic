@@ -561,10 +561,14 @@ export const svgSprite = \`${this.getSvgSprite(this.collection.filter(m => m.has
             $svg.attr('viewBox', $svgOrigin.attr('viewBox'));
         }
         if(config.svgSprite.width) {
-            $svg.attr('width', config.svgSprite.width);
+            $svg.attr('width', options.width ? options.width : config.svgSprite.width);
         }
         if(config.svgSprite.height) {
-            $svg.attr('height', config.svgSprite.height);
+            $svg.attr('height', options.height ? options.height : config.svgSprite.height);
+        }
+        if(options.size) {
+            $svg.attr('width', options.size);
+            $svg.attr('height', options.size);
         }
         if(options.class && options.class.length) {
             for(let cl of options.class.split(',')) {
