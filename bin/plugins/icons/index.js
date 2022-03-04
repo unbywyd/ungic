@@ -866,7 +866,7 @@ export const svgSprite = \`${this.getSvgSprite(this.collection.filter(m => m.has
         }
         return config.fs.dist.css;
     }
-    async generateSpriteSass(icons) {
+    async generateSpriteSass(icons) {       
         let template = path.join(__dirname, 'templates', 'sprites_sass.hbs');
         let config = this.config;
         let prefix = this.buildSuffix != '' ? (this.buildSuffix + '-') : '';

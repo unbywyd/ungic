@@ -147,21 +147,9 @@ module.exports = async function(args) {
       }
     }
 
-    let scssRelease;
-    if(generateScssRelease) {
-      if(!buildConfig.includeOnlyUsedComponents) {
-        scssRelease = await scssInquirer.call(this, args, release);
-      } else if(scssComponents.length) {
-        scssRelease = await scssInquirer.call(this, args, release, {
-          components: scssComponents,
-          excludeComponents: []
-        });
-        if(typeof scssRelease != 'object') {
-          this.logger.system(`CSS release was not implemented`);
-        }
-      }
-    }
+    // тут надо сбилдить иконки
 
+    // ICONS -----------------------------
     let generateIconsRelease = true;
     if(commonIcons.length && reconfig && buildConfig.includeOnlyUsedComponents) {
       response = await prompts.call(this, [{
@@ -198,7 +186,6 @@ module.exports = async function(args) {
     }
     let originSvgIconsMode = iconsPlugin.buildConfig.svgIconsMode;
     let combineIcons = buildConfig.combineIcons;
-    let combineScssComponents = buildConfig.combineScssComponents;
 
     if(reconfig && iconsRelease && pagesChosen.length > 1) {
       response = await prompts.call(this, [{
@@ -211,48 +198,7 @@ module.exports = async function(args) {
         combineIcons = response.combineIcons;
       }
     }
-    if(reconfig && scssRelease && pagesChosen.length > 1) {
-      response = await prompts.call(this, [{
-        type: 'confirm',
-        name: 'combineScssComponents',
-        message: 'Do you want to combine all the scss components of each page into one release? (Into a single .css file)',
-        default: combineScssComponents
-      }]);
-      if(response) {
-        combineScssComponents = response.combineScssComponents;
-      }
-    }
-
-    this.logger.system(`Release build start, please wait...`);
-
-    await fse.emptyDir(releaseDist);
-    // Вот тут надо тупо скопировать все файлы в дист
-    if(buildConfig.saveAllAssets) {
-      if(await fse.pathExists(this.app.project.assets)) {
-        this.logger.system(`Start copying assets files...`);
-        await fse.copy(this.app.project.assets, releaseDist);
-        this.logger.system(`Assets files copied successfully`);
-      }
-    }
-
-    let commonScssRelease;
-
-    // Общий релиз для стилей
     
-    if(scssRelease) {
-        scssRelease.host = buildConfig.host;
-        scssRelease.includeLocalStyles = htmlRelease.includeLocalStyles;
-        scssRelease.urlsOptimization = buildConfig.urlsOptimization;
-        scssRelease.noConflict = buildConfig.noConflict;
-        try {
-          commonScssRelease = await scssPlugin.release(_.extend({}, scssRelease));
-          this.logger.system(`Common styles have been generated`);
-        } catch(e) {
-          this.logger.system(`CSS release completed with an error: ${e.message}`, 'CLI', 'error');
-        }
-    }
-    let scssReleasesByPage = {};
-
     if(iconsRelease) {
       iconsRelease.host = buildConfig.host;
       iconsRelease.includeLocalStyles = htmlRelease.includeLocalStyles;
@@ -311,6 +257,76 @@ module.exports = async function(args) {
         this.logger.system(`ICONS release completed with an error: ${e.message}`, 'CLI', 'error');
       }
     }
+    let prevIconsScssPlugins = scssPlugin.iconsStorage;
+    scssPlugin.iconsStorage = {};
+    for(let item of commonIconsRelease.releases) {
+      scssPlugin.iconsStorage[item.type] = item;
+    }
+    // END ICONS --------------------------------------------------
+
+    // Begin of SASS release
+    let scssRelease;
+    if(generateScssRelease) {
+      if(!buildConfig.includeOnlyUsedComponents) {
+        scssRelease = await scssInquirer.call(this, args, release);
+      } else if(scssComponents.length) {
+        scssRelease = await scssInquirer.call(this, args, release, {
+          components: scssComponents,
+          excludeComponents: []
+        });
+        if(typeof scssRelease != 'object') {
+          this.logger.system(`CSS release was not implemented`);
+        }
+      }
+    }
+
+    let combineScssComponents = buildConfig.combineScssComponents;
+
+    // Если требуется настроить и есть SASS релиз и имеются страницы
+    if(reconfig && scssRelease && pagesChosen.length > 1) {
+      response = await prompts.call(this, [{
+        type: 'confirm',
+        name: 'combineScssComponents',
+        message: 'Do you want to combine all the scss components of each page into one release? (Into a single .css file)',
+        default: combineScssComponents
+      }]);
+      if(response) {
+        combineScssComponents = response.combineScssComponents;
+      }
+    }
+
+    this.logger.system(`Release build start, please wait...`);
+
+    await fse.emptyDir(releaseDist);
+    // Вот тут надо тупо скопировать все файлы в дист
+    if(buildConfig.saveAllAssets) {
+      if(await fse.pathExists(this.app.project.assets)) {
+        this.logger.system(`Start copying assets files...`);
+        await fse.copy(this.app.project.assets, releaseDist);
+        this.logger.system(`Assets files copied successfully`);
+      }
+    }
+
+    let commonScssRelease;
+
+    // Общий релиз для стилей
+    
+    if(scssRelease) {
+        scssRelease.host = buildConfig.host;
+        scssRelease.includeLocalStyles = htmlRelease.includeLocalStyles;
+        scssRelease.urlsOptimization = buildConfig.urlsOptimization;
+        scssRelease.noConflict = buildConfig.noConflict;
+        try {
+          commonScssRelease = await scssPlugin.release(_.extend({}, scssRelease));
+          this.logger.system(`Common styles have been generated`);
+        } catch(e) {
+          this.logger.system(`CSS release completed with an error: ${e.message}`, 'CLI', 'error');
+        }
+    }
+    let scssReleasesByPage = {};
+
+    scssPlugin.iconsStorage = prevIconsScssPlugins;
+
     for(let page in releaseByPage) {
       try {
         let release = releaseByPage[page];

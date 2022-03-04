@@ -229,13 +229,17 @@ class scssPlugin extends plugin {
                                     contents: '@function exist() {@return false}'
                                 });
                             } else if (/^ungic\.sprites/.test(url)) {
-                                if (this.iconsStorage.sprite) {
+                                let storage = this.iconsStorage.sprite || this.iconsStorage.sprites;
+                                if('object' == typeof storage && storage.data) {
+                                    storage = storage.data;
+                                }
+                                if (storage) {
                                     let cid = 'stdin';
                                     if (prev != 'stdin') {
                                         cid = this.cidByPath(prev);
                                     }
                                     return done({
-                                        contents: `$cid:${cid}; ` + this.iconsStorage.sprite.data.sass
+                                        contents: `$cid:${cid}; ` + storage.sass
                                     });
 
                                 } else {
@@ -245,13 +249,17 @@ class scssPlugin extends plugin {
                                     contents: '@function exist() {@return false}'
                                 });
                             } else if (/^ungic\.font-icons/.test(url) || /^ungic\.ficons/.test(url)) {
-                                if (this.iconsStorage.fonts) {
+                                let storage = this.iconsStorage.font || this.iconsStorage.fonts;
+                                if('object' == typeof storage && storage.data) {
+                                    storage = storage.data;
+                                }
+                                if (storage) {
                                     let cid = 'stdin';
                                     if (prev != 'stdin') {
                                         cid = this.cidByPath(prev);
                                     }
                                     return done({
-                                        contents: `$cid:${cid}; ` + this.iconsStorage.fonts.data.sass
+                                        contents: `$cid:${cid}; ` + storage.sass
                                     });
 
                                 } else {
