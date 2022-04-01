@@ -116,12 +116,14 @@ function getHTMLSvgSprite(iconData, options) {
         return svgHTML;
     }
 }
-export function render(id, options={}) {
+export function render(id, options={}, replacer) {
     let iconData = icons.find(i => i.id == id);
     if(!iconData) {
         return new Error(`${id} icon not exist`);
     }
-  
+    if(typeof replacer == 'function') {
+        iconData = replacer(iconData);
+    }
     if(!iconData.svg) {
         return getHTMlSpriteIcon(iconData, options);
     } else {
