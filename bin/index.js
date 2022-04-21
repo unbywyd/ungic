@@ -82,7 +82,7 @@ class app extends skeleton {
                 return {}
             }
             let configs = [getConfig(packagePath), getConfig(configPath)];
-
+    
             if(!PLUGINS_SETTINGS[key]) {
                 PLUGINS_SETTINGS[key] = {}
             }
@@ -111,10 +111,16 @@ class app extends skeleton {
         introPluginsSettings('beautify');
 
         if(configPath) {
-            config = Object.assign(config, require(configPath), config_cmd);
+            let appConfig = require(configPath);
+            let server = Object.assign(appConfig.server, config_cmd.server);
+            config_cmd.server = server;
+            config = Object.assign(config, appConfig, config_cmd);
+
         } else {
             config = Object.assign(config, config_cmd);
         }  
+
+        
  
         super(require('./model-scheme'), {objectMerge: true}, config);
         this.PLUGINS_SETTINGS = PLUGINS_SETTINGS;

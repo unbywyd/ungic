@@ -773,6 +773,7 @@ export const svgSprite = \`${this.getSvgSprite(this.collection.filter(m => m.has
                 }
                 results.exportFile = path.join(this.dist, 'exports', exportFilename);
             }
+       
             if(releaseData.sprites && Array.isArray(releaseData.sprites)) {
                 let icons = releaseData.sprites;
                 spritesData = await this.generateSprite(icons);

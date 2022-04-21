@@ -80,6 +80,7 @@ module.exports = async function(args) {
   }
   
   let releaseDist = path.join(this.app.project.dist, 'releases', release.releaseName + '-v' + release.version);
+  await fse.emptyDir(releaseDist);
 
   let htmlRelease = await htmlInquirer.call(this, args, release);
 
@@ -206,6 +207,7 @@ module.exports = async function(args) {
       iconsRelease.noConflict = buildConfig.noConflict;
     }
 
+    // Иконки для страниц по отдельности
     if(pagesChosen.length > 1) {
       for(let page in releaseByPage) {
         let data = releaseByPage[page];
@@ -222,7 +224,7 @@ module.exports = async function(args) {
               this.logger.system(`CSS release completed with an error: ${e.message}`, 'CLI', 'error');
             }
           }
-        }
+        }    
         if(!combineIcons && page != 'ungic-icons.html') {
           if(Array.isArray(data.icons_ids) && data.icons_ids.length && iconsRelease) {
             let svgIcons = _.filter(data.icons_ids, id => iconsPlugin.collection.get(id).has('svg'));
@@ -247,11 +249,14 @@ module.exports = async function(args) {
     if(commonIcons.length && iconsRelease) {
       let svgIcons = _.filter(commonIcons, id => iconsPlugin.collection.get(id).has('svg'));
       let sprites = _.reject(commonIcons, id => iconsPlugin.collection.get(id).has('svg'));
-      try {
+
+     
+      try {        
         commonIconsRelease = await iconsPlugin.release(_.extend({combineIcons}, iconsRelease, {
           svgIcons,
           sprites
         }));
+        //console.log(commonIconsRelease);
         this.logger.system(`Icons have been generated`);
       } catch(e) {
         this.logger.system(`ICONS release completed with an error: ${e.message}`, 'CLI', 'error');
@@ -297,7 +302,7 @@ module.exports = async function(args) {
 
     this.logger.system(`Release build start, please wait...`);
 
-    await fse.emptyDir(releaseDist);
+    
     // Вот тут надо тупо скопировать все файлы в дист
     if(buildConfig.saveAllAssets) {
       if(await fse.pathExists(this.app.project.assets)) {
