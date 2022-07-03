@@ -153,7 +153,7 @@ class ungicProject extends skeleton {
             }
             plugin.on('rendered', destroy);
         }
-        htmlPlugin.on('render', () => {
+        htmlPlugin.on('render', () => {         
             renderInterceptor(htmlPlugin);
         });
 

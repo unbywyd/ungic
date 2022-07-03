@@ -36,7 +36,7 @@ class finishController extends skeleton {
         this.tasks.add(id);
     }
     releaseTask(id) {
-        this.tasks.delete(id);
+        this.tasks.delete(id);   
         if(!this.tasks.size) {
             this.collector.run();
         }
@@ -385,8 +385,10 @@ class app extends skeleton {
                 data: e
             });
         });
+        
         this.project.on('watcher', (event, rp, ph) => { 
             let needPath = path.normalize(path.join(config.fs.dirs.source, config.fs.source.assets).replace(/(^\/|\/$)+/, '')); 
+ 
             if(rp.indexOf(needPath) !== 0) {
                 return
             }
@@ -397,11 +399,12 @@ class app extends skeleton {
                 relative
             });
         });
-        this.project.on('watcher', (event, rp, ph) => {                        
+        this.project.on('watcher', (event, rp, ph) => {                    
+            let relative = path.relative(this.project.dist, ph).replace(/\\+/g, '/');           
+            
             if(rp.indexOf(path.normalize(config.fs.dirs.dist).replace(/(^\/|\/$)+/, '')) !== 0) {
                 return
             }           
-            let relative = path.relative(this.project.dist, ph).replace(/\\+/g, '/');
             this.finishController.push({
                 event,
                 url: this.fastify.address + '/' + path.relative(this.project.dist, ph).replace(/\\+/g, '/'),
@@ -416,9 +419,11 @@ class app extends skeleton {
             });
         });
         this.project.on('plug_render', id => {
+            //console.log('plug_render');
             this.finishController.task(id);
         });
         this.project.on('plug_rendered', id => {
+            //console.log('plug_rendered');
             this.finishController.releaseTask(id);
         });
 

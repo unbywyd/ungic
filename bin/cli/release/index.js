@@ -207,7 +207,48 @@ module.exports = async function(args) {
       iconsRelease.noConflict = buildConfig.noConflict;
     }
 
+
+    // Begin of SASS release
+    // Заполнение scssRelease
+    let scssRelease;
+    if(generateScssRelease) {
+      if(!buildConfig.includeOnlyUsedComponents) {
+        scssRelease = await scssInquirer.call(this, args, release);
+      } else if(scssComponents.length) {
+        scssRelease = await scssInquirer.call(this, args, release, {
+          components: scssComponents,
+          excludeComponents: []
+        });
+        if(typeof scssRelease != 'object') {
+          this.logger.system(`CSS release was not implemented`);
+        }
+      }
+    }
+
+    let combineScssComponents = buildConfig.combineScssComponents;
+    // Конфигурация combineScssComponents
+    // Если требуется настроить и есть SASS релиз и имеются страницы
+    if(reconfig && scssRelease && pagesChosen.length > 1) {
+      response = await prompts.call(this, [{
+        type: 'confirm',
+        name: 'combineScssComponents',
+        message: 'Do you want to combine all the scss components of each page into one release? (Into a single .css file)',
+        default: combineScssComponents
+      }]);
+      if(response) {
+        combineScssComponents = response.combineScssComponents;
+      }
+    }
+
+
     // Иконки для страниц по отдельности
+    /**
+     * Прогоняем releaseByPage
+     * Требуется: combineScssComponents, combineIcons, scssRelease, scssReleasesByPage
+     */
+
+    let scssReleasesByPage = {};
+
     if(pagesChosen.length > 1) {
       for(let page in releaseByPage) {
         let data = releaseByPage[page];
@@ -249,7 +290,6 @@ module.exports = async function(args) {
     if(commonIcons.length && iconsRelease) {
       let svgIcons = _.filter(commonIcons, id => iconsPlugin.collection.get(id).has('svg'));
       let sprites = _.reject(commonIcons, id => iconsPlugin.collection.get(id).has('svg'));
-
      
       try {        
         commonIconsRelease = await iconsPlugin.release(_.extend({combineIcons}, iconsRelease, {
@@ -269,36 +309,7 @@ module.exports = async function(args) {
     }
     // END ICONS --------------------------------------------------
 
-    // Begin of SASS release
-    let scssRelease;
-    if(generateScssRelease) {
-      if(!buildConfig.includeOnlyUsedComponents) {
-        scssRelease = await scssInquirer.call(this, args, release);
-      } else if(scssComponents.length) {
-        scssRelease = await scssInquirer.call(this, args, release, {
-          components: scssComponents,
-          excludeComponents: []
-        });
-        if(typeof scssRelease != 'object') {
-          this.logger.system(`CSS release was not implemented`);
-        }
-      }
-    }
 
-    let combineScssComponents = buildConfig.combineScssComponents;
-
-    // Если требуется настроить и есть SASS релиз и имеются страницы
-    if(reconfig && scssRelease && pagesChosen.length > 1) {
-      response = await prompts.call(this, [{
-        type: 'confirm',
-        name: 'combineScssComponents',
-        message: 'Do you want to combine all the scss components of each page into one release? (Into a single .css file)',
-        default: combineScssComponents
-      }]);
-      if(response) {
-        combineScssComponents = response.combineScssComponents;
-      }
-    }
 
     this.logger.system(`Release build start, please wait...`);
 
@@ -327,8 +338,7 @@ module.exports = async function(args) {
         } catch(e) {
           this.logger.system(`CSS release completed with an error: ${e.message}`, 'CLI', 'error');
         }
-    }
-    let scssReleasesByPage = {};
+    } 
 
     scssPlugin.iconsStorage = prevIconsScssPlugins;
 
