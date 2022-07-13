@@ -72,7 +72,16 @@ async function routes(fastify, options) {
         var pathToModule = require.resolve('socket.io-client');
         const ioSockets = await fsp.readFile(path.join(path.dirname(path.dirname(pathToModule)), 'dist/socket.io.js'), 'UTF-8');
 
-        let output = `(function(){${ioSockets} \n document.addEventListener('DOMContentLoaded', function() {`;
+        let output = `
+        let DOMContentLoaded = (callback) => {
+            if (document.readyState === "complete" || document.readyState === "interactive") {
+                callback();
+            } else {
+                window.addEventListener("DOMContentLoaded", callback);
+            }
+        }
+        
+        (function(){${ioSockets} \n DOMContentLoaded(function() {`;
         if(components.length) {
             for(let cid of components) {
                 let pathToCSS = path.join(htmlPlugin.dist, config.fs.dist.css, cid + (['ltr', 'rtl'].indexOf(dir) == -1 ? '' : '.' + dir) + '.css');
