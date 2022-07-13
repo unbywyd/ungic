@@ -118,7 +118,8 @@ async function routes(fastify, options) {
             const pages = "${pages}";            
             const resource = window.performance ? window.performance.getEntriesByType("resource") : [];
             socket.on('change', (events) => {
-                for(let e of events) {                    
+                for(let e of events) {       
+                    console.log(e);             
                     document.dispatchEvent(new CustomEvent('ungic', {detail:e}));
                     let {events, relative, url}  = e;
                     if(pages.indexOf(relative) != -1 || pages.indexOf('*') != -1) {                        

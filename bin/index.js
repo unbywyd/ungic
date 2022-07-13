@@ -387,8 +387,7 @@ class app extends skeleton {
         });
         
         this.project.on('watcher', (event, rp, ph) => { 
-            let needPath = path.normalize(path.join(config.fs.dirs.source, config.fs.source.assets).replace(/(^\/|\/$)+/, '')); 
- 
+            let needPath = path.normalize(path.join(config.fs.dirs.source, config.fs.source.assets).replace(/^[\\\/]+/, '')); 
             if(rp.indexOf(needPath) !== 0) {
                 return
             }
@@ -400,9 +399,8 @@ class app extends skeleton {
             });
         });
         this.project.on('watcher', (event, rp, ph) => {                    
-            let relative = path.relative(this.project.dist, ph).replace(/\\+/g, '/');           
-            
-            if(rp.indexOf(path.normalize(config.fs.dirs.dist).replace(/(^\/|\/$)+/, '')) !== 0) {
+            let relative = path.relative(this.project.dist, ph).replace(/\\+/g, '/');    
+            if(path.normalize(rp).replace(/^[\\\/]+/, '').indexOf(path.normalize(config.fs.dirs.dist).replace(/^[\\\/]+/, '')) !== 0) {
                 return
             }           
             this.finishController.push({
