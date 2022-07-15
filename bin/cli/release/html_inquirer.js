@@ -13,6 +13,9 @@ module.exports = async function(args, defaultConfig={}) {
       configId: "default"
    }, defaultConfig, getBuildConfig.call(this, htmlPlugin, args.html_build_name ? args.html_build_name : args.release_name));
 
+   release.outputReleasePath = path.join(release.outputReleaseDir, release.releaseName + '-v' + release.version);
+
+
   let pages = htmlPlugin.collection.findAllWhere({ type: 'page' });
   if (!pages.length) {
     return this.logger.system(`This project has no pages.`, 'CLI', 'warning');
@@ -208,15 +211,18 @@ module.exports = async function(args, defaultConfig={}) {
     }
   } else {
     if(!selectedPages.length) {
-      return this.logger.system('HTML pages for release were not provided', 'CLI', 'warning');
-    }
-    let pagesToRelease = _.filter(selectedPages, page => !excludePages.includes(page));
-    if(!selectedPages.length) {
-      return this.logger.system('HTML pages for release were not provided', 'CLI', 'warning');
+      this.logger.system('HTML pages for release were not provided', 'CLI', 'warning');
     } else {
-      release.pages = selectedPages;
+      let pagesToRelease = _.filter(selectedPages, page => !excludePages.includes(page));
+      if(!pagesToRelease.length) {
+        this.logger.system('HTML pages for release were not provided', 'CLI', 'warning');
+      } else {
+        release.pages = selectedPages;
+      }
     }
   }
-
+  if(!release.pages) {
+    release.pages = [];
+  }
  	return release;
 }

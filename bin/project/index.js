@@ -126,14 +126,6 @@ class ungicProject extends skeleton {
         let config = this.config;
         this.fastify = options.fastify;
 
-                    
-      /* let copyAssets = async() => {
-            if(await fse.pathExists(this.assets)) {
-                await fse.copy(this.assets, this.dist);
-            }
-        }
-        await copyAssets();*/
-
         let htmlPluginConfig = _.extend({}, config.plugins.html || {}, {fs: config.fs});
         htmlPlugin = new htmlPlugin(htmlPluginConfig, {
             project: this

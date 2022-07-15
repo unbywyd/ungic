@@ -743,7 +743,7 @@ export const svgSprite = \`${this.getSvgSprite(this.collection.filter(m => m.has
         let spritesDist = this.spritesDist;
         let config = this.config;
         let svgSpriteData, fontsData, spritesData;
-        this.dist =  path.join(this.dist, 'releases', releaseName + '-v' + version);
+        this.dist =  releaseData.outputReleasePath;
         this.fontsDist = path.join(this.dist, config.fs.dist.fonts);
         this.spritesDist = path.join(this.dist, config.fs.dist.img, 'sprites');
         this.skipIconsEvent = true;

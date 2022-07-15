@@ -48,6 +48,12 @@ module.exports = {
                             saveAllAssets: {
                                 type: 'boolean'
                             },
+                            archive: {
+                                type: 'boolean'
+                            },
+                            outputPathRelativeDist: {
+                                type: 'string'
+                            },
                             noConflict: {
                                 type: 'boolean'
                             },
@@ -101,6 +107,8 @@ module.exports = {
             releases: {
                 default: {
                     saveAllAssets: true,    
+                    archive: false,
+                    outputPathRelativeDist: './releases/',
                     host: '',        
                     noConflict: true,
                     scssBuildName: "default",

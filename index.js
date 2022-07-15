@@ -28,13 +28,13 @@ logger.prototype.decorate = function (message, label, color) {
   output += ("\n" + strArray.join('\n'));
   output += ("\n" + c.bold(closeLines));
 
-  if(this.storage.has(output)) {
+  if (this.storage.has(output)) {
     return
   }
   this.storage.set(output, label);
   this.publish(output, label);
 
-  setTimeout(function() {
+  setTimeout(function () {
     this.storage.delete(output);
   }.bind(this), 1000);
 }
@@ -61,13 +61,13 @@ logger.prototype.system = function (message, target, status) {
     message = message.message;
     color = 'red';
   } else {
-    if(status === false || status === 'error') {
+    if (status === false || status === 'error') {
       color = 'red';
     }
-    if(status === true || status === 'success') {
+    if (status === true || status === 'success') {
       color = 'green';
     }
-    if(status == 'warning') {
+    if (status == 'warning') {
       color = 'yellow';
     }
   }
@@ -128,6 +128,18 @@ class App extends skeleton {
           command: 'create'
         });
       })
+      .command('release <release_name> [build_name]', "Release", yargs => {
+        return yargs
+          .option('silent', {
+            type: 'boolean',
+            description: 'Run release without configuration',
+            default: true
+          })
+      }, args => {
+        this.setConfig({
+          command: 'release'
+        });
+      })
       .command('run [port]', "Launch current ungic project", yargs => {
         return yargs
           .option('open', {
@@ -151,14 +163,15 @@ class App extends skeleton {
   async initialize() {
     let config = this.config;
 
-    if (['init', 'run', 'create'].indexOf(config.command) == -1) {
+    if (['init', 'run', 'create', 'release'].indexOf(config.command) == -1) {
       console.log(colors.yellow.bold('To get started with ungic, you need to follow these simple steps:'));
       console.log(colors.yellow('● Go to working directory (an empty directory is recommended) ') + colors.yellow('and initialize a new project using ') + colors.yellow.bold('ungic init') + colors.yellow(' command. \n') + colors.yellow('Or create a new directory: ') + colors.yellow.bold('ungic create <projectName>'));
-      console.log(colors.yellow('● Run the project using ')+colors.yellow.bold('ungic run') + colors.yellow(' command and start working with source files!'));
+      console.log(colors.yellow('● Run the project using ') + colors.yellow.bold('ungic run') + colors.yellow(' command and start working with source files!'));
       require('yargs').showHelp();
       return;
     }
     this.app = new ungic(config);
+    let self = this;
 
     if (config.log) {
       console.log(colors.cyan('Log output to console enabled. You can disable this option using the "log false" command.'));
@@ -169,7 +182,7 @@ class App extends skeleton {
       if (!config.log && ['system', 'error'].indexOf(type) == -1) { //  && ['success', 'error'].indexOf(type) == -1
         return;
       }
-      if(type == 'system') {
+      if (type == 'system') {
         let message_type = args.message_type === undefined ? 'system' : args.message_type;
         this.logger.system(message, args.plugin_id ? args.plugin_id : false, message_type);
       } else {
@@ -183,15 +196,15 @@ class App extends skeleton {
           this.logger.success(message, args.plugin_id ? args.plugin_id : false);
         }
       }
-      if(args.exit) {
+      if (args.exit) {
         process.exit(0);
       }
     });
-    this.on('log', (type, message, args={}) => {
+    this.on('log', (type, message, args = {}) => {
       if (!config.log && ['system'].indexOf(type) == -1) {
         return;
       }
-      if(type == 'system') {
+      if (type == 'system') {
         let message_type = args.message_type === undefined ? 'system' : args.message_type;
         this.logger.system(message, message_type);
       } else {
@@ -217,110 +230,124 @@ class App extends skeleton {
     if (config.command == 'run') {
       await this.app.begin();
     }
-    let self = this;
-
-    this.logger.success(`${this.app.config.name} app running at: ${colors.cyan.bold(this.app.fastify.address)}`, 'Status');
-    this.appMenu = async function(yargs) {
-      yargs
-        .command('release <release_name> [build_name]', 'Build a full release', yargs => {
-          yargs.option('version', {
-            alias: 'v',
-            type: 'number',
-            description: 'Release version'
-          })
-        }, args => {
-          try {
-            this.close();
-            require('./bin/cli/release/').call(self, args).finally(() => {
-               this.open();
-            }).catch(e => {
+    if (config.command == 'release') {
+      try {
+        await this.app.begin({
+          release: true
+        });
+        require('./bin/cli/release/').call(self, config).then(() => {
+          process.exit();
+        }).catch(e => {
+          console.log(e);
+          process.exit();
+        });
+      } catch (e) {
+        console.log(e);
+        process.exit();
+      }
+    } else {
+      this.logger.success(`${this.app.config.name} app running at: ${colors.cyan.bold(this.app.fastify.address)}`, 'Status');
+      this.appMenu = async function (yargs) {
+        yargs
+          .command('release <release_name> [build_name]', 'Build a full release', yargs => {
+            yargs.option('version', {
+              alias: 'v',
+              type: 'number',
+              description: 'Release version'
+            })
+          }, args => {
+            try {
+              this.close();
+              require('./bin/cli/release/').call(self, args).finally(() => {
+                this.open();
+              }).catch(e => {
+                console.log(e);
+              });
+            } catch (e) {
               console.log(e);
-            });
-          } catch(e) {
-            console.log(e);
-          }
-        })
-        .command('info', 'Info about current project', args => {
-        }, args => {
-          try {
-            self.logger.system(`Project: ${colors.green.bold(self.app.config.name)} v${colors.green.bold(self.app.config.version)} / ${config.mode}`);
-          } catch(e) {
-            console.log(e);
-          }
-        })
-        .command('open [url]', 'Open url of project in Browser', args => {
-        }, args => {
-          try {
-            args.url = args.url ? args.url : '/';
-            open(self.app.fastify.address + (/^\//.test(args.url) ? args.url : '/' + args.url));
-          } catch(e) {
-            console.log(e);
-          }
-        })
-        .command('server <path> [port]', 'Create or destroy a custom local server relative to this project', args => {
-          args.option('close', {
+            }
+          })
+          .command('info', 'Info about current project', args => {
+          }, args => {
+            try {
+              self.logger.system(`Project: ${colors.green.bold(self.app.config.name)} v${colors.green.bold(self.app.config.version)} / ${config.mode}`);
+            } catch (e) {
+              console.log(e);
+            }
+          })
+          .command('open [url]', 'Open url of project in Browser', args => {
+          }, args => {
+            try {
+              args.url = args.url ? args.url : '/';
+              open(self.app.fastify.address + (/^\//.test(args.url) ? args.url : '/' + args.url));
+            } catch (e) {
+              console.log(e);
+            }
+          })
+          .command('server <path> [port]', 'Create or destroy a custom local server relative to this project', args => {
+            args.option('close', {
               type: 'boolean',
               alias: 'c'
-          });
-          args.option('open', {
-            type: 'boolean',
-            alias: 'o',
-            default: true
-        });
-        }, args => {
-          try {       
-            let publicPath = path.join(self.app.project.root, args.path); 
-            if(/\.{2,}/.test(args.path)) {
-              self.logger.system(new Error(`The path must be relative to the project`));
-              return 
-            } 
-            if(!fs.existsSync(publicPath)) {
-              self.logger.system(new Error(`${publicPath} path not exists`));
-              return 
-            }            
-            if(args.close) {
-              Servers.kill(publicPath).then(() => {
-                self.logger.log(colors.cyan.bold(`${publicPath} server successfully closed`));
-              }).catch(e => {
-                self.logger.system(e);                
-              });
-            } else {
-              this.close();
-              Servers.create(publicPath).then(e => {
-                self.logger.log(colors.cyan.bold('Server running at:' + e));
-                this.open();
-                if(args.open) {
-                  open(e);
-                }
-              }).catch(e => {
-                self.logger.system(e);
-                this.open();
-              });
-            }
-          } catch(e) {
-            console.log(e);
-          }
-        })
-        .command('log <status>', 'Log output to the console', args => {
-          args.positional('status', {
-            describe: 'Enable or disable log output to console',
-            type: 'boolean'
-          });
-        }, args => {
-          try {
-            let log = args.status;
-            if(log != config.log) {
-              config.log = log;
-              if(log) {
-                self.logger.log(colors.cyan.bold('Log output to the console is activated'));
-              } else {
-                self.logger.log(colors.cyan.bold('Log output to the console is deactivated'));
+            });
+            args.option('open', {
+              type: 'boolean',
+              alias: 'o',
+              default: true
+            });
+          }, args => {
+            try {
+              let publicPath = path.join(self.app.project.root, args.path);
+              if (/\.{2,}/.test(args.path)) {
+                self.logger.system(new Error(`The path must be relative to the project`));
+                return
               }
+              if (!fs.existsSync(publicPath)) {
+                self.logger.system(new Error(`${publicPath} path not exists`));
+                return
+              }
+              if (args.close) {
+                Servers.kill(publicPath).then(() => {
+                  self.logger.log(colors.cyan.bold(`${publicPath} server successfully closed`));
+                }).catch(e => {
+                  self.logger.system(e);
+                });
+              } else {
+                this.close();
+                Servers.create(publicPath).then(e => {
+                  self.logger.log(colors.cyan.bold('Server running at:' + e));
+                  this.open();
+                  if (args.open) {
+                    open(e);
+                  }
+                }).catch(e => {
+                  self.logger.system(e);
+                  this.open();
+                });
+              }
+            } catch (e) {
+              console.log(e);
             }
-          } catch(e) {
-            console.log(e);
-          }
-        });
+          })
+          .command('log <status>', 'Log output to the console', args => {
+            args.positional('status', {
+              describe: 'Enable or disable log output to console',
+              type: 'boolean'
+            });
+          }, args => {
+            try {
+              let log = args.status;
+              if (log != config.log) {
+                config.log = log;
+                if (log) {
+                  self.logger.log(colors.cyan.bold('Log output to the console is activated'));
+                } else {
+                  self.logger.log(colors.cyan.bold('Log output to the console is deactivated'));
+                }
+              }
+            } catch (e) {
+              console.log(e);
+            }
+          });
 
         let cliModes = fg.sync('./bin/cli/*.js', { cwd: __dirname });
         if (cliModes.length) {
@@ -331,8 +358,8 @@ class App extends skeleton {
                 this.close().then(() => {
                   self.createReadline(async function (yargs) {
                     try {
-                      require(handler).call(self, yargs, async(callback) => {
-                          await this.close();
+                      require(handler).call(self, yargs, async (callback) => {
+                        await this.close();
                         try {
                           await callback();
                         } catch (e) {
@@ -340,7 +367,7 @@ class App extends skeleton {
                         }
                         this.open();
                       });
-                    } catch(e) {
+                    } catch (e) {
                       console.log(e);
                     }
                   }, {
@@ -354,55 +381,53 @@ class App extends skeleton {
                   });
                 });
               });
-            }
           }
+        }
         yargs.argv;
-    }    
-    //let appConfig = this.app.config;
-
-
-    let htmlPlugin = this.app.project.plugins.get('html');
-    let iconsPlugin = this.app.project.plugins.get('icons');
-    let scssPlugin = this.app.project.plugins.get('scss');
-
-    if(!fs.readdirSync(htmlPlugin.root).length && !fs.readdirSync(iconsPlugin.root).length && !fs.readdirSync(scssPlugin.root).length) {
-      let answers = await prompts.call(this, [{
-        type: 'confirm',
-        name: 'install',
-        message: `Do you want to install one of the demo projects to get started?`
-      }]);
-      if(answers && answers.install) {
-        // install package
-        let {demo, boilerplate} = require('./bin/cli/modules/install_packages');
-        let response = await prompts.call(this, [{
-          type: 'list',
-          name: 'name',
-          message: `Choose package to install`,
-          validate: v => v.replace(/\s+/, '') !== '',
-          choices: ["demo", 'boilerplate']
-        }]);
-        if(response && response.name)  {          
-          if(response.name == 'demo') {
-            await demo.call(this, {silence:1});
-          }
-          if(response.name == 'boilerplate') {
-            await boilerplate.call(this, {silence:1});
-          }
-          this.system('Package installation completed!');
-          await this.app.project.updateConfigFile(data => {
-            delete data._visit;
-            return data;
-          });   
-        } else {
-          this.system('The action was interrupted', 'warning');
-        }   
       }
-    }
-    if (!this.ready) {
-      this.ready = true;
-      this.createReadline(this.appMenu, {
-        context: this
-      });
+      let htmlPlugin = this.app.project.plugins.get('html');
+      let iconsPlugin = this.app.project.plugins.get('icons');
+      let scssPlugin = this.app.project.plugins.get('scss');
+
+      if (!fs.readdirSync(htmlPlugin.root).length && !fs.readdirSync(iconsPlugin.root).length && !fs.readdirSync(scssPlugin.root).length) {
+        let answers = await prompts.call(this, [{
+          type: 'confirm',
+          name: 'install',
+          message: `Do you want to install one of the demo projects to get started?`
+        }]);
+        if (answers && answers.install) {
+          // install package
+          let { demo, boilerplate } = require('./bin/cli/modules/install_packages');
+          let response = await prompts.call(this, [{
+            type: 'list',
+            name: 'name',
+            message: `Choose package to install`,
+            validate: v => v.replace(/\s+/, '') !== '',
+            choices: ["demo", 'boilerplate']
+          }]);
+          if (response && response.name) {
+            if (response.name == 'demo') {
+              await demo.call(this, { silence: 1 });
+            }
+            if (response.name == 'boilerplate') {
+              await boilerplate.call(this, { silence: 1 });
+            }
+            this.system('Package installation completed!');
+            await this.app.project.updateConfigFile(data => {
+              delete data._visit;
+              return data;
+            });
+          } else {
+            this.system('The action was interrupted', 'warning');
+          }
+        }
+      }
+      if (!this.ready) {
+        this.ready = true;
+        this.createReadline(this.appMenu, {
+          context: this
+        });
+      }
     }
   }
 }

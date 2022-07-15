@@ -37,17 +37,22 @@ module.exports = async function(args) {
     return this.logger.system(`This project has no pages.`, 'CLI', 'warning');
   }
 
-
-  let response = await prompts.call(this, [{
-    type: 'confirm',
-    name: 'reconfig',
-    message: 'Do you want to configure release?',
-    default: false
-  }]);
-
-  if(!response) {
-    return this.logger.system(`The action was canceled`, 'CLI');
+  let response = {
+    reconfig: false
   }
+  if(!args.silent) {
+    response = await prompts.call(this, [{
+      type: 'confirm',
+      name: 'reconfig',
+      message: 'Do you want to configure release?',
+      default: false
+    }]); 
+
+    if(!response) {
+      return this.logger.system(`The action was canceled`, 'CLI');
+    }
+  }
+
 
   let reconfig = response && response.reconfig;
   args.silently = reconfig === false;
@@ -79,11 +84,12 @@ module.exports = async function(args) {
     }
   }
   
-  let releaseDist = path.join(this.app.project.dist, 'releases', release.releaseName + '-v' + release.version);
+  let releaseDist = path.join(this.app.project.dist, (buildConfig.outputPathRelativeDist || './releases/'), release.releaseName + '-v' + release.version);
+  
   await fse.emptyDir(releaseDist);
 
   let htmlRelease = await htmlInquirer.call(this, args, release);
-
+  
   htmlRelease.urlsOptimization = buildConfig.urlsOptimization;
   htmlRelease.host = buildConfig.host;
   htmlRelease.noConflict = buildConfig.noConflict;
@@ -370,36 +376,38 @@ module.exports = async function(args) {
         this.logger.system(e, 'CLI');
       }
     }
-    let tempPath = path.join(this.app.project.dist, 'releases', release.releaseName + '-v' + release.version + '.zip');
-    await new Promise((res, rej) => {
-        const output = fs.createWriteStream(tempPath);
-        const archive = archiver('zip', {
-          zlib: { level: 5 }
-        });
-        output.on('close', async() => {
-            try {
-              await fse.copy(tempPath, path.join(releaseDist, release.releaseName + '-v' + release.version + '.zip'));
-              await fse.remove(tempPath);
-            } catch(e) {
-              console.log(e);
-            }
-            res();
-        });
-        archive.pipe(output);
-        archive.directory(releaseDist, false);
-        archive.directory(this.app.project.sourceDir, 'source');
-        archive.append(Buffer.from(`
-/*******************************************
-*  This release generated using ungic.
-********************************************/
-  Release name: ${release.releaseName}
-  Release version: ${release.version}
-  Release date: ${moment().format('DD.MM.YYYY, h:mm')}
-  Project name: ${this.app.config.name}
-  Project version: ${this.app.config.version}
-  Author: ${this.app.config.author}`), { name: 'README.txt' });
-        archive.finalize();
-    });
+    if(buildConfig.archive) {
+      let tempPath = path.join(this.app.project.dist, (buildConfig.outputPathRelativeDist || './releases/'), release.releaseName + '-v' + release.version + '.zip');
+      await new Promise((res, rej) => {
+          const output = fs.createWriteStream(tempPath);
+          const archive = archiver('zip', {
+            zlib: { level: 5 }
+          });
+          output.on('close', async() => {
+              try {
+                await fse.copy(tempPath, path.join(releaseDist, release.releaseName + '-v' + release.version + '.zip'));
+                await fse.remove(tempPath);
+              } catch(e) {
+                console.log(e);
+              }
+              res();
+          });
+          archive.pipe(output);
+          archive.directory(releaseDist, false);
+          archive.directory(this.app.project.sourceDir, 'source');
+          archive.append(Buffer.from(`
+  /*******************************************
+  *  This release generated using ungic.
+  ********************************************/
+    Release name: ${release.releaseName}
+    Release version: ${release.version}
+    Release date: ${moment().format('DD.MM.YYYY, h:mm')}
+    Project name: ${this.app.config.name}
+    Project version: ${this.app.config.version}
+    Author: ${this.app.config.author}`), { name: 'README.txt' });
+          archive.finalize();
+      });
+    }
     this.logger.system(`${release.releaseName} release successfully generated to ${releaseDist}`, 'CLI', 'success');
   }
 }

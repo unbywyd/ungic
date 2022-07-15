@@ -607,7 +607,7 @@ class scssPlugin extends plugin {
         plugins.push(postcssTheme(params));
 
         if (release) {  
-            let releasePath = path.join(this.dist, 'releases', release.releaseName + '-v' + release.version); 
+            let releasePath = release.outputReleasePath; 
             plugins.push(srcReplacer({
                 release,
                 log: this.log.bind(this),
@@ -824,7 +824,7 @@ class scssPlugin extends plugin {
             if (res && res.css) {
                 data.push(res.css);              
              
-                let sourceURL = path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName) + dir + '.scss.map');
+                let sourceURL = path.join(releaseData.outputReleasePath, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName) + dir + '.scss.map');
                 await fse.outputFile(sourceURL, res.map.toString());
 
                  // Если требуется инверсия
@@ -834,7 +834,7 @@ class scssPlugin extends plugin {
                     try {                    
                         let response = await this._sassRender(hbs.compile(renderTemplate)(source), components, { release });
                         data.push(response.css);
-                        sourceURL = path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName) + dir + '-inverse.scss.map');
+                        sourceURL = path.join(releaseData.outputReleasePath, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName) + dir + '-inverse.scss.map');
                         await fse.outputFile(sourceURL, response.map.toString());
                     } catch (e) {
                         console.log(e);
@@ -851,7 +851,7 @@ class scssPlugin extends plugin {
                         try {                         
                             let response = await this._sassRender(hbs.compile(renderTemplate)(source), components, { release });
                             data.push(response.css);
-                            sourceURL = path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName) + dir + '-theme-' + theme + '.scss.map');
+                            sourceURL = path.join(releaseData.outputReleasePath, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName) + dir + '-theme-' + theme + '.scss.map');
                             await fse.outputFile(sourceURL, response.map.toString());
                         } catch (e) {
                             console.log(e);
@@ -863,7 +863,7 @@ class scssPlugin extends plugin {
                             try {                       
                                 let response = await this._sassRender(hbs.compile(renderTemplate)(source), components, { release });
                                 data.push(response.css);
-                                sourceURL = path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName) + dir + '-theme-' + theme + '-inverse.scss.map');
+                                sourceURL = path.join(releaseData.outputReleasePath, 'exports', (releaseData.filename ? releaseData.filename : releaseData.releaseName) + dir + '-theme-' + theme + '-inverse.scss.map');
                                 await fse.outputFile(sourceURL, response.map.toString());
                             } catch (e) {
                                 console.log(e);
@@ -886,7 +886,7 @@ class scssPlugin extends plugin {
  
                        
                         if(!releaseData.includeLocalStyles) {           
-                            await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
+                            await fse.outputFile(path.join(releaseData.outputReleasePath, url), output);
                         }
                         this.releaseResults.push({
                             url: this.generateDistSrc(url),
@@ -903,7 +903,7 @@ class scssPlugin extends plugin {
                                     //let vars = varsBySelector['.un-theme-' + theme] ? `.un-theme-${theme} {${varsBySelector['.un-theme-' + theme].map(e => `${e.var}:${e.color}`).join(';')}}` : '';
                                     let url = path.join(config.fs.dist.css, versionName + (releaseData.filename ? releaseData.filename : releaseData.releaseName) + '.theme-' + theme + dir + '.min.css');
                                     if(!releaseData.includeLocalStyles) {     
-                                        await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
+                                        await fse.outputFile(path.join(releaseData.outputReleasePath, url), output);
                                     }
                                     this.releaseResults.push({
                                         url: this.generateDistSrc(url),
@@ -923,7 +923,7 @@ class scssPlugin extends plugin {
                                    
                                     let url = path.join(config.fs.dist.css, versionName + (releaseData.filename ? releaseData.filename : releaseData.releaseName) + label + '-inverse' + dir + '.min.css');
                                     if(!releaseData.includeLocalStyles) {
-                                        await fse.outputFile(path.join(this.dist, 'releases', releaseData.releaseName + '-v' + releaseData.version, url), output);
+                                        await fse.outputFile(path.join(releaseData.outputReleasePath, url), output);
                                     }    
                                     this.releaseResults.push({
                                         url: this.generateDistSrc(url),
@@ -960,7 +960,7 @@ class scssPlugin extends plugin {
         let themes = await fg('*.scss', { onlyFiles: true, cwd: path.join(this.root, 'project', 'themes') });
         return _.map(themes, t => path.basename(t, path.extname(t)));
     }
-    async release(release) {
+    async release(release) {    
         let components = release.components;
         for (let cid of release.components) {
             if (!await this.componentHasRender(cid)) {
@@ -974,7 +974,8 @@ class scssPlugin extends plugin {
         }
 
         this.activeRelease = release;
-        let releasePath = path.join(this.dist, 'releases', release.releaseName + '-v' + release.version);
+        let releasePath = release.outputReleasePath;
+  
         try {
             let success = await this._renderComponents(components, release);
             if (success) {
@@ -1032,7 +1033,8 @@ class scssPlugin extends plugin {
             let toPath = path.join(this.dist, 'exports', 'sass-options.json');
 
             if (this.activeRelease) {
-                toPath = path.join(this.dist, 'releases', this.activeRelease.releaseName + '-v' + this.activeRelease.version, 'exports', 'sass-options.json');
+                //console.log(this.activeRelease.outputReleasePath);
+                toPath = path.join(this.activeRelease.outputReleasePath, 'exports', 'sass-options.json');
                 delete this.activeRelease;
             }
 

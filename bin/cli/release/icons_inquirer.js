@@ -17,6 +17,8 @@ module.exports = async function(args, defaultConfig={}, overlayConfig={}) {
       sprites: true
    }, defaultConfig, getBuildConfig.call(this, iconsPlugin, args.icons_build_name ? args.icons_build_name : args.release_name), overlayConfig);
 
+   release.outputReleasePath = path.join(release.outputReleaseDir, release.releaseName + '-v' + release.version);
+
   let icons = iconsPlugin.collection;
   if(!icons.size()) {
     return this.logger.system(`This project has no icons.`, 'CLI', 'warning');

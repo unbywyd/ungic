@@ -769,7 +769,7 @@ class htmlPlugin extends plugin {
             dist: this.dist,
             relativeDist: '',
             virtualRelativeDist: '',
-            releaseDistPath: this.release ? path.join(this.dist, 'releases', this.release.releaseName + '-v' + this.release.version) : false,
+            releaseDistPath: this.release ? this.release.outputReleasePath : false,
             urlsOptimization: this.release ? this.release.urlsOptimization : false
         });
         return data;
@@ -1096,7 +1096,7 @@ class htmlPlugin extends plugin {
                 }
                 let distPath = this.dist;
                 if(this.release) {
-                    distPath = path.join(this.dist, 'releases', this.release.releaseName + '-v' + this.release.version);
+                    distPath = this.release.outputReleasePath;
                     if(build.validation) {
                         if(attrs.amp) {
                             let resultValidation = await this.ampValidate(output, attrs.path);
@@ -1322,7 +1322,7 @@ class htmlPlugin extends plugin {
                             });   
                         } else {
                             let styles = [];
-                            let distPath = path.join(this.dist, 'releases', this.release.releaseName + '-v' + this.release.version);
+                            let distPath = this.release.outputReleasePath;
                             let self = this;
 
 
