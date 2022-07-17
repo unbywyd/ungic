@@ -1156,9 +1156,12 @@ export const svgSprite = \`${this.getSvgSprite(this.collection.filter(m => m.has
             console.log(e);
         }
         this.on('watcher', (event, rp, ph) => {
-            if(rp.indexOf(this.relativePath) !== 0) {
+            rp = path.normalize(rp).replace(/^[\\\/]+/, '');
+
+            if(rp.indexOf(path.normalize(this.relativePath).replace(/^[\\\/]+/, '')) !== 0) {
                 return
             }
+
             let supports = ['.png', '.svg', '.jpeg', '.jpg'];
             if(supports.indexOf(path.extname(ph)) != -1) {
                 this.watchController.emit('bind', event, ph);

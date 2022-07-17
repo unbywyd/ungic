@@ -394,7 +394,9 @@ class htmlPlugin extends plugin {
             }
         });      
         this.on('watcher', (event, rp, ph) => {            
-            if(rp.indexOf(this.relativePath) !== 0) {
+            rp = path.normalize(rp).replace(/^[\\\/]+/, '');
+
+            if(rp.indexOf(path.normalize(this.relativePath).replace(/^[\\\/]+/, '')) !== 0) {
                 return
             }      
             let availableTypes = _.keys(systemConfig.supportedTypes).map(type => '.' + type);

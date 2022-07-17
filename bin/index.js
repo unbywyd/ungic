@@ -395,7 +395,10 @@ class app extends skeleton {
         });
         if (!release) {
             this.project.on('watcher', (event, rp, ph) => {
+                rp = path.normalize(rp).replace(/^[\\\/]+/, '');
+
                 let needPath = path.normalize(path.join(config.fs.dirs.source, config.fs.source.assets).replace(/^[\\\/]+/, ''));
+                //console.log(rp, ph);
                 if (rp.indexOf(needPath) !== 0) {
                     return
                 }
@@ -408,6 +411,7 @@ class app extends skeleton {
             });
             this.project.on('watcher', (event, rp, ph) => {
                 let relative = path.relative(this.project.dist, ph).replace(/\\+/g, '/');
+                //console.log(rp, ph);
                 if (path.normalize(rp).replace(/^[\\\/]+/, '').indexOf(path.normalize(config.fs.dirs.dist).replace(/^[\\\/]+/, '')) !== 0) {
                     return
                 }
@@ -426,7 +430,6 @@ class app extends skeleton {
             });
         });
         this.project.on('plug_render', id => {
-            //console.log('plug_render');
             this.finishController.task(id);
         });
         this.project.on('plug_rendered', id => {

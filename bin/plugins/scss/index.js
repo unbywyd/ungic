@@ -1021,7 +1021,9 @@ class scssPlugin extends plugin {
             }
         });
         this.on('watcher', (event, rp, ph, stat) => {
-            if(rp.indexOf(this.relativePath) !== 0) {
+            rp = path.normalize(rp).replace(/^[\\\/]+/, '');
+            
+            if(rp.indexOf(path.normalize(this.relativePath).replace(/^[\\\/]+/, '')) !== 0) {
                 return
             } 
             if (path.extname(ph) == '.scss') {
