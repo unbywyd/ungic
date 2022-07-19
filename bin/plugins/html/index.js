@@ -330,7 +330,7 @@ class htmlPlugin extends plugin {
 
         this.ungicParser.add('pipe', async (attributes, args, body) => {
             let pipes = _.findWhere(this.pipes.storage, {page_id: args.id});
-        
+           
             if(pipes) {
                 return
             }
