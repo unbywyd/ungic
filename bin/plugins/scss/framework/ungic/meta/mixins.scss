@@ -1,0 +1,49 @@
+@use "sass:map";
+@use "sass:list";
+@use "sass:selector";
+@use "ungic.project.config" as config;
+@use "./functions" as *;
+
+@mixin check-colors($colors) {
+    $available-colors: get-all-available-сolors();
+    $keys: map.keys($colors);
+    @each $color-name, $color in $colors {
+        @if not is-color-available($color-name) {
+            @error '#{$color-name} is not available color!';
+        } @else {
+            $error: is-valid-color-value($color-name, $color, true);               
+            @if $error {
+                @error $error; 
+            }
+        }
+    }
+    @each $color-name in $available-colors {
+        @if not list.index($keys, $color-name) {
+            @error '#{$color-name} color is a required!';
+        }
+    }
+}
+
+@mixin wrapsys($prepend: '') {
+    @if $prepend != '' {
+        @if(&) {
+            $selector: parse-selector(&);
+            @at-root #{selector.nest($prepend, $selector)} {
+                @content;
+            }
+        } @else {
+            @at-root #{$prepend} {
+                @content;
+            }
+        }
+    } @else {
+        @if(&) {
+            $selector: parse-selector(&);
+            @at-root #{$selector} {
+                @content;
+            }
+        } @else {
+            @content;
+        }
+    }
+}

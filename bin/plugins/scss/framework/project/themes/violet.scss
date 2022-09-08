@@ -1,0 +1,34 @@
+/*------------------------------------------
+*   Theme file
+--------------------------------------------
+*   Theme: violet
+*   Desc: This file is part of ungic.theme module
+*   API:  https://ungic.com/guide/api/sass.html#ungic-theme
+*/
+
+// Colors can be specified as a list, where the first value will be applied in normal mode and the second in inversion mode
+$colors: (
+    primary: #5928e5,
+    secondary: #1d1d2b,
+    success: #1BC167,
+    danger: #FF5252,
+    info: #2196F3,
+    warning: #FFC94B,
+    system: #ff9600,
+    text-color: (#232127, #FFF),
+    background-color: (#FFF, #131315)
+);
+
+$config: (
+    brightness: (
+        offset-brighten: 0,            // List type possible
+        offset-dim: 5,                 // List type possible
+        saturation-brighten: (0, 0),   // List type possible
+        saturation-dim: (0, 0)         // List type possible
+    ),
+    relative-light-limit : true,
+    gray: (
+        saturation: (20%, 10%),  // List type possible
+        hue: #5928e5           // List type possible
+    )
+);

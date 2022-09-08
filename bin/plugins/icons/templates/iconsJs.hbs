@@ -1,0 +1,136 @@
+function prepareHTMLicon(iconData, options) { 
+    let title = iconData.name;
+    if(options.title) {
+        title = options.title;
+    }
+    if(options.presentation) {
+        title = `<span aria-hidden="true" class="${config.sprites.className}-label">${title}</span>`;  
+    } else {
+        title = `<span class="${config.sprites.className}-label">${title}</span>`;  
+    }
+    options.title = title;
+
+    let classes = "";
+    if(options.class) {
+        classes = options.class;
+    }
+    options.classes = classes;
+    return options;
+}
+function getHTMlSpriteIcon(iconData, options={}) {
+    options = prepareHTMLicon(iconData, options);
+    if(options.href) {
+        return `<a href="${options.href}"><i aria-hidden="true" class="${options.classes} ${config.sprites.className}-${iconData.id}"></i>${options.title}</a>`;
+    } else {
+        return `<i aria-hidden="true" class="${options.classes} ${config.sprites.className}-${iconData.id}"></i>${options.title}`;
+    }
+}
+function getHTMlFontIcon(iconData, options) {
+    options = prepareHTMLicon(iconData, options);
+    if(!config.fonts.lables) {
+        options.title = '';
+    }
+    if(options.href) {
+        return `<a href="${options.href}"><i aria-hidden="true" class="${options.classes} ${fontConfig.font.class} ${fontConfig.font.class}-${iconData.id}"></i>${options.title}</a>`;
+    } else {
+        return `<i aria-hidden="true" class="${options.classes} ${fontConfig.font.class} ${fontConfig.font.class}-${iconData.id}"></i>${options.title}`;
+    }
+}
+function getHTMLSvgSprite(iconData, options) {
+    let wrapElement = document.createElement('div');
+    
+    wrapElement.innerHTML = iconData.svg;
+    let svgOriginElement = wrapElement.querySelector('svg');
+    
+    let svgElement = document.createElement('svg');
+    if(options.svgBody) {
+        svgElement = svgOriginElement;
+    }
+    svgElement.classList.add('ungic-icon');
+    svgElement.setAttribute('role', 'img');  
+    
+    svgElement.removeAttribute('id');
+    let title = iconData.name;
+    if(options.title) {
+        title = options.title;
+    }
+    let className = config.svgSprite.className;
+    let uniqid = '_' + Math.random().toString(36).substr(2, 9);
+
+    if(!options.presentation && title) {
+        svgElement.setAttribute('aria-labelledby', uniqid);
+        let titleEl = document.createElement('title');
+        titleEl.setAttribute('id', uniqid);
+        titleEl.innerHTML = title;
+
+        if(options.svgBody) {
+            let originTitle = svgElement.querySelector('title');
+            if(originTitle) {
+                originTitle.setAttribute('id', uniqid);
+                originTitle.innerHTML = title;
+            } else {
+                svgElement.appendChild(titleEl);   
+            }
+        } else {
+            svgElement.appendChild(titleEl);   
+        }      
+
+    } else if(!title || options.presentation) {
+        svgElement.setAttribute('aria-hidden', true);
+    }
+    if(!options.svgBody) {
+        let url = '#' + className + '-' + iconData.id;
+        let useEl = document.createElement('use');
+        useEl.setAttribute('xlink:href', url); 
+        svgElement.appendChild(useEl);
+    }
+
+    if(config.svgSprite.width) {
+        svgElement.setAttribute('width', config.svgSprite.width);
+    }
+    if(config.svgSprite.height) {
+        svgElement.setAttribute('height', config.svgSprite.height);
+    }
+    if(options.height) {
+        svgElement.setAttribute('height', options.height);
+    }
+    if(options.width) {
+        svgElement.setAttribute('width', options.width);
+    }
+
+    if(options.class && options.class.length) {
+        let classes = options.class.split(',').filter(e => e.trim() != '');
+        for(let className of classes) {
+            svgElement.classList.add(className.trim());
+        }
+    }
+    
+    let svgHTML = svgElement.outerHTML;  
+    if(options.href) {
+        let attrs = '';
+        if(options.presentation) {
+            attrs = 'aria-hidden="true"';
+        }   
+        return `<a ${attrs} href="${options.href}">${svgHTML}</a>`;
+    } else {
+        return svgHTML;
+    }
+}
+export function render(id, options={}, replacer) {
+    let iconData = icons.find(i => i.id == id);
+    if(!iconData) {
+        return new Error(`${id} icon not exist`);
+    }
+    if(typeof replacer == 'function') {
+        iconData = replacer(iconData);
+    }
+    if(!iconData.svg) {
+        return getHTMlSpriteIcon(iconData, options);
+    } else {
+        if(iconsMode == 'fonts') {
+            return getHTMlFontIcon(iconData, options);
+        } else {
+            return getHTMLSvgSprite(iconData, options);
+        }
+    }
+}

@@ -1,0 +1,520 @@
+/*------------------------------------------
+*   Optional component render file
+--------------------------------------------
+*   This file should contain the final CSS style rules that will be generated in CSS!
+*   API: https://ungic.com/guide/api/sass.html
+*/
+
+// SASS native modules
+@use "sass:math";
+
+@use "sass:meta" as meta;
+@use "sass:map" as map;
+@use "sass:list" as list;
+@use "sass:string" as string;
+
+// Component core
+@use ".core" as *;
+
+// Theme module
+@use "ungic.theme" as *;
+
+// Ungic framework modules
+@use "ungic.meta" as un-meta;
+@use "ungic.utils" as un-utils;
+
+@use "ungic.project" as project;
+
+@use "ungic.components.grid" as grid;
+
+// Custom
+@use "functions" as *;
+@use "mixins" as *;
+
+// you must include any style files here
+// or write them in this file
+
+@keyframes anim-rotate-after {
+    30% {
+        border-radius: 45%/55%;
+    }
+    100% {
+        transform: rotate(360deg) scale(1.4);    
+        border-radius: 50%;    
+    }
+}
+@keyframes anim-rotate-before {
+    to {
+        transform: rotate(-136deg) scale(.8);
+        border-radius: 50%;
+    }
+}
+@keyframes anim-logo {
+    to {
+        transform: scale(1.2);
+        color: color-var(primary);
+    }
+}
+
+@include component {
+    h2,h3,h4 {
+        font-weight: 400;
+    }
+    :focus {
+        outline: 2px dotted color(text-color);
+        outline-offset: 2px;
+    }
+    &-btn {
+        padding: .8em 1.5em;
+        border-radius: 3em;
+        
+        text-decoration: none;
+        &.primary {
+            background-color: color(primary);
+            color: #FFF;           
+            &:hover, &:focus {
+                background-color: color(primary, .1);                
+            }
+        }   
+        &.transld {
+            color: color(text-color);  
+            font-weight: bold;      
+            &:hover {
+                background-color: color(gray, .8);
+            }
+            &:focus {
+                box-shadow: 0 0 0 2px color(gray, .2);
+            }
+        }
+    }      
+    &-header {
+        min-height: 120vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;  
+        position: relative;
+        overflow-x: hidden;
+        overflow-y: visible;
+        &-decor {
+            position: absolute;
+            display: block;
+            top: 0px;           
+            left: 0;
+            right: 0;
+            width: auto;    
+            fill: color(primary, .2);
+            pointer-events: none;
+        }
+        &-container {
+            padding: 2em;
+            display: flex;
+            justify-content: center;        
+            position: relative;    
+            z-index: 2;
+        }
+        &-box {
+            text-align: center;
+            background-color: color(background-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 0 1.5em rgba(subs(#FFF, #000), .2);
+            height: 50vh;
+            width: 50vh;
+            border-radius: 48%/52%;
+            position: relative;
+            @include grid.media('screen and #{grid.media(max-sm)}') {
+                font-size: .8em;
+            }
+            @include grid.media('screen and #{grid.media(max-xs)}') {
+                font-size: .7em;
+            }          
+            >div {
+                position: relative;
+                z-index: 3;
+            }
+            &:before, &:after {
+                position: absolute;
+                pointer-events: none;
+                display: block;
+                content: '';   
+                left: -2em;
+                right: -2em;
+                top: -2em;
+                bottom: -2em;
+                opacity: .9;
+            }
+            &:before {               
+                transform: rotate(45deg) scale(1.2);
+                animation: anim-rotate-before ease-in-out 10s infinite alternate;
+                border-radius: 38%/48%;
+                box-shadow: 0 0 0 3em rgba(color-rgb(primary, .6), .5);
+            }
+            &:after {
+                animation: anim-rotate-after ease-in-out 10s infinite alternate;
+                transform: rotate(0) scale(.8);
+                border-radius: 50%;
+                box-shadow: 0 0 0 1em rgba(color-rgb(primary, -.1, 5), .4);
+            }
+            &-logo {
+                line-height: 1;         
+                display: block;
+                margin-top: -1em;
+                text-decoration: none;
+                font-size: 7em;
+                @include grid.media('screen and #{grid.media(max-md)}') {
+                    font-size: 5em;
+                }
+                animation: anim-logo ease-in-out 5s infinite alternate;
+                &, &:hover {
+                    color: color(text-color); 
+                }
+                &:focus {
+                    outline: none;
+                    color: color(system)
+                }
+            }
+            &-title {
+                font-size: 2em;
+                line-height: 1.2;
+                margin: 0;
+                font-weight: 100;
+                color: color(text-color);
+            }
+        }
+    } 
+    &-icons {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        &-heading {
+            text-align: center;
+            color: gray(-.5);            
+        }
+        &-icon {
+            padding: 1em;
+            font-size: 2em;
+        }
+    }
+    &-canvas {
+        background: linear-gradient(180deg, color(background-color) 0%, color(primary, .85, 10) 70%);
+        overflow: hidden;
+        border-radius: 12px;
+        margin: 0 auto;
+        svg {
+            display: block;
+            width: 100%;
+            .a {
+                fill: url(#bg)
+            }
+            .w {
+                fill: color(background-color);
+            }
+
+            .b {
+                fill: color(primary, .9);
+            }
+
+            .c {
+                fill: color(primary, .85);
+            }
+
+            .d {
+                fill: color(primary, .95);
+            }
+
+            .e {
+                fill: color(primary, .2, 5);
+            }
+
+            .f {
+                fill: color(primary, .7);
+            }
+
+            .g {
+                fill: color(primary, .6, 0, -10);
+            }
+
+            .h {
+                fill: color(primary, -.2);
+            }
+
+            .i {
+                fill: color(primary, .2);
+            }
+
+            .j {
+                fill: color(primary, -.6);
+                &1 {
+                    fill: color(primary, subs(-.9))
+                }
+                &2 {
+                    fill: color(warning, .9);
+                }
+                &3 {
+                    fill: color(primary, -.3);
+                }
+            }
+
+            .k {
+                fill: subs(#f1b98a, darken(#f1b98a, 70%));
+            }
+
+            .l {
+                fill: color(system)
+            }
+
+            .m {
+                fill: color(warning, subs(.2, .7), 10);
+            }
+
+            .n {
+                fill: color(system, .9)
+            }
+
+            .o {
+                fill: color(warning, subs(0, .6), 8);
+            }
+
+            .p {
+                fill: color(warning, subs(-.2));
+            }
+
+            .q {
+                fill:color(primary);
+            }
+
+            .r {
+                fill:color(primary, -.2);
+            }
+
+            .s {
+                fill: color(primary, .9);
+            }
+        }        
+    }
+    &-colors {
+        &-section {
+            background-color: color(background-color);     
+            padding: 1em;
+            border-radius: 6px;
+            color: color(text-color);
+        }
+        h4 { 
+            text-align: center;
+            font-size: 1.4em;
+        }
+        &-color {                   
+            width: math.div(100%, list.length(colors()));
+            &-name {
+                font-size: .8em;
+                line-height: 1.2;
+                display: block;
+                padding-top: .5em;
+                @include grid.media(grid.media(max-sm)) {
+                    display: none;
+                }
+            }
+            @each $color-name, $color in colors() {
+                &.bgc-#{$color-name} {
+                    @include this {
+                        &-colors-color-box {                      
+                            display: block;
+                            padding: 2em 0;
+                            background-color: color($color-name);
+                        }
+                    }
+                }    
+            }
+            &.gray {
+                width: math.div(100, 21) + 0%;
+            }
+            @for $i from -10 through 10 {
+                &.bgc-gray-#{$i} {             
+                    @include this {
+                        &-colors-color-box {
+                            display: block;
+                            padding: 2em 0;
+                            background-color: color(gray, $i * 0.1);
+                        }
+                    }
+                }   
+            }
+        }
+    }
+    &-section {
+        background-color: color(background-color);
+        padding: 2em;
+        &-title {
+            margin-top: 0;
+            @include grid.media(grid.media(min-xs)) {
+                font-size: 3.2em;
+            }
+        }
+    }
+    &-logo {
+        text-decoration: none;
+        display: block;
+        line-height: 1;
+        color: color(secondary, -.7);  
+        &:hover, &:focus {
+            color: color(primary, -.2);
+        }   
+        font-size: 2em;
+    }
+    &-nav {
+        position: fixed;
+        z-index: 999;
+        top: 1em;
+        padding: .2em 1em;
+        width: 80%;
+        left: 10%;
+        @include grid.media('screen and #{grid.media(max-xs)}') {
+            left: 1em;
+            width: auto;
+            right: 1em;
+        }
+        border-radius: 3em;
+        box-shadow: 0 0 0 .5em rgba(gray-rgb(.9), .2);
+        background-color: rgba(gray-rgb(.95), .98);
+        &-menu {
+            list-style: none;
+            margin: 0;
+            padding: 1em 0;
+            display: flex;
+            li {
+                padding: 0 .2em;
+                a {
+                    border-radius: 2em;
+                    padding: 1em 1.5em;   
+                    color: color(secondary, -.7);                 
+                    &:hover {
+                        background-color: gray(.8);
+                    }
+                }
+                &.active {
+                    a {                      
+                        background-color: gray(.85);                        
+                        font-weight: 700;
+                    }
+                }
+            }     
+        }
+    }
+    &-panel-tools {
+        position: fixed;
+        z-index: 999;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 1em .5em;
+        box-shadow: 0 0 0 .5em rgba(gray-rgb(.8), .2);
+        background-color: rgba(gray-rgb(.8), .98);
+        overflow-x: auto;
+    }
+    &-selectbox {
+        display: inline-flex;
+        align-items: center;
+        label {
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+        select {
+            height: 36px;
+            background-color: gray(.9);
+            border-radius: 26px;   
+            padding: 0 1em;
+            border: 2px solid color(gray, .6);
+            margin-left: .5em;
+            &:hover {
+                background-color: gray(.85);
+            }
+            &:focus {
+                box-shadow: 0 0 0 2px color(system);
+                border-color:color(system);
+                outline: 2px dotted color(text-color);
+                outline-offset: 6px;
+            }
+        }
+    }
+    &-switcher {        
+        input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            border: 0;
+            border: none;
+            box-shadow: none;
+            &+label {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                height: 36px;
+                vertical-align: middle;
+                border: 2px solid color(gray, .6);
+                cursor: pointer;
+                padding: 0 1em;
+                min-width: 180px;
+                text-align: center;
+                background-color: gray(.9);
+                border-radius: 26px;
+                &:hover {
+                    background-color: gray(.85);
+                }
+            }
+            &:focus {
+                &+label {
+                    box-shadow: 0 0 0 2px color(system);
+                    border-color:color(system);                    
+                    outline: 2px dotted color(text-color);
+                    outline-offset: 6px;
+                }
+            }
+            &:not(:checked) {
+                &+label {
+                    [data-status="on"] {
+                        display: none;
+                    }
+                    [data-status="off"] {
+                        display: block;
+                    }    
+                }
+            }
+            &:checked {
+                &+label {
+                    background-color: color(system);
+                    color: white;
+                    [data-status="on"] {
+                        display: block;
+                    }
+                    [data-status="off"] {
+                        display: none;
+                    }
+                }
+            }
+        }
+    }
+}
+
+@include grid.responsive-tool(jc-between, false) {
+    justify-content: space-between;
+} 
+@include grid.responsive-tool(jc-center, false) {
+    justify-content: center;
+} 
+
+.is-dark {
+    @include is-light() {
+        display: none;
+    }
+}
+.is-light {
+    @include is-dark() {
+        display: none;
+    }
+}  
+ 

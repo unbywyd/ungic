@@ -1,0 +1,71 @@
+/*---------------------------------------------
+*   Framework system file!
+-----------------------------------------------
+*   Module: ungic.component.core
+*   Desc: This file is part of ungic.component.core module
+*   API:  https://ungic.com/guide/api/sass.html#ungic-component-core
+*/
+
+@use "../config" as this;
+
+@use "sass:map";
+@use "sass:color";
+@use "sass:meta";
+@use "sass:list";
+@use "sass:string" as str;
+@use "ungic.meta" as un-meta;
+@use "sass:selector";
+
+/*
+*   Check if a component exists in project.
+*/
+@function exist() {
+  @return true;
+}
+
+/*
+*   Export SASS data to JSON
+*/
+@function export($oid, $data) {
+  @return un-meta.export(this.$cid, $oid, $data);
+}
+
+/*
+*   Method for creating a selector by adding a suffix to the component class name using an append sass method.
+*/
+@function this($suffix) {
+  @return inspect(nth(selector.append(cid(true), $suffix), 1));
+}
+
+/*
+*   Get component ID
+*/
+@function cid($as_selector: false) {
+  $cid: this.$cid;
+  @if $as_selector {
+    @return ".#{$cid}";
+  }
+  @return $cid;
+}
+
+/*
+*   Get access to config of the current component. 
+*   Using without parameters returns the entire configuration of the component.
+*/
+@function config($key: "", $subkey: false) {
+  @if map.has-key(this.$config, $key) {
+    $result: map.get(this.$config, $key);
+    @if $subkey and type-of($result) == map {
+      @if map.has-key($result, $subkey) {
+        @return map.get($result, $subkey);
+      } @else {
+        @return $result;
+      }
+    } @else {
+      @return $result;
+    }
+  } @else if $key != "" {
+    @return false;
+  }
+  @return this.$config;
+}

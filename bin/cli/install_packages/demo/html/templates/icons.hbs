@@ -1,0 +1,30 @@
+ {{#if icons.svgSprite}}
+    <h3 class="@@-icons-heading">Svg sprite</h3>
+    <div class="@@-icons">
+        {{#each icons.svgSprite}}
+        <div class="@1-icon" data-id="{{id}}">
+            {{{icons_icon id}}}
+        </div>
+        {{/each}}
+    </div>
+    {{/if}}
+    {{#if icons.sprites}}
+    <h3 class="@@-icons-heading">Image sprite</h3>
+    <div class="@@-icons">
+        {{#each icons.sprites}}
+        <div class="@1-icon" data-id="{{id}}">
+            {{{icons_icon id}}}
+        </div>
+        {{/each}}
+    </div>
+    {{/if}}
+    {{#if icons.fonts}}
+    <h3 class="@@-icons-heading">Font icons</h3>
+    <div class="@@-icons">
+        {{#each icons.fonts}}
+        <div class="@1-icon" data-id="{{id}}">
+            {{{icons_icon id}}}
+        </div>
+        {{/each}}
+    </div>
+{{/if}}

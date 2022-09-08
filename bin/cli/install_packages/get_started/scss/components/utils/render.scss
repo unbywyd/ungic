@@ -1,0 +1,892 @@
+/*------------------------------------------
+*   Optional component render file
+--------------------------------------------
+*   This file should contain the final CSS style rules that will be generated in CSS!
+*   API: https://ungic.com/guide/api/sass.html
+*/
+
+// Component core
+@use ".core" as this;
+
+// Theme module
+@use "ungic.theme" as *;
+
+// Ungic framework modules
+@use "ungic.utils" as *;
+
+// Custom
+@use "functions" as *;
+@use "mixins" as *;
+
+// you must include any style files here
+// or write them in this file
+
+
+@keyframes highlight {
+  0% {
+    background-color: this.config(highlight-bgc);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.fg-stretch {
+  flex-grow: 1;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.highlight {
+  position: relative;
+  display: inline-block;
+  color: this.config(highlight-color);
+  animation: highlight 0.5s;
+}
+
+.sep {
+  &:not(:last-child) {
+    &:after {
+      content: ", ";
+    }
+  }
+}
+
+.sep-children {
+  > * {
+    &:not(:last-child) {
+      &:after {
+        content: ", ";
+      }
+    }
+  }
+}
+
+.space {
+  height: this.config(space-height);
+}
+
+.ibox {
+  display: block;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  > img {
+    display: block;
+    max-width: 100%;
+  }
+  &-contain {
+    > img {
+      object-fit: contain;
+      max-height: 100%;
+    }
+    background-size: contain;
+  }
+  &-cover {
+    > img {
+      object-fit: cover;
+      width: 100%;
+      height: 100%;
+    }
+
+    background-size: cover;
+  }
+  &-fill {
+    > img {
+      object-fit: fill;
+      width: 100%;
+      height: 100%;
+    }
+  }
+}
+
+.img {
+  &-contain,
+  &-fill,
+  &-cover {
+    display: block;
+  }
+
+  &-cover,
+  &-fill {
+    width: 100%;
+    height: 100%;
+  }
+
+  &-cover {
+    object-fit: cover;
+  }
+
+  &-contain {
+    object-fit: contain;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  &-fill {
+    object-fit: fill;
+  }
+}
+.bg {
+  &-center {
+    background-position: 50% 50%;
+  }
+}
+.text {
+  &-center {
+    text-align: center;
+  }
+
+  &-start {
+    text-align: left;
+  }
+
+  &-end {
+    text-align: right;
+  }
+
+  &-justify {
+    text-align: justify;
+  }
+
+  &-nowrap {
+    white-space: nowrap;
+  }
+
+  &-inline {
+    display: block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+}
+
+.base {
+  &-fs {
+    font-size: this.prop(font-size) !important;
+  }
+  &-lh {
+    line-height: this.prop(line-height) !important;
+  }
+  &-ff {
+    font-family: this.prop(font-family) !important;
+  }
+  &-size-content {
+    &:before,
+    &:after {
+      font-size: this.prop(font-size) !important;
+    }
+  }
+}
+
+.va {
+  &-middle {
+    vertical-align: middle;
+  }
+
+  &-baseline {
+    vertical-align: baseline;
+  }
+
+  &-top {
+    vertical-align: top;
+  }
+
+  &-bottom {
+    vertical-align: bottom;
+  }
+}
+
+.list {
+  &-circle {
+    list-style: circle;
+  }
+
+  &-decimal {
+    list-style: decimal;
+  }
+
+  &-square {
+    list-style: square;
+  }
+
+  &-disc {
+    list-style: disc;
+  }
+
+  &-ll {
+    list-style: lower-latin;
+  }
+
+  &-none {
+    list-style: none;
+    &-deep {
+      &,
+      ul {
+        list-style: none;
+      }
+    }
+  }
+}
+
+.has {
+  &-float {
+    position: relative;
+  }
+}
+
+.pos {
+  &-rel {
+    position: relative;
+  }
+
+  &-abs {
+    position: absolute;
+  }
+
+  &-fix {
+    position: fixed;
+  }
+  &-stretch {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+  &-x {
+    left: 0;
+    right: 0;
+    &a {
+      left: 0;
+      &-offset {
+        left: auto;
+        right: 100%;
+      }
+    }
+    &b {
+      right: 0;
+      &-offset {
+        right: auto;
+        left: 100%;
+      }
+    }
+  }
+  &-y {
+    top: 0;
+    bottom: 0;
+    &a {
+      top: 0;
+
+      &-offset {
+        top: auto;
+        bottom: 100%;
+      }
+    }
+    &b {
+      bottom: 0;
+
+      &-offset {
+        bottom: auto;
+        top: 100%;
+      }
+    }
+  }
+}
+
+.td {
+  &-ul {
+    text-decoration: underline;
+  }
+
+  &-ol {
+    text-decoration: overline;
+  }
+
+  &-lt {
+    text-decoration: line-through;
+  }
+  &-none {
+    &,
+    &:focus,
+    &:hover,
+    &:active {
+      text-decoration: none;
+    }
+    &-deep {
+      a {
+        &,
+        &:focus,
+        &:hover,
+        &:active {
+          text-decoration: none;
+        }
+      }
+    }
+  }
+}
+
+.tt {
+  &-cap {
+    text-transform: capitalize;
+  }
+
+  &-low {
+    text-transform: lowercase;
+  }
+
+  &-up {
+    text-transform: uppercase;
+  }
+
+  &-none {
+    text-transform: none;
+  }
+}
+
+.fw {
+  &-100 {
+    font-weight: 100;
+  }
+
+  &-200 {
+    font-weight: 200;
+  }
+
+  &-300 {
+    font-weight: 300;
+  }
+
+  &-400 {
+    font-weight: 400;
+  }
+
+  &-500 {
+    font-weight: 500;
+  }
+
+  &-600 {
+    font-weight: 600;
+  }
+
+  &-700 {
+    font-weight: 700;
+  }
+
+  &-900 {
+    font-weight: 900;
+  }
+}
+
+.fs {
+  &-i {
+    font-style: italic;
+  }
+  &-n {
+    font-style: normal;
+  }
+}
+
+.input {
+  &-hidden {
+    display: block;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    border: none;
+    outline: none;
+    position: absolute;
+    background: none;
+    overflow: hidden;
+  }
+}
+
+.auto {
+  &-scroll {
+    overflow: auto;
+    &-y {
+      overflow-y: auto;
+    }
+    &-x {
+      overflow-x: auto;
+    }
+  }
+  &-height {
+    height: auto;
+  }
+  &-width {
+    height: auto;
+  }
+  &-mg {
+    margin: auto;
+    &-x {
+      margin: 0 auto;
+    }
+  }
+}
+
+.divider {
+  &,
+  &-v {
+    display: block;
+    position: relative;
+    &:after {
+      content: "";
+      position: absolute;
+      border-radius: 2px;
+      background-color: this.config(divider-bgc);
+    }
+  }
+
+  &:after {
+    right: 0;
+    left: 0;
+    top: 50%;
+    transform: translateY(-1px);
+    height: 2px;
+  }
+
+  &-v {
+    margin-left: this.config(divider-vertical-space-sides);
+    margin-right: this.config(divider-vertical-space-sides);
+    &:after {
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      left: 50%;
+      transform: translateX(-1px);
+      border-bottom: none;
+    }
+  }
+}
+
+.pd {
+  padding: this.prop(padding);
+  &-hf {
+    padding: this.prop(padding) * 0.5;
+  }
+
+  &-x {
+    padding-left: this.prop(padding-left);
+    padding-right: this.prop(padding-right);
+
+    &-hf {
+      padding-left: this.prop(padding-left);
+      padding-right: this.prop(padding-right);
+    }
+  }
+
+  &-y {
+    padding-top: this.prop(padding-top);
+    padding-bottom: this.prop(padding-bottom);
+
+    &-hf {
+      padding-top: this.prop(padding-top) * 0.5;
+      padding-bottom: this.prop(padding-bottom) * 0.5;
+    }
+  }
+
+  &-xa {
+    padding-left: this.prop(padding-left);
+
+    &-hf {
+      padding-left: this.prop(padding-left) * 0.5;
+    }
+  }
+
+  &-xb {
+    padding-right: this.prop(padding-right);
+
+    &-hf {
+      padding-right: this.prop(padding-right) * 0.5;
+    }
+  }
+
+  &-ya {
+    padding-top: this.prop(padding-top);
+
+    &-hf {
+      padding-top: this.prop(padding-top) * 0.5;
+    }
+  }
+
+  &-yb {
+    padding-bottom: this.prop(padding-bottom);
+
+    &-hf {
+      padding-bottom: this.prop(padding-bottom) * 0.5;
+    }
+  }
+}
+
+.mg {
+  margin: this.prop(margin);
+  &-hf {
+    margin: this.prop(margin) * 0.5;
+  }
+
+  &-x {
+    margin-left: this.prop(margin-left);
+    margin-right: this.prop(margin-right);
+
+    &-hf {
+      margin-left: this.prop(margin-left);
+      margin-right: this.prop(margin-right);
+    }
+  }
+
+  &-y {
+    margin-top: this.prop(margin-top);
+    margin-bottom: this.prop(margin-bottom);
+
+    &-hf {
+      margin-top: this.prop(margin-top) * 0.5;
+      margin-bottom: this.prop(margin-bottom) * 0.5;
+    }
+  }
+
+  &-xa {
+    margin-left: this.prop(margin-left);
+
+    &-hf {
+      margin-left: this.prop(margin-left) * 0.5;
+    }
+  }
+
+  &-xb {
+    margin-right: this.prop(margin-right);
+
+    &-hf {
+      margin-right: this.prop(margin-right) * 0.5;
+    }
+  }
+
+  &-ya {
+    margin-top: this.prop(margin-top);
+
+    &-hf {
+      margin-top: this.prop(margin-top) * 0.5;
+    }
+  }
+
+  &-yb {
+    margin-bottom: this.prop(margin-bottom);
+
+    &-hf {
+      margin-bottom: this.prop(margin-bottom) * 0.5;
+    }
+  }
+}
+
+
+.size {
+  @include tool-step(this.config(sizes), (font-size));
+}
+
+.sr-fix {
+  position: relative;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.round {
+  border-radius: 3px;
+}
+
+.rounded {
+  border-radius: 50%;
+}
+
+.aratio {
+  padding-top: 100%;
+  display: flex;
+  position: relative;
+  .img {
+    &-contain,
+    &-fill,
+    &-cover {
+      height: auto;
+      max-height: 100%;
+    }
+  }
+
+  .ibox {
+    img {
+      height: auto;
+      max-height: 100%;
+    }
+  }
+
+  > *,
+  > * {
+    display: block;
+    &.row,
+    &.column {
+      display: flex;
+    }
+    margin-top: -100%;
+  }
+
+  &[data-ratio="16:9"] {
+    padding-top: 56.25%;
+
+    > *,
+    > * {
+      margin-top: -56.25%;
+    }
+  }
+
+  &[data-ratio="9:4"] {
+    padding-top: 44.4%;
+
+    > *,
+    > * {
+      margin-top: -44.4%;
+    }
+  }
+
+  &[data-ratio="20:11"] {
+    padding-top: 55%;
+
+    > *,
+    > * {
+      margin-top: -55%;
+    }
+  }
+
+  &[data-ratio="4:3"] {
+    padding-top: 50%;
+
+    > *,
+    > * {
+      margin-top: -50%;
+    }
+  }
+
+  &[data-ratio="3:2"] {
+    padding-top: 66.66%;
+
+    > *,
+    > * {
+      margin-top: -66.66%;
+    }
+  }
+
+  &[data-ratio="8:5"] {
+    padding-top: 62.5%;
+
+    > *,
+    > * {
+      margin-top: -62.5%;
+    }
+  }
+}
+
+.cursor {
+  &-pointer {
+    cursor: pointer;
+  }
+
+  &-text {
+    cursor: text;
+  }
+
+  &-def {
+    cursor: default;
+  }
+}
+
+.block {
+  display: block;
+  &-center {
+    margin: 0 auto;
+  }
+}
+
+.flex {
+  display: flex;
+}
+
+.iblock {
+  display: inline-block;
+}
+
+.iflex {
+  display: inline-flex;
+}
+
+.inherit {
+  &-height {
+    height: inherit;
+  }
+  &-width {
+    width: inherit;
+  }
+  &-mg {
+    margin: inherit;
+  }
+  &-pd {
+    padding: inherit;
+  }
+}
+
+.stretch {
+  width: 100%;
+  height: 100%;
+  &-w {
+    min-width: 100%;
+  }
+  &-h {
+    min-height: 100%;
+  }
+  &-hv {
+    min-height: 100vh;
+  }
+  &-wv {
+    min-width: 100vw;
+  }
+}
+
+.no {
+  &-pos {
+    position: static !important;
+  }
+
+  &-aratio {
+    &,
+    &[data-ratio] {
+      padding-top: 0 !important;
+
+      > div,
+      > span {
+        margin-top: 0 !important;
+      }
+    }
+  }
+
+  &-pointer {
+    pointer-events: none !important;
+  }
+
+  &-fs {
+    font-style: normal !important;
+  }
+
+  &-mg {
+    margin: 0 !important;
+
+    &-x {
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+    }
+
+    &-y {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+    }
+
+    &-xa {
+      margin-left: 0 !important;
+    }
+
+    &-xb {
+      margin-right: 0 !important;
+    }
+
+    &-ya {
+      margin-top: 0 !important;
+    }
+
+    &-yb {
+      margin-bottom: 0 !important;
+    }
+  }
+
+  &-pd {
+    padding: 0 !important;
+
+    &-x {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+
+    &-y {
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+    }
+
+    &-xa {
+      padding-left: 0 !important;
+    }
+
+    &-xb {
+      padding-right: 0 !important;
+    }
+
+    &-ya {
+      padding-top: 0 !important;
+    }
+
+    &-yb {
+      padding-bottom: 0 !important;
+    }
+  }
+  &-td {
+    text-decoration: none !important;
+  }
+  &-tt {
+    text-transform: none !important;
+  }
+  &-bd {
+    border: none !important;
+  }
+  &-bg {
+    background: none !important;
+  }
+  &-bgc {
+    background-color: none !important;
+  }
+  &-scroll {
+    overflow: hidden !important;
+    &-x {
+      overflow-x: hidden !important;
+    }
+    &-y {
+      overflow-y: hidden !important;
+    }
+  }
+  &-ls {
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    &-deep {
+      ul,
+      ol {
+        list-style: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+    }
+  }
+  &-select {
+    user-select: none !important;
+  }
+  &-outline {
+    &,
+    &:focus {
+      outline: none !important;
+    }
+  }
+}

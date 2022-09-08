@@ -1,0 +1,24 @@
+{
+    "links": [
+        {
+            "url": "https://ungic.com",
+            "label": "Documentation",
+            "attrs": [
+                {
+                    "name": "target",
+                    "value": "_blank"
+                }
+            ]
+        },
+        {
+            "url": "https://github.com/unbywyd/ungic",
+            "label": "Github",
+            "attrs": [
+                {
+                    "name": "target",
+                    "value": "_blank"
+                }
+            ]
+        }
+    ]
+}

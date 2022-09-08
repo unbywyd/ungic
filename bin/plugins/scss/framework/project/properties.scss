@@ -1,0 +1,28 @@
+/*------------------------------------------
+*   Optional project file
+--------------------------------------------
+*   Module: ungic.project
+*   Desc: This file contains any CSS properties that can be applied when styling components.
+*   API:  https://ungic.com/guide/api/sass.html#ungic-project
+*/
+
+@use "ungic.utils" as utils;
+@use "ungic.theme" as theme;
+
+$font-size: 16px;
+$line-height:1.5;
+$font-family: utils.rtl-prepend('-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"', 'Heebo', ',');
+$padding: 1.2em;
+$box-shadow: none;
+$border-radius: 3px;
+
+// Outline
+$outline-color: theme.color(system, .6);
+$outline-style: ridge;
+$outline-width: 2px;
+$outline-offset: 2px;
+
+// Border
+$border-width: 2px;
+$border-style: solid;
+$border-color: theme.gray(.8);

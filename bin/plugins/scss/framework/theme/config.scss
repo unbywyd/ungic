@@ -1,0 +1,99 @@
+@use "ungic.meta" as un-meta;
+@use "sass:meta";
+@use "sass:map";
+@use "sass:color";
+@use "sass:list";
+
+/*
+*   Retrieves configuration from configuration file of active theme by path project/themes/THEME_NAME.css
+*   It depends on the chosen theme for rendering
+*/
+$settings: () !default;
+
+/*
+*   This is if the second run for inversion colors
+*/
+$inverse-mode: false !default;
+$theme-prefix: false !default;
+
+$colors: map.get($settings, 'colors');
+$config: map.get($settings, 'config');
+$palettes: map.get($settings, 'palettes');
+// Default inversion (Инверсия по умолчанию)
+$inverse: map.get($config, inverse);
+
+$default-inverse: $inverse;
+
+$inverse-support: map.get($config, inverse-support);
+$colors-vars-mode: map.get($config, colors-vars-mode);
+
+$name: map.get($settings, 'theme-name');
+
+
+/*
+*   Inverted relative to the global method
+*   Если это вторичный режим сборки в режиме инверсии и режим инверсии по умолчанию правда, тогда меняем его на ложь (инвертируем значение) и наоборот.
+*/
+@if($inverse-mode) {
+   // $inverse = defaultInverse
+    @if($inverse) {
+        $inverse: false
+    } @else {
+        $inverse: true
+    }
+}
+
+/*
+*   Generate a missing third (extra) color
+*/
+@if un-meta.is-color-available(extra) and (not map.has-key($colors, extra) and map.has-key($colors, primary) and map.has-key($colors, secondary)) {
+  $_primary: map.get($colors, primary);
+
+  @if(type-of($_primary) == list) {
+    @if($inverse) {
+      $_primary: nth($_primary, 2);
+    } @else {
+      $_primary: nth($_primary, 1);
+    }
+  }
+  $_secondary: map.get($colors, secondary);
+  @if(type-of($_secondary) == list) {
+    @if($inverse) {
+      $_secondary: nth($_secondary, 2);
+    } @else {
+      $_secondary: nth($_secondary, 1);
+    }
+  }
+
+  $colors: map.merge($colors, (extra: color.mix($_primary, $_secondary)));
+}
+
+
+/*
+*   Checking theme colors
+*/
+@include un-meta.check-colors($colors);
+
+/*
+*   Colors can be in the form of a list, it is required for inversion, then such colors will be substituted by swapping
+*/
+@each $color-name, $_color in $colors {
+    $color: $_color;
+    @if(type-of($color) == list) {
+        $color: nth($_color, 1);
+        @if($inverse) {
+          $color: nth($_color, 2);
+        }
+    }
+    $colors: map.merge($colors, (
+      #{$color-name}: $color
+    ));
+}
+
+/*
+*   Determines the type of theme light or dark.
+*/
+$theme-type: 'light';
+@if(un-meta.is-darker(map.get($colors, 'background-color'), map.get($colors, 'text-color'))) {
+    $theme-type: 'dark';
+}

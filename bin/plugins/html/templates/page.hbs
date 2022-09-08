@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="{{lang}}" {{dirAttribute}}="{{#if rtl}}rtl{{/if}}{{#unless rtl}}ltr{{/unless}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="{{description}}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{#if components}}
+    <un-pipe sass="{{components}}" main="{{name}}"></un-pipe>
+    {{/if}}
+    <title>{{title}}</title>
+</head>
+<body> 
+    <div class="@">
+        <!-- content -->
+    </div>
+</body>
+</html>

@@ -1,0 +1,97 @@
+@use "sass:map";
+@use "sass:meta";
+
+@function rtli($val) {
+    @return #{$val + '/*rtl:ignore*/'};
+}
+
+$_icons: ({{#each icons}}{{id}}: (name: {{name}}, height: {{coordinates.height}}, width: {{coordinates.width}}, x: {{coordinate coordinates.x}}, y: {{coordinate coordinates.y}}),{{/each}});
+$url: "{{path}}";
+$class-name: "{{config.className}}";
+
+@function get-icon($icon-name) {
+    $result: null;
+    @if(map.has-key($_icons, $icon-name)) {
+        $result: map.get($_icons, $icon-name);
+        @if meta.variable-exists("cid") {
+            $save: use-icon($cid, $icon-name);
+        }
+    } @else {
+        @warn '#{$icon-name} icon not exist';
+    }
+    @return $result;
+}
+
+@mixin icon-core {
+    display:inline-block;
+    vertical-align: middle;
+    text-decoration: none;
+    background-image:url("{{path}}");
+}
+
+@function exist() {@return true};
+
+@function get-icons-list() {
+    @return map.keys($_icons);
+}
+
+@function icon-exist($icon-name) {
+    @if(not map.has-key($_icons, $icon-name)) {
+        @return false;
+    }
+    @return true;
+}
+
+@function has-icon($icon-name) {
+    @return icon-exist($icon-name);
+}
+
+@function get-icons() {
+    @return $_icons;
+}
+
+@mixin icon($icon-name) {
+    $icon: get-icon($icon-name);
+    @if $icon {
+        width: map.get($icon, width) + px;
+        height: map.get($icon, height) + px;
+        @include icon-core;
+        background-position: rtli(#{map.get($icon, x) map.get($icon, y)});
+        @if meta.variable-exists("cid") {
+            $save: use-icon($cid, $icon-name);
+        }
+    }
+}
+
+@mixin icon-label {
+    border: 0;
+    clip: rect(1px, 1px, 1px, 1px);
+    clip-path: inset(50%);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+    word-wrap: normal !important;
+}
+
+
+@mixin render {
+    .{{config.className}}-label {
+        @include icon-label();
+    }
+    {{#each icons}}
+        .{{../config.className}} {
+            &-{{id}} {
+                width: {{coordinates.width}}px;
+                height: {{coordinates.height}}px;
+                background-position: rtli(#{ {{coordinate coordinates.x}} {{coordinate coordinates.y}} });
+                @include icon-core;
+            }
+        }
+        @if meta.variable-exists("cid") {
+            $save: use-icon($cid, "{{id}}");
+        }
+    {{/each}}
+}

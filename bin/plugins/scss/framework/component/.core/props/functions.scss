@@ -1,0 +1,63 @@
+/*---------------------------------------------
+*   Framework system file!
+-----------------------------------------------
+*   Module: ungic.component.props
+*   Desc: This file is part of ungic.component.props module
+*   API:  https://ungic.com/guide/api/sass.html#ungic-component-props
+*/
+@use "./config" as this;
+@use "ungic.default-properties" as default-props;
+
+@use "sass:map";
+@use "sass:meta";
+@use "ungic.utils" as utils;
+@use "./handlers" as property-handlers;
+@use "ungic.project" as project;
+
+$component: meta.module-variables(this);
+$default-properties: meta.module-variables(default-props);
+
+@use "ungic.meta.property-handlers" as global-property-handlers;
+
+/*
+*   Gel all component properties
+*/
+@function properties($defaults: false) {
+  @if $defaults {
+    @return utils.merge($default-properties, this.$properties);
+  }
+  @return this.$properties;
+}
+
+@function props($defaults: false) {
+  @if $defaults {
+    @return utils.merge($default-properties, this.$properties);
+  }
+  @return this.$properties;
+}
+
+
+/*
+*   Get the computed value of a specific property of a component
+*/
+@function prop($prop, $args...) {
+  @return property-handlers.handler($prop, $args...);
+}
+
+/*
+*   Check if component property differs from project property, also checks for changes to derived properties.
+*/
+@function is-prop-changed($prop) {
+  $all_props: utils.merge($default-properties, this.$properties);
+  @if not map.has-key($all_props, $prop) {
+    @return null;
+  }
+  $project-value: global-property-handlers.handler($prop, (properties: project.$properties, private-properties: ()));
+  $private-value: property-handlers.handler($prop);
+
+  @if meta.inspect($project-value) != meta.inspect($private-value) {
+    @return true;
+  } @else {
+    @return false;
+  }
+}

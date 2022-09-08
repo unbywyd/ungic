@@ -1,0 +1,49 @@
+@use "ungic.project.config" as config;
+@use "ungic.project.properties" as properties;
+@use "ungic.default-properties" as def_properties;
+@use "ungic.utils" as utils;
+@use "sass:meta";
+@use "sass:map";
+@use "./property-handlers.scss" as property-handlers;
+
+$config: meta.module-variables(config);
+$properties: meta.module-variables(properties);
+$default_properties: meta.module-variables(def_properties);
+
+/*
+*   Get project config
+*/
+
+@function config($key: "", $subkey: false) {
+  @if map.has-key($config, $key) {
+    $result: map.get($config, $key);
+    @if $subkey and type-of($result) == map {
+      @if map.has-key($result, $subkey) {
+        @return map.get($result, $subkey);
+      } @else {
+        @return $result;
+      }
+    } @else {
+      @return $result;
+    }
+  } @else if $key != "" {
+    @return false;
+  }
+  @return $config;
+}
+
+@function properties($defaults: false) {
+  @if $defaults {
+    @return utils.merge($default_properties, $properties);
+  }
+  @return $properties;
+}
+
+@function props($defaults: false) {
+  @return properties($defaults);
+}
+
+@function prop($prop, $args...) {
+  $props: utils.merge($default_properties, $properties);
+  @return property-handlers.handler($prop, $args...);
+}

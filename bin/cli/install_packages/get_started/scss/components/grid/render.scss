@@ -1,0 +1,169 @@
+/*------------------------------------------
+*   Optional component render file
+--------------------------------------------
+*   This file should contain the final CSS style rules that will be generated in CSS!
+*   API: https://ungic.com/guide/api/sass.html
+*/
+
+// SASS native modules
+@use "sass:list" as list;
+
+// Component core
+@use ".core" as this;
+
+// Ungic framework modules
+@use "ungic.utils"as *;
+
+// Custom
+@use "functions"as *;
+@use "mixins"as *; 
+
+$breakpoints: breakpoints(keys);
+$only-max-width-container: this.config(container-max-width-only);
+.#{this.config(class-names, container)} {
+    width: 100%;
+    padding-left: u(this.prop(padding, left));
+    padding-right: u(this.prop(padding, left));
+    margin-left: auto;
+    margin-right: auto;
+    @if $only-max-width-container {
+        max-width: breakpoint(lg);
+    }
+    @for $i from 1 through list.length($breakpoints) {
+        $max: "";
+        @if $i+1 <=list.length($breakpoints) {
+            $max: "and" media("max-#{list.nth($breakpoints, $i + 1)}");
+        }
+        @if not $only-max-width-container {
+            @include media(screen "and" media("min-#{list.nth($breakpoints, $i)}") $max) {
+                max-width: container-size(list.nth($breakpoints, $i));
+            }
+        }
+    }
+}
+
+@include this.component {
+    @if this.config(columns-number-group) {
+        @each $grid,
+        $columns in this.config(columns-number-group) {
+            &-#{$grid} {
+                $has_rules: false;
+                @for $i from 1 through list.length($columns) {
+                    $col-num: list.nth($columns, $i);
+                    >.row>.#{this.config(class-names, column)} {
+                        $type: type-of($col-num);
+                        @if ($type==map and not $has_rules) {
+                            $has_rules: true;
+                        }
+                        @if ($i==1) {
+                            @include generate-custom-grid($col-num);
+                        }
+                        @else {
+                            $max: "";
+                            @if ($i <=list.length($breakpoints)) {
+                                $max: "and" media(max-#{nth($breakpoints, $i)});
+                            }
+                            @include media(screen "and" media(min-#{nth($breakpoints, $i - 1)}) $max) {
+                                @if ($has_rules and $type !=map) {
+                                    &:nth-child(1n) {
+                                        @include generate-custom-grid($col-num);
+                                    }
+                                }
+                                @else {
+                                    @include generate-custom-grid($col-num);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    @if this.config(gap-custom) {
+        @each $class-name,
+        $px in this.config(gap-custom) {
+            $margin: $px;
+            &-gap-custom-#{$class-name} {
+                padding-left: u($margin);
+                padding-right: u($margin);
+                &,
+                .#{this.config(class-names, nest)} {
+                    >.row {
+                        margin-right: u(negative($margin));
+                        margin-left: u(negative($margin));
+                        >.#{this.config(class-names, column)} {
+                            padding: u($margin);
+                            >.#{this.config(class-names, nest)} {
+                                margin-top: u(negative($margin));
+                                margin-bottom: u(negative($margin));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    @if this.config(gap-space) and this.config(gap-space)>0 and this.config(gap-steps) and this.config(gap-steps)>0 {
+        &-gap {
+            @for $i from 1 through this.config(gap-steps) {
+                &-#{$i} {
+                    $margin: this.config(gap-space) * $i;
+                    padding-left: u($margin);
+                    padding-right: u($margin);
+                    &,
+                    .#{this.config(class-names, nest)} {
+                        >.row {
+                            margin-right: u(negative($margin));
+                            margin-left: u(negative($margin));
+                            >.#{this.config(class-names, column)} {
+                                padding: u($margin);
+                                >.#{this.config(class-names, nest)} {
+                                    margin-top: u(negative($margin));
+                                    margin-bottom: u(negative($margin));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    .#{this.config(class-names, column)} {
+        &-stretch {
+            flex-grow: 1;
+        }
+    }
+}
+
+.row {
+    flex-wrap: wrap;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    &-nowrap, &.nowrap {
+        flex-wrap: nowrap;
+    }
+    &-stretch, &.stretch {
+        >.#{this.config(class-names, column)} {
+            flex-grow: 1;
+        }
+    }
+    &-reverse, &.reverse {
+        flex-direction: row-reverse;
+    }
+    @include grid-columns();
+    @for $i from 1 through list.length($breakpoints) {
+        @include media(screen "and" media("min-#{list.nth($breakpoints, $i)}")) {
+            @include grid-columns("-f#{list.nth($breakpoints, $i)}");
+        }
+        $reverse: (list.length($breakpoints) - $i)+1;
+        // Reverse
+        @include media(screen "and" media("max-#{list.nth($breakpoints, $reverse)}")) {
+            @include grid-columns("-t#{list.nth($breakpoints, $reverse)}");
+        }
+    }
+    &-inline, &.inline {
+        display: inline-flex;
+    }
+}
+@import "tools"; 

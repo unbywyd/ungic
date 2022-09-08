@@ -1,0 +1,143 @@
+@use "sass:map";
+@use "sass:meta";
+
+$font-family: "{{config.font.name}}";
+$url: "{{fonts_path}}";
+$class-name: "{{config.font.class}}";
+
+$_icons: (
+    {{#each icons}}{{id}}:(
+        unicode: {{unicode}},
+        name: "{{name}}",
+        {{#if title}} title: "{{title}}", {{/if}}
+    ),{{/each}}
+);
+
+@function _char($character-code) {
+    @if function-exists("selector-append") {
+        @return unquote("\"\\#{$character-code}\"");
+    }
+
+    @if "\\#{'x'}"=="\\x" {
+        @return str-slice("\x", 1, 1)+$character-code;
+    }
+
+    @else {
+        @return #{"\"\\"}#{$character-code + "\""};
+    }
+}
+
+@mixin icon-core {
+    font-family: {{config.font.name}} !important;
+    speak: none;
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    text-decoration: none;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-size: {{config.font.size}};
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    &::selection {
+        background-color: transparent;
+    }
+}
+
+@function icon-exist($icon-name) {
+    @if(not map.has-key($_icons, $icon-name)) {
+        @return false;
+    }
+    @return true;
+}
+
+@function has-icon($icon-name) {
+    @return icon-exist($icon-name);
+}
+
+
+@function exist() {@return true};
+
+@function get-icon($icon-name) {
+    $result: null;
+    @if(map.has-key($_icons, $icon-name)) {
+        $icon: map.get($_icons, $icon-name);
+        $result:_char(map.get($icon, unicode));
+        @if meta.variable-exists("cid") {
+            $save: use-icon($cid, $icon-name);
+        }
+    } @else {
+        @warn '#{$icon-name} icon not exist';
+    }
+    @return $result;
+}
+
+@function get-icons-list() {
+    @return map.keys($_icons);
+}
+
+@function get-icons() {
+    @return $_icons;
+}
+
+@mixin icon($icon-name, $before: true) {
+    $unicode: get-icon($icon-name);
+    @if($unicode != null) {
+        @if($before) {
+            @include icon-core();
+            &:before {
+                content: $unicode;
+            }
+        } @else {
+            @include icon-core();
+            content: $unicode;
+        }
+    }
+    @if meta.variable-exists("cid") {
+        $save: use-icon($cid, $icon-name);
+    }
+}
+
+@mixin icon-label {
+    border: 0;
+    clip: rect(1px, 1px, 1px, 1px);
+    clip-path: inset(50%);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+    word-wrap: normal !important;
+}
+
+@mixin render {
+    @font-face {
+        font-family: {{config.font.name}};
+        src: url('{{fonts_path}}{{config.font.name}}.eot'); /* IE9 Compat Modes */
+        src: url('{{fonts_path}}{{config.font.name}}.eot?#iefix') format('embedded-opentype'){{#each config.font.supports}}, url('{{../fonts_path}}{{../config.font.name}}.{{type}}') format('{{format}}'){{/each}};
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+    }
+    .{{config.font.class}} {
+        @include icon-core();
+        &-label {
+            @include icon-label();
+        }
+    }
+    @if(length(map.keys($_icons))) {
+        @each $icon-name, $icon in $_icons {
+            .{{config.font.class}}-#{$icon-name} {
+                &:before {
+                    content: _char(map.get($icon, unicode));
+                }
+            }
+            @if meta.variable-exists("cid") {
+                $save: use-icon($cid, $icon-name);
+            }
+        }
+    }
+}

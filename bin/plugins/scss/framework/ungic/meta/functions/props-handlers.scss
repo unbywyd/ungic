@@ -1,0 +1,412 @@
+@use "sass:map";
+@use "sass:string" as str;
+@use "sass:meta";
+@use "sass:math";
+@use "sass:list";
+@use "ungic.utils" as *;
+
+@function parse-pm($options:()) {
+    $data: (top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0);
+
+    @if(list.length($options) == 1) {
+        $data: merge($data, (top: list.nth($options, 1),
+            right: list.nth($options, 1),
+            bottom: list.nth($options, 1),
+            left: list.nth($options, 1)));
+    }
+
+    @else if(list.length($options) == 2) {
+        $data: merge($data, (top: list.nth($options, 1),
+            right: list.nth($options, 2),
+            bottom: list.nth($options, 1),
+            left: list.nth($options, 2)));
+    }
+
+    @else if(list.length($options) == 3) {
+        $data: merge($data, (top: list.nth($options, 1),
+            right: list.nth($options, 2),
+            bottom: list.nth($options, 3),
+            left: list.nth($options, 2)));
+    }
+
+    @else if(list.length($options) == 4) {
+        $data: merge($data, (top: list.nth($options, 1),
+            right: list.nth($options, 2),
+            bottom: list.nth($options, 3),
+            left: list.nth($options, 4)));
+    }
+
+    @return $data;
+}
+
+@function parse-pm-props($props, $prop) {
+    $storage: (top:0, right:0, bottom:0, left:0);
+  
+    @if map.has-key($props, $prop) {
+        @if type-of(map.get($props, $prop)) == map {
+          $storage: map.merge($storage, map.get($props, $prop));
+        } @else {
+          $storage: parse-pm(map.get($props, $prop));
+        }
+    }
+    @return $storage;
+}
+
+@function pm-inv-replace($props, $storage, $prop) {
+    $top: #{$prop}-top;
+    $right: #{$prop}-right;
+    $bottom: #{$prop}-bottom;
+    $left: #{$prop}-left;
+  
+    @if map.has-key($props, $top) {
+      $storage: map.merge($storage, (top: map.get($props, $top)));
+    }
+    @if map.has-key($props, $right) {
+      $storage: map.merge($storage, (right: map.get($props, $right)));
+    }
+    @if map.has-key($props, $bottom) {
+      $storage: map.merge($storage, (bottom: map.get($props, $bottom)));
+    }
+    @if map.has-key($props, $left) {
+      $storage: map.merge($storage, (left: map.get($props, $left)));
+    }
+    @return $storage;
+  }
+  
+@function border-handler($border, $properties) {
+    @if map.has-key($properties, "border") {
+        $_border: map.get($properties, "border");
+        @if type-of($_border) == map {
+            $border: map.merge($border, $_border);
+        } @else if($_border == inherit) {
+            $border: map.merge($border, (
+                width: inherit,
+                style: inherit
+            ));
+        } @else if type-of($_border) != list {
+            $_border: ($_border, );
+        }
+
+        $styles: (dotted, dashed, solid, double, groove, ridge, inset, outset, none, hidden);
+        @each $value in $_border {
+            @if type-of($value) == number {
+                $border: map.merge($border, (
+                    width: $value
+                ));
+            }
+            @if list.index($styles, $value) {
+                $border: map.merge($border, (
+                    style: $value
+                ));
+            }
+            @if type-of($value) == color {
+                $border: map.merge($border, (
+                    color: $value
+                ));
+            }
+        }
+    }
+    @if map.has-key($properties, border-width) {
+        $border: map.merge($border, (
+            width: map.get($properties, border-width)
+        ));
+    }
+    @if map.has-key($properties, border-style) {
+        $border: map.merge($border, (
+            style: map.get($properties, border-style)
+        ));
+    }
+    @if map.has-key($properties, border-color) {
+        $border: map.merge($border, (
+            color: map.get($properties, border-color)
+        ));
+    }
+    @return $border;
+}
+
+@function font-handler($font, $properties) {
+    $weights: (bold bolder normal lighter 100 200 300 400 500 600 700 800 900);
+    $styles: (italic oblique);
+    $variants: (small-caps);
+    @if map.has-key($properties, font) {
+        @if type-of(map.get($properties, font)) == map {
+            $font: map.merge($font, map.get($properties, font));
+        } @else {
+            $_font: map.get($properties, font);
+            @if $_font == inherit {
+                $font: map.merge($font, (style: inherit, size: inherit, variant: inherit, family: inherit, weight: inherit));
+            } @else {
+                @if type-of($_font) != list {
+                    $_font: ($_font, );
+                }
+                @each $value in $_font {
+                    @if list.index($styles, $value) {
+                       $font: map.merge($font, (style: $value));
+                    }
+                    @else if list.index($variants, $value) {
+                       $font: map.merge($font, (variant: $value));
+                    }
+                    @else if list.index($weights, $value) {
+                       $font: map.merge($font, (weight: $value));
+                    } @else if type-of($value) == number {
+
+                        @if not math.is-unitless($value) {
+                            $font: map.merge($font, (size: $value));
+                        } @else {
+                            $font: map.merge($font, (line-height: $value));
+                        }
+                    } @else if type-of($value) == string  {
+                        $font: map.merge($font, (family: $value));
+                    }
+                }
+            }
+        }
+    }
+    @if map.has-key($properties, font-style) {
+        $font: map.merge($font, (style: map.get($properties, font-style)));
+    }
+    @if map.has-key($properties, font-size) {
+        $font: map.merge($font, (size: map.get($properties, font-size)));
+    }
+    @if map.has-key($properties, font-weight) {
+        $font: map.merge($font, (weight: map.get($properties, font-weight)));
+    }
+    @if map.has-key($properties, line-height) {
+        $font: map.merge($font, (line-height: map.get($properties, line-height)));
+    }
+    @if map.has-key($properties, font-family) {
+        $font: map.merge($font, (family: map.get($properties, font-family)));
+    }
+    @if map.has-key($properties, font-variant) {
+        $font: map.merge($font, (variant: map.get($properties, font-variant)));
+    }
+    @return $font;
+}
+
+@function background-handler($background, $properties) {
+    $attachments: (fixed scroll local);
+    $positions: (left center right);
+    $repeats: (no-repeat repeat repeat-x repeat-y);
+
+    @if map.has-key($properties, background) {
+        @if type-of(map.get($properties, background)) == map {
+            $background: map.merge($background, map.get($properties, background));
+        } @else {
+            $_bg: map.get($properties, background);
+            @if type-of($_bg) != list {
+                $_bg: ($_bg, );
+            }
+            $position: ();
+            @each $value in $_bg {
+                @if list.index($attachments, $value) {
+                    $background: map.merge($background, (attachment: $value));
+                }
+                @if list.index($repeats, $value) {
+                    $background: map.merge($background, (repeat: $value));
+                }
+                @if type-of($value) == string and str.index($value, 'url(') {
+                    $background: map.merge($background, (image: $value));
+                } @else if type-of($value) == number or list.index($positions, $value) {
+                    @if list.length($position) < 2 {
+                        $position: list.append($position, $value, space);
+                        @if list.index($_bg, $value) + 1 <= list.length($_bg) {
+                            $next-value:  list.nth($_bg, list.index($_bg, $value) + 1);
+                            @if(type-of($next-value) == number or list.index($positions, $next-value)) {
+                                $position: list.append($position, $next-value);
+                            }
+                        } @else {
+                            $position: list.append($position, $value, space);
+                        }
+                    }
+                }
+            }
+
+            @if list.length($position) {
+                $background: map.merge($background, (position: $position));
+            }
+        }
+    }
+
+    @if map.has-key($properties, background-image) {
+        $background: map.merge($background, (image: map.get($properties, background-image)));
+    }
+
+    @if map.has-key($properties, background-attachment) {
+        $background: map.merge($background, (attachment: map.get($properties, background-attachment)));
+    }
+
+    @if map.has-key($properties, background-repeat) {
+        $background: map.merge($background, (repeat: map.get($properties, background-repeat)));
+    }
+
+    @if map.has-key($properties, background-position) {
+        $position: map.get($properties, background-position);
+        @if type-of($position) != list {
+            $position: ($position $position);
+        }
+        $background: map.merge($background, (position: $position));
+    }
+    @return $background;
+}
+
+@function list-style-handler($list, $properties) {
+    $positions: (inside outside);
+    $types: (circle disc square armenian decimal decimal-leading-zero georgian lower-alpha lower-greek lower-latin lower-roman upper-alpha upper-latin upper-roman);
+    @if(map.has-key($properties, list-style)) {
+        @if type-of(map.get($properties, list-style)) == map {
+            $list: map.merge($list, map.get($properties, list-style));
+        } @else {
+            $_list: map.get($properties, list-style);
+            @if $_list == none or $_list == inherit  {
+                $list: map.merge($list, (type: $_list));
+            } @else {
+                @each $value in $_list {
+                    @if list.index($positions, $value) {
+                        $list: map.merge($list, (position: $value));
+                    }
+                    @if list.index($types, $value) {
+                        $list: map.merge($list, (type: $value));
+                    }
+                    @if type-of($value) == string and str.index($value, 'url(') {
+                        $list: map.merge($list, (image: $value));
+                    }
+                }
+            }
+        }
+    }
+    @if map.has-key($properties, list-style-type) {
+        $list: map.merge($list, (type: map.get($properties, list-style-type)));
+    }
+    @if map.has-key($properties, list-style-position) {
+        $list: map.merge($list, (position: map.get($properties, list-style-position)));
+    }
+    @if map.has-key($properties, list-style-image) {
+        $list: map.merge($list, (image: map.get($properties, list-style-image)));
+    }
+    @return $list;
+}
+
+@function border-radius-handler($radius, $properties) {
+    @if map.has-key($properties, border-radius) {
+
+        @if type-of(map.get($properties, border-radius)) == map {
+            $radius: map.merge($radius, map.get($properties, border-radius));
+        } @else {
+            $_radius: map.get($properties, "border-radius");
+            @if $_radius == inherit {
+                $radius: map.merge($radius, (
+                    top-left:inherit,
+                    top-right:inherit,
+                    bottom-right:inherit,
+                    bottom-left:inherit
+                ));
+            } @else {
+                @if type-of($_radius) == number {
+                    $_radius: ($_radius, );
+                }
+                @if type-of($_radius) == list {
+                    @if list.length($_radius) == 1 {
+                        $radius: map.merge($radius, (
+                            top-left:list.nth($_radius, 1),
+                            top-right:list.nth($_radius, 1),
+                            bottom-right:list.nth($_radius, 1),
+                            bottom-left:list.nth($_radius, 1)
+                        ));
+                    }
+                    @if list.length($_radius) == 2 {
+                        $radius: map.merge($radius, (
+                            top-left:list.nth($_radius, 1),
+                            top-right:list.nth($_radius, 2),
+                            bottom-right:list.nth($_radius, 1),
+                            bottom-left:list.nth($_radius, 2)
+                        ));
+                    }
+                    @if list.length($_radius) == 3 {
+                        $radius: map.merge($radius, (
+                            top-left:list.nth($_radius, 1),
+                            top-right:list.nth($_radius, 2),
+                            bottom-right:list.nth($_radius, 3),
+                            bottom-left:list.nth($_radius, 2)
+                        ));
+                    }
+                    @if list.length($_radius) == 4 {
+                        $radius: map.merge($radius, (
+                            top-left:list.nth($_radius, 1),
+                            top-right:list.nth($_radius, 2),
+                            bottom-right:list.nth($_radius, 3),
+                            bottom-left:list.nth($_radius, 4)
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    @if map.has-key($properties, border-top-left-radius) {
+        $radius: map.merge($radius, (top-left: map.get($properties, border-top-left-radius)));
+    }
+    @if map.has-key($properties, border-top-right-radius) {
+        $radius: map.merge($radius, (top-right: map.get($properties, border-top-right-radius)));
+    }
+    @if map.has-key($properties, border-bottom-right-radius) {
+        $radius: map.merge($radius, (bottom-right: map.get($properties, border-bottom-right-radius)));
+    }
+    @if map.has-key($properties, border-bottom-left-radius) {
+        $radius: map.merge($radius, (bottom-left: map.get($properties, border-bottom-left-radius)));
+    }
+    @return $radius;
+}
+
+
+@function outline-handler($outline, $properties) {
+    @if map.has-key($properties, "outline") {
+        $_outline: map.get($properties, "outline");
+        @if type-of($_outline) == map {
+            $outline: map.merge($outline, $_outline);
+        } @else if($_outline == inherit) {
+            $outline: map.merge($outline, (
+                width: inherit,
+                style: inherit
+            ));
+        } @else if type-of($_outline) != list {
+            $_outline: ($_outline, );
+        }
+
+        $styles: (dotted, dashed, solid, double, groove, ridge, inset, outset, none, hidden);
+        @each $value in $_outline {
+            @if type-of($value) == number {
+                $outline: map.merge($outline, (
+                    width: $value
+                ));
+            }
+            @if list.index($styles, $value) {
+                $outline: map.merge($outline, (
+                    style: $value
+                ));
+            }
+            @if type-of($value) == color {
+                $outline: map.merge($outline, (
+                    color: $value
+                ));
+            }
+        }
+    }
+    @if map.has-key($properties, outline-width) {
+        $outline: map.merge($outline, (
+            width: map.get($properties, outline-width)
+        ));
+    }
+    @if map.has-key($properties, outline-style) {
+        $outline: map.merge($outline, (
+            style: map.get($properties, outline-style)
+        ));
+    }
+    @if map.has-key($properties, outline-color) {
+        $outline: map.merge($outline, (
+            color: map.get($properties, outline-color)
+        ));
+    }
+    @return $outline;
+}

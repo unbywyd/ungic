@@ -1,0 +1,467 @@
+/*
+*   Functions for calculating various project and component properties
+*/
+
+@use "ungic.default-properties" as default-props;
+@use "sass:map";
+@use "sass:string" as str;
+@use "sass:meta";
+@use "sass:math";
+@use "sass:list";
+@use "ungic.utils" as *;
+
+@use "ungic.theme" as theme;
+
+@use "./config" as this;
+
+$component: meta.module-variables(this);
+$properties: map.get($component, properties);
+
+@use "ungic.project.properties" as properties;
+
+$project_props: meta.module-variables(properties);
+
+$default-properties: meta.module-variables(default-props);
+
+$all_props: merge($default-properties, $properties);
+
+$private_properties: map.get($component, private-properties);
+
+@use "ungic.meta.property-handlers" as *;
+
+@function handler($prop, $args...) {
+  @if meta.function-exists($prop) {
+    @if list.length($args) == 0 {
+      @return meta.call(meta.get-function($prop));
+    }
+    @return meta.call(meta.get-function($prop),$args...);
+  } @else {
+    @if not map.has-key($all_props, $prop) {
+      @if str.index($prop, '-') {
+        $property: str.slice($prop, str.index($prop, "-") + 1, -1);
+        @if not map.has-key($all_props, $property) {
+          @warn '#{$prop} property not specified';
+          @return "";
+        }
+      } @else {
+        @warn '#{$prop} property not specified';
+        @return "";
+      }
+    } @else {
+      @if str.index($prop, line-height) {
+        @return handler(font, line-height);
+      }
+      @if str.index($prop, border) and str.index($prop, radius) {
+        $stripped: str.slice($prop, str.index($prop, "-") + 1, -1);
+        $stripped: str.slice($stripped, 1, str.index($stripped, "radius") - 2);
+        @return handler(border-radius, $stripped);
+      } @else if str.index($prop, border) == 1 {
+        $methods: (color, width, style);
+        $method: str.slice($prop, str.index($prop, "-") + 1, -1);
+        @if (list.index($methods, $method)) {
+          @return handler(border, $method);
+        }
+      }
+      @if str.index($prop, padding) == 1 {
+        @return handler(padding, str.slice($prop, str.index($prop, "-") + 1, -1));
+      }
+      @if str.index($prop, margin) == 1 {
+        @return handler(margin, str.slice($prop, str.index($prop, "-") + 1, -1));
+      }
+      @if str.index($prop, font) == 1 {
+        $methods: (family, style, size, variant, weight);
+        $method: str.slice($prop, str.index($prop, "-") + 1, -1);
+        @if (list.index($methods, $method)) {
+          @return handler(font, $method);
+        }
+      }
+      @if str.index($prop, background) == 1 {
+        $methods: (attachment, color, position, image, repeat);
+        $method: str.slice($prop, str.index($prop, "-") + 1, -1);
+        @if (list.index($methods, $method)) {
+          @return handler(background, $method);
+        }
+      }
+      @if str.index($prop, list-style) == 1 {
+        $methods: (type, position, image);
+        $method: str.slice($prop, str.length("list-style-") + 1, -1);
+        @if (list.index($methods, $method)) {
+          @return handler(list-style, $method);
+        }
+      }
+    }
+  }
+  @return map.get($all_props, $prop);
+}
+
+@function border($param: false) {
+    $border: (
+        width: default-props.$border-width,
+        style: default-props.$border-style,
+        color: default-props.$border-color
+    );
+
+    $border: border-handler($border, $properties);
+    $border: border-handler($border, $private_properties);
+
+    @if type-of($param) == bool and $param {
+        @return $border;
+    }
+
+    @if type-of($param) == string and map.has-key($border, $param) {
+        @return map.get($border, $param);
+    }
+    $border-width: map.get($border, width);
+    $border-style: map.get($border, style);
+    $border-color: map.get($border, color);
+    $output: ();
+
+    @if($border-style == none) {
+        @return none;
+    }
+    @if($border-width == 0) {
+        @return 0;
+    }
+
+    @if $border-width != inherit {
+        $output: list.append($output, $border-width);
+    }
+    @if $border-style != inherit {
+        $output: list.append($output, $border-style);
+    }
+    @if $border-color != inherit {
+        $output: list.append($output, $border-color);
+    }
+    @if list.length($output) == 0 {
+        @return inherit;
+    }
+    @return $output;
+}
+
+@function padding($param: false) {
+
+    // Parse common property of project
+    $padding: parse-pm-props($project_props, padding);
+
+    // Replace individual props of project
+    $padding: pm-inv-replace($project_props, $padding, padding);
+
+    // Replace common property of project to component props
+    @if map.has-key($properties, padding) {
+      $padding: parse-pm-props($properties, padding);
+    }
+
+    // Replace individual props of component
+    $padding: pm-inv-replace($private_properties, $padding, padding);
+
+    @if type-of($param) == bool and $param {
+        @return $padding;
+    }
+
+    @if type-of($param) == string and map.has-key($padding, $param) {
+        @return map.get($padding, $param);
+    }
+    $padding-top: map.get($padding, top);
+    $padding-right: map.get($padding, right);
+    $padding-bottom: map.get($padding, bottom);
+    $padding-left: map.get($padding, left);
+    @if list.index(map.values($padding), inherit) {
+        @return inherit;
+    }
+    @if $padding-top == $padding-right and $padding-bottom == $padding-left and $padding-left == $padding-top {
+        @return $padding-top;
+    }
+    @if $padding-top == $padding-bottom and $padding-left == $padding-right {
+        @return $padding-top $padding-left;
+    }
+    @if $padding-left == $padding-right {
+        @return $padding-top $padding-left $padding-bottom;
+    }
+    @return (
+        $padding-top
+        $padding-right
+        $padding-bottom
+        $padding-left
+    );
+}
+
+@function margin($param: false) {
+    // Parse common property of project
+    $margin: parse-pm-props($project_props, margin);
+
+    // Replace individual props of project
+    $margin: pm-inv-replace($project_props, $margin, margin);
+
+    // Replace common property of project to component props
+    @if map.has-key($properties, margin) {
+      $margin: parse-pm-props($properties, margin);
+    }
+
+    // Replace individual props of component
+    $margin: pm-inv-replace($private_properties, $margin, margin);
+
+    @if type-of($param) == bool and $param {
+        @return $margin;
+    }
+
+    @if type-of($param) == string and map.has-key($margin, $param) {
+        @return map.get($margin, $param);
+    }
+    $margin-top: map.get($margin, top);
+    $margin-right: map.get($margin, right);
+    $margin-bottom: map.get($margin, bottom);
+    $margin-left: map.get($margin, left);
+    @if list.index(map.values($margin), inherit) {
+        @return inherit;
+    }
+    @if $margin-top == $margin-right and $margin-bottom == $margin-left and $margin-left == $margin-top {
+        @return $margin-top;
+    }
+    @if $margin-top == $margin-bottom and $margin-left == $margin-right {
+        @return $margin-top $margin-left;
+    }
+    @if $margin-left == $margin-right {
+        @return $margin-top $margin-left $margin-bottom;
+    }
+    @return (
+        $margin-top
+        $margin-right
+        $margin-bottom
+        $margin-left
+    );
+}
+
+@function font($param: false) {
+    $font: (
+        style: default-props.$font-style,
+        variant: default-props.$font-variant,
+        weight: default-props.$font-weight,
+        size: default-props.$font-size,
+        line-height: default-props.$line-height,
+        family: default-props.$font-family
+    );
+
+    $font: font-handler($font, $properties);
+    $font: font-handler($font, $private_properties);
+
+    @if type-of($param) == bool and $param {
+        @return $font;
+    }
+
+    @if type-of($param) == string and map.has-key($font, $param) {
+        @return map.get($font, $param);
+    }
+
+    $font-size: map.get($font, size);
+    $font-variant: map.get($font, variant);
+    $font-weight: map.get($font, weight);
+    $font-style: map.get($font, style);
+    $font-family: map.get($font, family);
+
+    @if $font-variant == inherit and $font-weight == inherit and $font-style == inherit and $font-family == inherit {
+        @return inherit;
+    }
+
+    $output: ();
+
+    @if $font-style != inherit {
+        $output: list.append($output, $font-style, space);
+    }
+    @if $font-variant != inherit {
+        $output: list.append($output, $font-variant, space);
+    }
+    @if $font-weight != inherit {
+        $output: list.append($output, $font-weight, space);
+    }
+    $output: list.append($output, str.unquote(map.get($font, 'size') + "/"+ map.get($font, 'line-height')), space);
+    @if $font-family != inherit {
+        $output: list.append($output, $font-family, space);
+    }    
+    @return $output;
+}
+
+@function background($param: false) {    
+    $background: (
+        attachment: default-props.$background-attachment,
+        color: theme.color(background-color),
+        image: default-props.$background-image,
+        position: default-props.$background-position,
+        repeat: default-props.$background-repeat
+    );
+
+    $background: background-handler($background, $properties);
+    $background: background-handler($background, $private_properties);
+
+
+    @if type-of($param) == bool and $param {
+        @return $background;
+    }
+
+    @if type-of($param) == string and map.has-key($background, $param) {
+        @return map.get($background, $param);
+    }
+
+    @if(map.get($background, image) == default-props.$background-image) {
+        @return (
+            map.get($background, color)
+        );
+    }
+    $output: ();
+    $background-attachment: map.get($background, attachment);
+    $background-repeat: map.get($background, repeat);
+    $background-position: meta.inspect(map.get($background, position));
+
+    @if $background-attachment != default-props.$background-attachment {
+        $output: list.append($output, $background-attachment);
+    }
+
+    $output: list.append($output, map.get($background, color));
+    $output: list.append($output, map.get($background, image));
+
+
+    @if $background-position != meta.inspect(default-props.$background-position) {
+        $output: list.append($output, $background-position);
+    }
+    @if $background-repeat != default-props.$background-repeat {
+        $output: list.append($output, $background-repeat);
+    }
+
+    @return $output;
+}
+
+@function list-style($param:false) {
+    $list: (
+        type: default-props.$list-style-type,
+        position: default-props.$list-style-position,
+        image: default-props.$list-style-image,
+    );
+
+    $list: list-style-handler($list, $properties);
+    $list: list-style-handler($list, $private_properties);
+
+
+    @if type-of($param) == bool and $param {
+        @return $list;
+    }
+    @if type-of($param) == string and map.has-key($list, $param) {
+        @return map.get($list, $param);
+    }
+
+    $output: ();
+
+    @if map.has-key($list, type) and map.get($list, type) != inherit {
+        $output: list.append($output, map.get($list, type), space);
+    }
+
+    @if map.get($list, position) != default-props.$list-style-position and map.get($list, position) != inherit {
+        $output: list.append($output, map.get($list, position), space);
+    }
+
+    @if map.get($list, image) != default-props.$list-style-image and map.get($list, image) != inherit {
+        $output: list.append($output, map.get($list, image), space);
+    }
+
+    @if list.length($output) == 0 {
+        @return inherit;
+    }
+
+    @return $output;
+}
+
+@function border-radius($param: false) {
+    $radius: (top-left:0, top-right:0, bottom-right:0, bottom-left:0);
+
+    $radius: border-radius-handler($radius, $properties);
+    $radius: border-radius-handler($radius, $private_properties);
+
+    @if list.index(map.values($radius), inherit) {
+        @return inherit;
+    }
+
+    @if type-of($param) == bool and $param {
+        @return $radius;
+    }
+
+    @if type-of($param) == string and map.has-key($radius, $param) {
+        @return map.get($radius, $param);
+    }
+    $top-left: map.get($radius, top-left);
+    $top-right: map.get($radius, top-right);
+    $bottom-left: map.get($radius, bottom-left);
+    $bottom-right: map.get($radius, bottom-right);
+    @if $top-left == $bottom-right and $bottom-left == $top-right and $bottom-left == $top-left {
+        @return $top-left;
+    } @else if $top-left == $bottom-right and $bottom-left == $top-right {
+        @return $top-left $bottom-left;
+    } @else if $top-right == $bottom-left {
+        @return $top-left $top-right $bottom-right;
+    }
+    @return (
+        $top-left
+        $top-right
+        $bottom-left
+        $bottom-right
+    );
+}
+
+@function overflow($param: false) {
+    $overflow: map.get($properties, overflow);
+    $overflow-x: map.get($properties, overflow-x);
+    $overflow-y: map.get($properties, overflow-y);
+    $output: $overflow;
+    @if $overflow-x == $overflow-y and $overflow != $overflow-x {
+        $output: $overflow-x;
+    }
+    @if type-of($param) == bool and $param {
+        @return (
+            overflow: $output,
+            overflow-x: $overflow-x,
+            overflow-y: $overflow-y,
+        );
+    }
+    @return $output;
+}
+
+@function outline($param: false) {
+    $outline: (
+        width: default-props.$outline-width,
+        style: default-props.$outline-style,
+        color: default-props.$outline-color
+    );
+
+    $outline: outline-handler($outline, $properties);
+    $outline: outline-handler($outline, $private_properties);
+
+    @if type-of($param) == bool and $param {
+        @return $outline;
+    }
+
+    @if type-of($param) == string and map.has-key($outline, $param) {
+        @return map.get($outline, $param);
+    }
+    $outline-width: map.get($outline, width);
+    $outline-style: map.get($outline, style);
+    $outline-color: map.get($outline, color);
+    $output: ();
+
+    @if($outline-style == none) {
+        @return none;
+    }
+    @if($outline-width == 0) {
+        @return 0;
+    }
+
+    @if $outline-width != inherit {
+        $output: list.append($output, $outline-width);
+    }
+    @if $outline-style != inherit {
+        $output: list.append($output, $outline-style);
+    }
+    @if $outline-color != inherit {
+        $output: list.append($output, $outline-color);
+    }
+    @if list.length($output) == 0 {
+        @return inherit;
+    }
+    @return $output;
+}

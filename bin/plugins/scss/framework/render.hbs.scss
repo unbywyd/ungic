@@ -1,0 +1,129 @@
+@use "sass:meta";
+@use "sass:map";
+@use "sass:string";
+@use "ungic.utils" as un-utils;
+@use "ungic.meta" as un-meta;
+@use "ungic.project.config" as project-config;
+@use "ungic.themes.{{theme}}" as theme;
+
+$theme-options: meta.module-variables(theme);
+
+
+$cids: ({{#each components}}{{.}},{{/each}});
+
+$theme-prefix: {{themePrefix}};
+$default-theme: {{defaultTheme}};
+$generate-theme-colors-vars: {{generateThemeColorsVars}};
+$theme-colors-vars-mode: {{themeColorsVarsMode}};
+
+@use "ungic.components" with ($cids: $cids);
+$inverse-mode: false;
+// Инверсия поддерживается, то есть будет сгенерирована инверсия для проекта.
+{{#if inverse}}
+   $inverse-mode: true;
+{{/if}}
+
+$inverse-support: {{inverseSupport}};
+
+$theme-options: map.merge($theme-options, (theme-name: {{theme}}));
+
+
+$theme-config: map.merge(map.get($theme-options, config), (inverse: {{defaultInverse}}, colors-vars-mode: $theme-colors-vars-mode, inverse-support: $inverse-support));
+$theme-options: map.merge($theme-options, (config: $theme-config));
+
+$project-configs: meta.module-variables(project-config);
+// inverse-mode - Инверсия поддерживается, то есть будет сгенерирована инверсия.
+$project: (theme: $theme-options, theme-prefix: $theme-prefix, default-theme: $default-theme, inverse-mode: $inverse-mode, config: $project-configs);
+
+@use "ungic.theme.init" as ungic_theme with (
+    $project: $project
+);
+
+$theme: ungic_theme.get();
+
+{{#unless inverse}}
+    $export: un-meta.export(project, theme, $theme-options);
+    $export: un-meta.export(project, config, $project-configs);
+{{/unless}}
+
+@use "ungic.project.properties" as p-properties;
+$project-properties: meta.module-variables(p-properties);
+
+{{#each components}}
+    @use "ungic.components.{{.}}.properties" as {{.}}-properties;
+    $properties: un-utils.merge($project-properties, meta.module-variables({{.}}-properties));
+
+    @use "ungic.components.{{.}}.properties_over" as {{.}}-properties_over with (
+        $cid: {{.}},
+        $properties: $properties
+    );
+    $properties: {{.}}-properties_over.$properties;
+
+    @use "ungic.components.{{.}}.core.props.config" as {{.}}-core_props with (
+        $properties: $properties,
+        $private_properties: meta.module-variables({{.}}-properties)
+    );
+
+    @use "ungic.components.{{.}}.config" as {{.}}-config;
+    $config: meta.module-variables({{.}}-config);
+    @use "ungic.components.{{.}}.config_over" as {{.}}-config_over with (
+        $cid: {{.}},
+        $config: $config
+    );
+    $config: {{.}}-config_over.$config;
+    {{#unless ../inverse}}
+        $export: un-meta.export({{.}}, config, $config);
+    {{/unless}}
+
+    $project: map.merge($project, (properties: $project-properties));
+    @use "ungic.components.{{.}}.core.config" as {{.}}-core with (
+        $cid: {{.}},
+        $config: $config,
+        $project: $project
+    );
+    {{#unless ../inverse}}
+        @use "ungic.components.{{.}}.once" as {{.}}-once;
+    {{/unless}}
+{{/each}}
+
+{{#each render}}
+    {{#if ../inverse}}
+        .un-inverse {
+            {{#if ../themePrefix}}
+                &.un-theme-{{../theme}} {
+                    @include meta.load-css("ungic.components.{{.}}.render");
+                }
+            {{/if}}
+            {{#unless ../themePrefix}}
+                @include meta.load-css("ungic.components.{{.}}.render");
+            {{/unless}}
+        }
+    {{/if}}
+
+    {{#unless ../inverse}}
+        {{#if ../themePrefix}}
+            .un-theme-{{../theme}} {
+                @include meta.load-css("ungic.components.{{.}}.render");
+            }
+        {{/if}}
+        {{#unless ../themePrefix}}
+            @include meta.load-css("ungic.components.{{.}}.render");
+        {{/unless}}
+    {{/unless}}
+{{/each}}
+
+@if $generate-theme-colors-vars {
+   @each $color-name, $color in ungic_theme.colors() {
+    $save-color: ungic-save-color((
+        'color': meta.inspect(ungic_theme.color($color-name)),
+        'colorName': meta.inspect($color-name),
+        'colorTint': 0,
+        'hueOffset': 0,
+        'saturation': 0,     
+        'inverseMode': {{inverse}},
+        'inverseSupport': $inverse-support,
+        'themeName': meta.inspect({{theme}}),
+        'themePrefix': $theme-prefix
+    ));
+   }
+}

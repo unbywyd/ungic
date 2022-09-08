@@ -1,0 +1,34 @@
+/*------------------------------------------
+*   Theme file
+--------------------------------------------
+*   Theme: rose
+*   Desc: This file is part of ungic.theme module
+*   API:  https://ungic.com/guide/api/sass.html#ungic-theme
+*/
+
+// Colors can be specified as a list, where the first value will be applied in normal mode and the second in inversion mode
+$colors: (
+    primary: #c0206b,
+    secondary: #48bb2d,
+    success: #1BC167,
+    danger: #FF5252,
+    info: #2196F3,
+    warning: #FFC94B,
+    system: #48bb2d,
+    text-color: (#423a47, #FFF),
+    background-color: (#FFF, #171518)
+);
+
+$config: (
+    brightness: (
+        offset-brighten: 20,            // List type possible
+        offset-dim: 20,                 // List type possible
+        saturation-brighten: (0, 10%),  // List type possible
+        saturation-dim: (0, 0)          // List type possible
+    ),
+    relative-light-limit : true,
+    gray: (
+        saturation: (20%, 5%),   // List type possible
+        hue: #e71a84           // List type possible
+    )
+);

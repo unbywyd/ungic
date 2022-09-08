@@ -1,0 +1,184 @@
+/*---------------------------------------------
+*   Framework system file!
+-----------------------------------------------
+*   Module: ungic.component.core
+*   Desc: This file is part of ungic.component.core module
+*   API:  https://ungic.com/guide/api/sass.html#ungic-component-core
+*/
+
+@use "../config" as this;
+@use "sass:map";
+@use "sass:list";
+@use "sass:selector";
+@use "sass:string" as str;
+@use '../functions' as *;
+@use "ungic.meta" as un-meta;
+@use "ungic.utils" as *;
+
+/*
+*   This mixin creates a wrapper for component rules with class name of component
+*/
+@mixin component {
+    #{cid(true)} {
+        @content;
+    }
+}
+
+/*
+*   This mixin creates a wrapper for component rules with class name of component
+*/
+@mixin this($suffix: null) {
+    @if $suffix {
+        $suffix: str-replace($suffix, '___this', cid());
+        $suffix: str-replace($suffix, '__this', cid(true));
+        #{this($suffix)} {
+            @content;
+        }
+    } @else {
+        #{cid(true)} {
+            @content;
+        }
+    }
+}
+
+/*
+*   This method adds the passed suffix to the beginning of the current selector.
+*   if the suffix is not a valid selector, it will be merged with component class name using the append sass method, 
+*   this behavior can be disabled using the second parameter of this method.
+*/
+@mixin wrap($suffix: null, $merge: true) {
+    @if $suffix {
+        $output: ();
+        $suffix: str-replace($suffix, '___this', cid());
+        $suffix: str-replace($suffix, '__this', cid(true));
+        $lsts: (':', '-', '+', '~', '_');
+        @each $selector in & {
+            $replacements:  selector.parse($suffix);
+            @each $replacement in $replacements {
+                $fs: str.slice(inspect($replacement), 0, 1);
+                @if list.index($lsts, $fs) and $merge {
+                    $replacement:  selector.append(cid(true), $replacement);
+                }
+                $output: list.append($output, str-replace(inspect($selector), cid(true), #{$replacement cid(true)}, false), comma);
+            }
+        }
+        @at-root #{$output} {
+            @content;
+        }
+    } @else {
+        &#{cid(true)} {
+            @content;
+        }
+    }
+}
+
+/*
+*   This method uses the append method to add the passed suffix to the root element of the selector.
+*   Important! The selector root must be with the class name of the component!
+*/
+@mixin and($suffix: null) {
+    @if $suffix {
+        $output: ();
+        $suffix: str-replace($suffix, '___this', cid());
+        $suffix: str-replace($suffix, '__this', cid(true));
+        @each $selector in & {
+            $replacements:  selector.append(cid(true), $suffix);
+            @each $replacement in $replacements {
+                $output: list.append($output, str-replace(inspect($selector), cid(true), $replacement, false), comma);
+            }
+        }
+        @at-root #{$output} {
+            @content;
+        }
+    } @else {
+        &#{cid(true)} {
+            @content;
+        }
+    }
+}
+
+/*
+*   This method inserts a part of the selector immediately after the first root of the selector, serves to create a sibling selector
+*/
+@mixin nest($suffix: null) {
+    @if $suffix {
+        $output: ();
+        $suffix: str-replace($suffix, '___this', cid());
+        $suffix: str-replace($suffix, '__this', cid(true));
+        @each $selector in & {
+            $replacements:  selector.nest(cid(true), $suffix);
+            @each $replacement in $replacements {
+                $output: list.append($output, str-replace(inspect($selector), cid(true), $replacement, false), comma);
+            }
+        }
+        @at-root #{$output} {
+            @content;
+        }
+    } @else {
+        &#{cid(true)} {
+            @content;
+        }
+    }
+}
+
+/*
+*   This method inserts a part of the selector before the current element.
+*/
+@mixin before($suffix: null) {
+    @if $suffix {
+        $output: ();
+        $suffix: str-replace($suffix, '___this', cid());
+        $suffix: str-replace($suffix, '__this', cid(true));
+        @each $selector in & {
+            $replacements:  selector.parse($suffix);
+            @each $replacement in $replacements {
+               $output: list.append($output, insert-nth($selector, list.length($selector), $replacement), comma);
+            }
+        }
+        @at-root #{$output} {
+          @content;
+        }
+    } @else {
+        &#{cid(true)} {
+          @content;
+        }
+    }
+}
+
+/*
+*   This method adds a suffix to the previous selector element using the append sass method. 
+*   If the suffix is not a valid selector, it will be merged with component class name using the append sass method, 
+*   this behavior can be disabled using the second parameter of this method.
+*/
+@mixin prev($suffix: null, $merge: true) {
+    @if $suffix {
+        $output: ();
+        $suffix: str-replace($suffix, '___this', cid());
+        $suffix: str-replace($suffix, '__this', cid(true));
+        $lsts: (':', '-', '+', '~', '_');
+        @each $selector in & {
+            $lng: list.length($selector);
+            $last: list.nth($selector, list.length($selector));
+            $replacements:  selector.parse($suffix);
+            @each $replacement in $replacements {
+                 @if $lng > 1 {
+                    $output: append($output, #{selector.append(remove-nth($selector, list.length($selector)), $replacement) $last}, comma);
+                } @else {
+                    $fs: str.slice(inspect($replacement), 0, 1);
+                    @if list.index($lsts, $fs) and $merge {
+                        $output: append($output, #{selector.append(cid(true), $suffix) $last}, comma);
+                    } @else {
+                        $output: append($output, #{$suffix $last}, comma);
+                    }
+                }
+            }
+        }
+        @at-root #{$output} {
+          @content;
+        }
+    } @else {
+        &#{cid(true)} {
+          @content;
+        }
+    }
+}

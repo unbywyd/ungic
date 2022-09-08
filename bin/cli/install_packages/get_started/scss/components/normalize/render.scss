@@ -1,0 +1,402 @@
+/*------------------------------------------
+*   Optional component render file
+--------------------------------------------
+*   This file should contain the final CSS style rules that will be generated in CSS!
+*   API: https://ungic.com/guide/api/sass.html
+*/
+
+// Component core
+@use ".core" as this;
+
+// Theme module
+@use "ungic.theme" as *;
+
+// Ungic framework modules
+@use "ungic.utils" as *;
+
+// you must include any style files here
+// or write them in this file
+body {
+  margin: 0;
+  font-family: this.prop(font-family);
+  font-size: this.prop(font-size);
+  line-height: this.prop(line-height);
+  background-color: color(background-color);
+  color: color(text-color);
+  &,
+  * {
+    box-sizing: border-box;
+  }
+}
+
+img {
+  max-width: 100%;
+}
+
+::selection {
+  background-color: color(this.config(selection-color-name), .9);
+  color: color(this.config(selection-color-name));
+}
+
+hr {
+  box-sizing: content-box;
+  height: 0;
+  border: none;
+  border-bottom: this.config(hr-border);
+  overflow: visible;
+}
+
+a {
+  color: color(this.config(ahref-color-name));
+  &:hover {
+    color: color(this.config(ahref-color-name), -.2);
+  }
+  &:focus {
+    color: color(this.config(ahref-color-name), -.4);
+  }
+  &[href^="#"] {
+    text-decoration: none;
+  }
+}
+
+a,
+btn,
+img,
+input,
+select {
+  &:focus {
+    outline: this.config(outline);
+  }
+}
+
+abbr,
+acronym {
+  &,
+  &[title] {
+    text-decoration: none;
+    cursor: help;
+    border-bottom: none;
+    text-decoration: underline;
+    text-decoration: underline dotted;
+  }
+}  
+
+label {
+  color: color(text-color);
+}
+
+h1 {
+  font-size: this.config(heading-max-size);
+}
+
+h2 {
+  font-size: strip-unit(strip-unit(this.config(heading-max-size)) * 90% * 0.01) + 0em;
+}
+
+h3 {
+  font-size: strip-unit(strip-unit(this.config(heading-max-size)) * 80% * 0.01) + 0em;
+}
+
+h4 {
+  font-size: strip-unit(strip-unit(this.config(heading-max-size)) * 70% * 0.01) + 0em;
+}
+
+h5 {
+  font-size: strip-unit(strip-unit(this.config(heading-max-size)) * 60% * 0.01) + 0em;
+}
+
+h6 {
+  font-size: strip-unit(strip-unit(this.config(heading-max-size)) * 50% * 0.01) + 0em;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin-top: this.config(heading-margin-top);
+  margin-bottom: this.config(heading-margin-bottom);
+  line-height: this.config(heading-line-height);
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+
+ul,
+ol {
+  margin: this.config(list-margin);
+  padding-left: this.config(list-padding-side);
+  line-height: this.config(list-line-height);
+  &.list {
+    &-none {
+      padding-left: 0;
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+  }
+}
+
+dl {
+  margin: this.config(dl-margin);
+}
+
+dd {
+  margin: 0;
+}
+
+dt {
+  font-weight: 700;
+  margin-bottom: this.config(dt-margin-bottom);
+}
+
+img {
+  border-style: none;
+}
+
+button,
+input,
+optgroup,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  margin: 0;
+  color: color(text-color);
+  box-shadow: none;
+  background-color: color(background-color);
+  &::-moz-focus-inner {
+    border: 0;
+  }
+}
+
+button,
+select {
+  cursor: pointer;
+}
+
+button::-moz-focus-inner,
+[type="button"]::-moz-focus-inner,
+[type="reset"]::-moz-focus-inner,
+[type="submit"]::-moz-focus-inner {
+  border-style: none;
+  padding: 0;
+}
+
+::-webkit-file-upload-button {
+  -webkit-appearance: button;
+  font: inherit;
+}
+
+fieldset {
+  padding: this.config(fieldset-padding);
+  border: this.config(fieldset-border);
+}
+
+legend {
+  color: inherit;
+  padding: this.config(legend-side-space);
+  white-space: normal;
+  display: block;
+  margin-left: negative(this.config(legend-side-space) * 0.5);
+}
+
+progress {
+  vertical-align: baseline;
+}
+
+dfn {
+  font-style: italic;
+}
+
+address {
+  font-style: italic;
+}
+
+cite {
+  font-style: italic;
+}
+
+q {
+  quotes: "«""»";
+  display: inline;
+  &.s2 {
+    quotes: "“""”";
+  }
+  &.s3 {
+    quotes: none;
+    &:before {
+      content: "«";
+    }
+    &:after {
+      content: "»";
+    }
+    &:before,
+    &:after {
+      font-size: 0.8em;
+    }
+  }
+}
+
+p {
+  margin-top: this.config(paragraph-margin-top);
+  margin-bottom: this.config(paragraph-margin-bottom);
+  &:last-child {
+    margin-bottom: 0;
+  }
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+bdo {
+  unicode-bidi: bidi-override;
+}
+
+s,
+strike,
+del {
+  text-decoration: line-through;
+}
+
+small {
+  font-style: normal;
+  font-size: 0.8em;
+}
+
+strong,
+b {
+  font-weight: bolder;
+}
+
+tt,
+code,
+kbd,
+samp {
+  font-family: monospace;
+}
+
+.samp {
+  font-family: monospace;
+}
+
+code,
+.code {
+  padding: 0 this.prop(font-size) * 0.25;
+  border-radius: this.config(code-bdrds);
+  tab-size: this.config(code-tab-size);
+  color: color(this.config(code-color-name));
+  background-color: color(this.config(code-color-name), .9);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+pre {
+  font-family: monospace;
+  font-size: 1em;
+  overflow-x: auto;
+  margin: this.config(pre-margin);
+  &:last-child {
+    margin-bottom: 0;
+  }
+  padding: this.config(pre-padding);
+  line-height: this.config(pre-line-height);
+  tab-size: this.config(pre-tab-size);
+  background-color: this.config(pre-bgc);
+  color: this.config(pre-color);
+}
+
+sub,
+sup {
+  font-size: 0.6em;
+  line-height: 0;
+}
+
+sub {
+  vertical-align: sub;
+}
+
+sup {
+  vertical-align: super;
+}
+
+template {
+  display: none;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+var,
+.var {
+  font-family: monospace;
+  font-style: normal;
+  border-radius: this.config(var-bdrds);
+  padding: 0 this.prop(font-size) * 0.25;
+  background-color:this.config(var-bgc);
+  color: this.config(var-color);
+}
+
+mark {
+  background-color: #fffe34;
+  color: #000;
+}
+
+u,
+ins {
+  text-decoration: underline;
+}
+
+i,
+em {
+  font-style: italic;
+}
+
+kbd {
+  color: this.config(kbd-color);
+  border-radius: this.config(kbd-bdrds);;
+  padding: 0 this.prop(font-size) * 0.25;
+  background-color: this.config(kbd-bgc);
+}
+
+.figure,
+figure {
+  display: block;
+  margin: 0;
+}
+
+.table {
+  &-stretch {
+    width: 100%;
+  }
+  &-caption-top {
+    caption-side: top;
+  }
+}
+
+.table,
+table {
+  border-collapse: collapse;
+  caption-side: bottom;
+  caption {
+    padding: this.prop(padding-top) 0;
+  }
+}
+
+caption {
+  display: table-caption;
+}
+
+[disabled]::selection {
+  background-color: transparent;
+}
+
+[disabled] {
+  cursor: not-allowed;
+}

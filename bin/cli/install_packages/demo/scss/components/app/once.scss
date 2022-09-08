@@ -1,0 +1,25 @@
+/*------------------------------------------
+*   Optional component file
+--------------------------------------------
+*   This file is processed once per compilation cycle. The main task of this file is to export data from sass.
+*   Example: $export: this.export('OPTION_ID', (myname: Artem));
+*/
+
+@use ".core" as this;
+
+@use "sass:meta" as meta;
+@use "sass:map" as map;
+@use "sass:list" as list;
+
+// Theme module
+@use "ungic.theme" as *;
+
+$gray: ();
+@for $i from -10 through 10  {
+    $value: $i * 0.1;
+    @if($value == 0) {
+        $value: 'gray';
+    }
+    $gray: list.append($gray, (key: $i, value: $value));
+}
+$export: this.export('demo', ("gray":$gray, colors: map.keys(colors()))); 

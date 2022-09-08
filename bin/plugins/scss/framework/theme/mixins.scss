@@ -1,0 +1,106 @@
+@use "functions" as *;
+@use "init" as config;
+@use "sass:map";
+@use "ungic.meta"as un-meta;
+
+
+/*
+*  Generate css rules for theme inversion only
+*/
+@mixin is-inverse {
+    $inverse-support: get(inverse-support);
+    @if not $inverse-support {
+        @warn 'Inversion mode is disabled, rules for inversion will be ignored';
+    } @else {    
+        $inverse: get(inverse);
+        $inverse-mode: get(inverse-mode);
+        // Если данный режим не является инверсией, но режим инверсии по умолчанию активен.
+        @if $inverse and not $inverse-mode {
+            @include un-meta.wrapsys('[un-prefix="{{[data-ungic-root]:not(.un-inverse)}}"]') {
+                @content;
+            }
+        } @else if $inverse {
+            @include un-meta.wrapsys('[un-save-inverse-props]') {
+                @content;
+            }
+        }
+    }
+}
+
+/*
+*   To make css rules by theme type (dark / light)
+*/
+@mixin is-type($type) {    
+    $inverse-support: get(inverse-support);
+    @if not $inverse-support {
+        @if get(theme-type) == $type {
+            @content;
+        }
+    } @else {
+        $inverse-mode: get(inverse-mode);
+    
+        @if get(theme-type) == $type and not $inverse-mode {
+            @include un-meta.wrapsys('[un-prefix="{{[data-ungic-root]:not(.un-inverse)}}"]') {
+                @content;
+            }
+        } @else if $inverse-mode and get(theme-type) == $type {
+            @include un-meta.wrapsys('[un-save-inverse-props]') {
+                @content;
+            }
+        }
+    }
+}
+
+@mixin is-dark() {
+    @include is-type(dark) {
+        @content
+    }
+}
+
+@mixin is-light() {
+    @include is-type(light) {
+        @content
+    }
+}
+
+/*
+*   To make css rules by theme name
+*/
+@mixin is-theme($theme-name) {
+    $theme-prefix: map.get(config.$project, theme-prefix);
+    $active-name: get(name);
+    @if $theme-name == $active-name {
+        @if $theme-name == 'default' {
+            @include un-meta.wrapsys('[un-save-props] [data-ungic-root]:not([class*="un-theme"])') {
+                @content;
+            }
+        } @else {
+            @include un-meta.wrapsys('[un-save-props]') {
+                @content;
+            }
+        }
+    }
+}
+
+/*
+*   Ignore inversion
+*/
+@mixin skip-inverse {    
+    @include un-meta.wrapsys('[un-inverse-skip]') {
+        @content;
+    }
+}
+
+/*
+*   Custom method for manual inversion control
+*/
+@mixin custom-inverse-prefix($prefix) {
+    $inverse-support: get(inverse-support);
+    @if not $inverse-support {
+        @warn 'Inversion mode is disabled, rules for inversion will be ignored';
+    } @else {
+        @include un-meta.wrapsys("[un-prefix='{{un-custom-prefix-#{$prefix}}}']") {
+            @content;
+        }
+    }
+}

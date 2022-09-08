@@ -1,0 +1,17 @@
+@use "sass:map";
+/*
+*   Set default variables
+*/
+
+$project: () !default;
+
+/*
+*   Customize the theme configuration
+*/
+@use "config" with (
+    $settings: map.get($project, theme),
+    $inverse-mode: map.get($project, inverse-mode),
+    $theme-prefix: map.get($project, theme-prefix)
+);
+
+@forward "functions";

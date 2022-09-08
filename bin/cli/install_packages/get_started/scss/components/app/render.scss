@@ -1,0 +1,29 @@
+/*------------------------------------------
+*   Optional component render file
+--------------------------------------------
+*   This file should contain the final CSS style rules that will be generated in CSS!
+*   API: https://ungic.com/guide/api/sass.html
+*/
+
+// SASS native modules
+@use "sass:meta" as meta;
+@use "sass:map" as map;
+
+// Component core
+@use ".core" as this;
+
+// Theme module
+@use "ungic.theme" as theme;
+
+// Ungic framework modules
+@use "ungic.meta" as un-meta;
+@use "ungic.utils" as un-utils;
+
+// Custom
+@use "functions" as *;
+@use "mixins" as *;
+
+// you must include any style files here
+// or write them in this file
+
+@include meta.load-css('ungic.slots.main');  

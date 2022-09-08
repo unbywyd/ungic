@@ -1,0 +1,11 @@
+/*
+*		Framework core file, don't change it!
+*		You should not change this file.
+*/
+@use "sass:meta";
+@use "ungic.project.config" as config;
+@use "ungic.project.properties" as properties;
+@forward "ungic.project.functions";
+
+$config: meta.module-variables(config);
+$properties: meta.module-variables(properties);

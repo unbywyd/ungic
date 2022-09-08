@@ -1,0 +1,9 @@
+/*------------------------------------------
+*   Optional component file
+--------------------------------------------
+*   This file is processed once per compilation cycle. The main task of this file is to export data from sass.
+*   Example: $export: this.export('OPTION_ID', (myname: Artem));
+*/
+
+@use ".core" as this;
+

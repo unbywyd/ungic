@@ -1,0 +1,45 @@
+/*------------------------------------------
+*   Theme file
+--------------------------------------------
+*   Theme: greenzy
+*   Desc: This file is part of ungic.theme module
+*   API:  https://ungic.com/guide/api/sass.html#ungic-theme
+*/
+
+// Colors can be specified as a list, where the first value will be applied in normal mode and the second in inversion mode
+$colors: (
+    primary: #38ca61,
+    secondary: #2e2b2a,
+    success: #1BC167,
+    danger: #FF5252,
+    info: #2196F3,
+    warning: #FFC94B,
+    system:#2cba54,
+    text-color: (#1d1d1d, #fafafa),
+    background-color: (#fafafa, #1d1d1d)
+);
+
+$config: (
+    brightness: (
+        offset-brighten: 20,            // List type possible
+        offset-dim: 20,                 // List type possible
+        saturation-brighten: (0, 10%),  // List type possible
+        saturation-dim: (0, 0)          // List type possible
+    ),
+    relative-light-limit : true,
+    gray: (
+        saturation: (20%, 5%),   // List type possible
+        hue: #38ca61           // List type possible
+    )
+);
+
+$palettes: (
+    primary: (
+        lighten: #e8f2c7,
+        darken: #4c5d15
+    ),
+    secondary: (
+        lighten: #f5f3e6,
+        darken: #181514
+    )
+);

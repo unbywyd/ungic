@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Demo icons</title>
+    <style>
+        body{background-color:#fff;color:#363638;margin:0}.ungic_icons-desc{font-family: Arial, Helvetica, sans-serif; color: gray; font-size: 14px; background-color: #fafafa; border-left: 3px solid #CCC; padding: 10px 10px 10px 20px}.ungic_icons-page{max-width:1000px;margin:20px auto}.ungic_icons-page h2{font-size:2em;margin-bottom:1em;color:#282a2f;font-weight:400}.ungic_icons-page .icon-name{display:block;line-height:1;margin-top:.5em;color:#3f3f43}.ungic_icons-items{display:flex;flex-wrap:wrap;margin-bottom:2em;padding-bottom:2em}.ungic_icons-items:not(:last-child){border:none;border-bottom:2px solid #f8f8f8}.ungic_icons-item{padding:1.5em;background:transparent;cursor:pointer;font-size:inherit;text-align:center;border:none;transition:all .2s}.ungic_icons-item:hover{transform:scale(1.2);background:#fafafa}.no-icons{text-align:center;padding:20px}
+    </style>
+    {{#unless release}}
+    <link rel="stylesheet" href="{{address}}/ungic/font-icons">
+    <link rel="stylesheet" href="{{address}}/ungic/sprites">
+    <script src="{{address}}/ungic/pipe?as=ungic-icons,icons&timeout=50"></script>
+    {{/unless}}
+    {{#if release}}
+    {{#each stylesheets}}
+    <link rel="stylesheet" href="{{{href}}}">
+    {{/each}}
+    {{/if}}
+</head>
+<body>
+{{#unless icons}}
+    <h2 class="no-icons">The project has no icons</h2>
+{{/unless}}
+{{#if icons}}
+    <div class="ungic_icons-page">
+        <p class="ungic_icons-desc">Click on the icon to get its ID</p>
+        <br>
+        {{#if icons.svgSprite}}
+        <h2>Svg sprite</h2>
+        <div class="ungic_icons-items">
+            {{#each icons.svgSprite}}
+            <button title="{{{id}}}" class="ungic_icons-item" data-id="{{id}}">
+                {{{icons_icon id}}}
+            </button>
+            {{/each}}
+        </div>
+        {{/if}}
+        {{#if icons.sprites}}
+        <h2>Image sprite</h2>
+        <div class="ungic_icons-items">
+            {{#each icons.sprites}}
+            <button title="{{{id}}}" class="ungic_icons-item" data-id="{{id}}">
+                {{{icons_icon id}}}
+            </button>
+            {{/each}}
+        </div>
+        {{/if}}
+        {{#if icons.fonts}}
+        <h2>Font icons</h2>
+        <div class="ungic_icons-items">
+            {{#each icons.fonts}}
+            <button title="{{{id}}}" class="ungic_icons-item" data-id="{{id}}">
+                {{{icons_icon id}}}
+            </button>
+            {{/each}}
+        </div>
+        {{/if}}
+    </div>
+    <script>!function(){let e;document.addEventListener("click",function(t){let o=t.target.closest(".ungic_icons-item");if(t.target.classList.contains("ungic_icons-item")||o){let n=(o||t.target).getAttribute("data-id");var l=document.createElement("input");l.value=n,l.style.position="absolute",l.style.top="-1000px",l.style.opacity=0,document.querySelector("body").appendChild(l),l.select(),l.setSelectionRange(0,99999),document.execCommand("copy");let i=document.createElement("div");i.style.backgroundColor="#5cc80d",i.style.color="#FFF",i.style.fontSize="20px",i.style.padding="8px 20px",i.style.borderRadius="4px",i.style.position="fixed",i.style.fontFamily="Arial",i.style.left="20px",i.style.top="20px",i.style.boxShadow="3px 3px 12px rgba(0,0,0,.2)",i.style.zIndex="1000",i.innerHTML="ID copied!",document.querySelector("body").appendChild(i),clearTimeout(e),e=setTimeout(function(){i.remove(),l.remove()},1e3)}})}();</script>
+    {{{svgSprite}}}
+{{/if}}
+</body>
+</html>

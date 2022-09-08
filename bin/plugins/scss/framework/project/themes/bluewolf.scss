@@ -1,0 +1,45 @@
+/*------------------------------------------
+*   Theme file
+--------------------------------------------
+*   Theme: bluewolf
+*   Desc: This file is part of ungic.theme module
+*   API:  https://ungic.com/guide/api/sass.html#ungic-theme
+*/
+
+// Colors can be specified as a list, where the first value will be applied in normal mode and the second in inversion mode
+$colors: (
+    primary: #4279f6,
+    secondary: #15181e,
+    success: #1BC167,
+    danger: #FF5252,
+    info: #2196F3,
+    warning: #FFC94B,
+    system:(#4880FF, #44a9ff),
+    text-color: (#090b0f, #FFF),
+    background-color: (#FFF, #17171b)
+);
+
+$config: (
+    brightness: (
+        offset-brighten: 20,            // List type possible
+        offset-dim: 20,                 // List type possible
+        saturation-brighten: (0, 10%),  // List type possible
+        saturation-dim: (0, 0)          // List type possible
+    ),
+    relative-light-limit : true,
+    gray: (
+        saturation: (20%, 5%),  // List type possible
+        hue: blue             // List type possible
+    )
+);
+
+$palettes: (
+    primary: (
+        lighten: #c6d7fe,
+        darken: #1242ae
+    ),
+    secondary: (
+        lighten: #484b52,
+        darken: #101319
+    )
+);

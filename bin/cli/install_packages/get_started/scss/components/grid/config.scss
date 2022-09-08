@@ -1,0 +1,79 @@
+/*------------------------------------------
+*   Optional component configuration file. 
+--------------------------------------------
+*   This file can contain any configuration parameters of the component.
+*/
+
+@use ".core/props" as *; // Get access to the processed properties of this component, you can use the prop() method to get the processed value.
+@use "ungic.theme" as theme; // Get access to theme module to work with colors
+
+
+$columns-counts: 12;
+
+$class-names: (
+  column: 'cell',
+  container: 'container',
+  nest: 'nest'
+);
+
+$gap-steps: 10;
+$gap-space: 2;
+$gap-custom: (
+	8: 4px,
+	16: 8px
+);
+
+$breakpoints: (
+  xs: 556px,
+  sm: 778px,
+  md: 1200px,
+  lg: 1440px
+);
+
+$breakpoints-with-padding: true;
+$width-container-with-padding: false;
+
+// Ignore intermediate breakpoints, will assign the max-width of lg breakpoint to the container.
+$container-max-width-only: false;
+
+// Custom grids
+$columns-number-group: (
+    '2': (2, 2, 3, 4, 6),
+    '3': (1, 2, ('2n': 50%, '2n+1': 25%), 4, 6),
+    icons: (1, (1: 50%),)
+);
+
+$media-rules: (
+	(
+		'rules': ('xs', 'max-xs', '<xs'),
+		'media': (max-width, xs)
+	),
+	(
+		'rules': ('sm', '<sm', 'max-sm'),
+		'media': (max-width, sm)
+	),
+	(
+		'rules': ('md', '<md', 'max-md'),
+		'media': (max-width, md)
+	),
+	(
+		'rules': ('<lg', 'max-lg'),
+		'media': (max-width, lg)
+	),
+	(
+		'rules': ('>xs', 'min-xs'),
+		'media': (min-width, xs)
+	),
+	(
+		'rules': ('>sm', 'min-sm'),
+		'media': (min-width, sm)
+	),
+	(
+		'rules': ('>md', 'min-md'),
+		'media': (min-width, md)
+	),
+	(
+		'rules': ('>lg', 'min-lg'),
+		'media': (min-width, lg)
+	)
+);

@@ -1,0 +1,79 @@
+/*------------------------------------------
+*   Optional component configuration file. 
+--------------------------------------------
+*   This file can contain any configuration parameters of the component.
+*/
+
+@use ".core/props" as *; // Get access to the processed properties of this component, you can use the prop() method to get the processed value.
+@use "ungic.theme" as *; // Get access to theme module to work with colors
+
+// Base
+$base-bdrds-sm: 3px;
+$base-border-width: 1px;
+$base-light-gray-color: gray(.9);
+$base-margin: prop(margin-top) * 0.5;
+$base-tab-size: 10;
+$base-line-height-sm: 1.2;
+$base-color-system-name: system;
+
+// A[href]
+$ahref-color-name: $base-color-system-name;
+
+// Outline
+$outline: $base-border-width solid color($base-color-system-name);
+
+// Selection
+$selection-color-name: system;
+
+// Heading
+$heading-max-size: 2.8em;
+$heading-margin-top: $base-margin;
+$heading-margin-bottom: $base-margin;
+$heading-line-height: $base-line-height-sm;
+
+// Pre
+$pre-margin: $base-margin 0;
+$pre-padding: prop(padding, top) * 0.5;
+$pre-bgc: $base-light-gray-color;
+$pre-tab-size: $base-tab-size;
+$pre-color: color(text-color);
+$pre-line-height: $base-line-height-sm;
+
+// Var
+$var-bgc: $base-light-gray-color;
+$var-color: color(text-color);
+$var-bdrds: $base-bdrds-sm;
+
+$kbd-bdrds: $base-bdrds-sm;
+$kbd-bgc: color(text-color);
+$kbd-color: color(background-color);
+
+$hr-border: $base-border-width solid $base-light-gray-color;
+
+// Lists
+
+$list-margin: $base-margin 0;
+$list-padding-side: prop(padding-left);
+$list-line-height: 1.5;
+
+// DL, DT
+$dl-margin:$base-margin  0;
+$dt-margin-bottom: $base-margin;
+
+// Fieldset
+
+$fieldset-border: $base-border-width solid $base-light-gray-color;
+$fieldset-padding: prop(padding);
+
+$legend-side-space: prop(padding-left) * 0.5;
+
+
+// Paragraph
+$paragraph-margin-top: $base-margin;
+$paragraph-margin-bottom: $base-margin;
+
+// Code
+
+$code-color-name: $base-color-system-name;
+$code-bdrds: $base-bdrds-sm;
+$code-tab-size: $base-tab-size;

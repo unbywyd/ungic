@@ -1,0 +1,17 @@
+/*------------------------------------------
+*   Optional project file
+--------------------------------------------
+*   Module: ungic.project
+*   Desc: This file is used to override the properties of components. To redefine a specific component, check the $cid (Component ID) variable.
+*   API:  https://ungic.com/guide/api/sass.html#ungic-project
+* -------	Don't change this part ---------*/
+@use "sass:map";
+$cid: null !default;
+$properties: () !default;
+/* ---------------------------------------- */
+
+
+// Example:
+@if($cid == helloworld) {
+  $properties: map.merge($properties, (border-width: 4px));
+}

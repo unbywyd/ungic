@@ -1,0 +1,220 @@
+@use "sass:string" as str;
+@use "sass:list";
+@use "sass:map";
+@use "sass:math";
+@use "sass:meta";
+
+@function str-replace($string, $search, $replace: '', $global: true) {
+  $index: str.index($string, $search);
+
+  @if $index {
+    @if $global {
+        @return str.slice($string, 1, $index - 1) + $replace + str-replace(str.slice($string, $index + str.length($search)), $search, $replace);
+    } @else {
+        @return str.slice($string, 1, $index - 1) + $replace + str.slice($string, $index + str.length($search));
+    }
+  }
+  @return $string;
+}
+
+@function deep-merge($source-map, $secondary-map) {
+    $result: $source-map;
+
+    @each $key, $value in $secondary-map {
+        @if (not map.has-key($result, $key)) or (type-of(map.get($result, $key)) !=type-of($value)) or (not (type-of(map.get($result, $key))==map and type-of($value)==map)) {
+            $result: map.merge($result, ($key: $value));
+        }
+
+        @else {
+            $result: map.merge($result, ($key: deep-merge(map.get($result, $key), $value)));
+        }
+    }
+
+    @return $result;
+}
+
+@function px($num) {
+  @return strip-unit($num) + 0px;
+}
+
+@function em($px, $def) {
+    @return math.div(strip-unit($px), strip-unit($def)) + 0em;
+}
+
+@function merge($maps...) {
+    $result: ();
+
+    @if(length($maps) > 1) {
+        @each $map in $maps {
+            $result: deep-merge($result, $map);
+        }
+    }
+
+    @else if(length($maps)==1) {
+        $result: list.nth($maps, 1);
+    }
+
+    @return $result;
+}
+
+/*
+*   Inverts the number
+*/
+@function inv($number) {
+    @if type-of($number) != number {
+        @warn '#{$number} is not number';
+    }
+    @return $number * -1;
+}
+
+@function negative($number) {
+    @if type-of($number) != number {
+        @warn '#{$number} is not number';
+        @return null;
+    }
+    @if($number < 0) {
+        @return $number;
+    }
+    @return $number * -1;
+}
+
+@function unit-merge($number, $unit) {
+    @if not math.is-unitless($number) {
+        @return $number;
+    }
+    $units: ('px': 1px, 'cm': 1cm, 'mm': 1mm, '%': 1%, 'ch': 1ch, 'pc': 1pc, 'in': 1in, 'em': 1em, 'rem': 1rem, 'pt': 1pt, 'ex': 1ex, 'vw': 1vw, 'vh': 1vh, 'vmin': 1vmin, 'vmax': 1vmax);
+
+    @if not list.index(map.keys($units), $unit) {
+        @warn 'Invalid unit #{$unit}';
+    }
+
+    @return $number * map.get($units, $unit);
+}
+
+@function strip-unit($number) {
+    @if type-of($number) == 'number' and not math.is-unitless($number) {
+        @return math.div($number, ($number * 0 + 1));
+    }
+
+    @return $number;
+}
+
+
+@function insert-nth($list, $index, $value) {
+  $result: null;
+
+  @if type-of($index) != number {
+    @warn "$index: #{quote($index)} is not a number for `insert-nth`.";
+  } @else if $index < 1 {
+    @warn "List index 0 must be a non-zero integer for `insert-nth`";
+  } @else if $index > length($list) {
+    @warn "List index is #{$index} but list is only #{length($list)} item long for `insert-nth'.";
+  } @else {
+    $result: ();
+
+    @for $i from 1 through length($list) {
+      @if $i == $index {
+        $result: append($result, $value);
+      }
+
+      $result: append($result, nth($list, $i));
+    }
+  }
+
+  @return $result;
+}
+
+@function remove-nth($list, $index) {
+    $result: null;
+
+    @if type-of($index) !=number {
+        @warn "$index: #{str.quote($index)} is not a number for `remove-nth`.";
+    }
+
+    @else if $index==0 {
+        @warn "List index 0 must be a non-zero integer for `remove-nth`.";
+    }
+
+    @else if math.abs($index) > list.length($list) {
+        @warn "List index is #{$index} but list is only #{list.length($list)} item long for `remove-nth`.";
+    }
+
+    @else {
+        $result: ();
+        $index: if($index < 0, list.length($list) + $index + 1, $index);
+
+        @for $i from 1 through list.length($list) {
+            @if $i !=$index {
+                $result: list.append($result, list.nth($list, $i));
+            }
+        }
+    }
+
+    @return $result;
+}
+
+@function replace-nth($list, $index, $replaceable_value) {
+    $result: null;
+
+    @if type-of($index) !=number {
+        @warn "$index: #{str.quote($index)} is not a number for `insert-nth`.";
+    }
+
+    @else if $index < 1 {
+        @warn "List index 0 must be a non-zero integer for `insert-nth`";
+    }
+
+    @else if $index > list.length($list) {
+        @warn "List index is #{$index} but list is only #{list.length($list)} item long for `insert-nth'.";
+    }
+
+    @else {
+        $result: ();
+
+        @for $i from 1 through list.length($list) {
+            @if $i==$index {
+                $result: list.append($result, $replaceable_value);
+            }
+
+            @else {
+                $result: list.append($result, nth($list, $i));
+            }
+        }
+    }
+
+    @return $result;
+}
+
+@function char($character-code) {
+    @if function-exists("selector-append") {
+        @return str.unquote("\"\\#{$character-code}\"");
+    }
+
+    @if "\\#{'x'}"=="\\x" {
+        @return str.slice("\x", 1, 1)+$character-code;
+    }
+
+    @else {
+        @return #{"\"\\"}#{$character-code + "\""};
+    }
+}
+
+@function dir($ltr, $rtl) {
+    @return #{$ltr + '/*rtl:' + $rtl + '*/'};
+}
+
+@function rtli($val) {
+    @return #{$val + '/*rtl:ignore*/'};
+}
+
+@function rtl-ignore($val) {
+    @return rtli($val);
+}
+
+@function rtl-prepend($value, $rtl-prepend, $sep:' ') {
+    @return #{$value + '/*rtl:prepend:' + $rtl-prepend + $sep + '*/'};
+}
+
+@function rtl-append($value, $rtl-append, $sep: ' ') {
+    @return #{$value + '/*rtl:append:' + $sep + $rtl-append + '*/'};
+}

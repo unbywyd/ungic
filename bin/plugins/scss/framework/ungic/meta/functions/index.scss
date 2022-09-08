@@ -1,0 +1,183 @@
+@use "sass:string" as str;
+@use "sass:color";
+@use "sass:list";
+@use "sass:map";
+@use "sass:math";
+@use "sass:meta";
+@use "ungic.utils" as *;
+@use "ungic.project.config" as config;
+@use "ungic.default-properties" as default-props;
+
+/*
+*   Export data for a specific component
+*   $cid -> Component id
+*   $oid -> Option Name (any key name)
+*   $data -> Any data
+*/
+@function export($cid, $oid, $data) {
+    @if(type-of($oid) != 'string' and type-of($oid) != 'number') {
+        @warn "oid should be a string or a number";
+        @return null;
+    }
+    @return to-export($cid, $oid, json-encode($data));
+}
+
+@function hsl($color, $strip-unit: true, $asmap: false) {
+    @if('color' != type-of($color)) {
+        @warn '#{$color} is not a color';
+        @return ();
+    }
+
+    $h: color.hue($color);
+    $s: color.saturation($color);
+    $l: color.lightness($color);
+
+    @if($strip-unit) {
+        $s: strip-unit(color.saturation($color));
+        $l: strip-unit(color.lightness($color));
+        $h: strip-unit(color.hue($color));
+    }
+
+    @if(not $asmap) {
+        @return ($h, $s, $l);
+    }
+
+    @else {
+        @return (h: $h,
+            s: $s,
+            l: $l);
+    }
+}
+
+@function lightest($color1, $color2) {
+    $hsl-color1: list.nth(hsl($color1), 3);
+    $hsl-color2: list.nth(hsl($color2), 3);
+    @if $hsl-color1 > $hsl-color2 {
+        @return $color1;
+    }
+    @return $color2;
+}
+
+@function darkest($color1, $color2) {
+    $hsl-color1: list.nth(hsl($color1), 3);
+    $hsl-color2: list.nth(hsl($color2), 3);
+    @if $hsl-color1 < $hsl-color2 {
+        @return $color1;
+    }
+    @return $color2;
+}
+
+@function is-darker($this-color, $than-this-color) {
+    $hsl-color1: list.nth(hsl($this-color), 3);
+    $hsl-color2: list.nth(hsl($than-this-color), 3);
+    @return $hsl-color1 < $hsl-color2;
+}
+
+@function get-all-available-сolors() {
+    $available-colors: config.$available-theme-colors;
+    $required-colors: (primary, secondary, system, info, danger, success, warning, text-color, background-color);
+    @each $color-name in $required-colors {
+        @if not list.index($available-colors, $color-name) {
+            $available-colors: list.append($available-colors, $color-name, $separator: comma);
+        }
+    }
+    @return $available-colors;
+}
+
+@function is-color-available($color-name) {
+    @if type-of($color-name) != string {
+        $color-name: meta.inspect($color-name);
+    }
+    $available-colors: get-all-available-сolors();
+    @if not list.index($available-colors, $color-name) {
+        @return false;
+    }
+    @return true;
+}
+
+@function is-valid-color-value($color-name, $color, $return_error: false) {
+    $error: '#{$color-name} has incorrect value. The theme color value must be of type color or a list of two color values: (color-by-default, color-in-inversion-mode)';
+
+    @if type-of($color) == list {
+        @if list.length($color) != 2 {
+            @if $return_error {
+                @return $error;
+            } @else {
+                @return false;
+            }
+        } @else {
+            @each $_color in $color {
+                @if type-of($_color) != color {
+                    @if $return_error {
+                        @return $error;
+                    } @else {
+                        @return false;
+                    }
+                }
+            }
+        }
+    } @else if type-of($color) != color {
+        @if $return_error {
+            @return $error;
+        } @else {
+            @return false;
+        }
+    }
+    
+    @if ($color-name == 'text-color' or $color-name == 'background-color') and type-of($color) != list {
+        @if $return_error {
+            @return '#{$color-name} has incorrect value. The theme color value for text-color or background-color must be a list of two color values: (color-by-default, color-in-inversion-mode)';
+        } @else {
+            @return false;
+        }
+    }
+
+    @if $return_error {
+        @return false;
+    } @else {
+        @return true;
+    }
+}
+
+@function check-color-name($color-name) {
+    @if type-of($color-name) != string {
+        $color-name: meta.inspect($color-name);
+    }
+    @if $color-name == "gray" or $color-name == "grey" {
+        @return true;
+    }
+    @if is-color-available($color-name) {
+        @return true;
+    }
+    @warn '#{$color-name} is not available color!';
+    @return false;
+}
+
+/*
+*   Returns the default property value (From core of framework)
+*/
+@function default-prop($prop) {
+  $props: meta.module-variables(default-props);
+  @if not map.has-key($props, $prop) {
+    @return null;
+  }
+  @return map.get($props, $prop);
+}
+
+
+@function parse-selector($selector) {
+    $output: ();
+    @if type-of($selector) == list {
+        @each $selector in & {
+            $ishtml: list.nth($selector, 1);
+            @if $ishtml == html {
+                $selector: remove-nth($selector, 1);
+            }
+            $output: list.append($output, $selector, comma);
+        }
+    } @else {
+        @warn '#{$selector} selector must be of type list';
+        $output: $selector;
+    }
+    @return $output;
+}

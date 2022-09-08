@@ -1,0 +1,8 @@
+/*------------------------------------------
+*   Optional component configuration file. 
+--------------------------------------------
+*   This file can contain any configuration parameters of the component.
+*/
+
+@use ".core/props" as *; // Get access to the processed properties of this component, you can use the prop() method to get the processed value.
+@use "ungic.theme" as theme; // Get access to theme module to work with colors

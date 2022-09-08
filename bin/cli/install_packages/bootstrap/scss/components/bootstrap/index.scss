@@ -1,0 +1,20 @@
+/*------------------------------------------
+*   Required component file 
+--------------------------------------------
+*   This file should forward custom data that will be available when this component will be included as a module.
+*/
+
+@forward ".core";
+
+
+/* ::::
+# there may be parameters for the dev build mode
+# inverse: false
+*/
+ 
+@import "@bootstrap/scss/functions";
+@import "@bootstrap/scss/variables";
+@import "./variables";
+
+@import "@bootstrap/scss/mixins";
+@import "@bootstrap/scss/utilities"; 

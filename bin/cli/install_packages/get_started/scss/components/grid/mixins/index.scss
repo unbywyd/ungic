@@ -1,0 +1,65 @@
+@use "sass:math";
+
+@use "ungic.component" as this;
+@use "ungic.utils" as *;
+@use "ungic.component.functions" as *;
+
+
+@mixin media($rules) {
+  @media #{$rules} {
+    @content;
+  }
+}
+
+@mixin responsive-rule($selector, $point) {
+  .#{$selector}-f#{$point} {
+		@include media(screen and media(min-#{$point})) {
+			@content;
+		}
+  }
+  .#{$selector}-t#{$point} {
+		@include media(screen and media(max-#{$point})) {
+			@content;
+		}
+  }
+}
+
+@mixin responsive-tool($tool-name, $static-tool: false, $skipbp: null) {
+	$breakpoints: this.config(breakpoints);
+	@if($static-tool == true) {
+		.#{$tool-name} {
+			@content;
+		}
+	}
+	@each $point, $media in $breakpoints {
+		@if($skipbp != $point) {
+			@include responsive-rule($tool-name, $point) {
+				@content;
+			}
+		}
+	}
+}
+
+@mixin grid-columns($suffix: "") {
+  $columns: this.config(columns-counts);
+  @for $i from 1 through $columns {
+    > .cell#{$suffix}-#{$i} {
+      flex-basis: percentage(math.div($i, $columns));
+      min-width: percentage(math.div($i, $columns));
+    }
+  }
+}
+
+@mixin generate-custom-grid($val) {
+	@if(type-of($val) == number) {
+		flex-basis: math.div(100, $val) + 0%;
+		min-width: math.div(100, $val) + 0%;
+	} @else if(type-of($val) == map) {
+		@each $rule, $v in $val {
+			&:nth-child(#{$rule}) {
+				flex-basis: $v;
+				min-width: $v;
+			}
+		}
+	}
+}

@@ -1,0 +1,60 @@
+{
+    "ungic.default-theme": {
+        "root": "root",
+        "path": "project/themes/default.scss"
+    },
+    "ungic.project": {
+        "root": "framework",
+        "path": "ungic/project/index.scss"
+    },
+    "ungic.project.properties": {
+        "root": "root",
+        "default": "",
+        "path": "project/properties.scss"
+    },
+    "ungic.project.config": {
+        "root": "root",
+        "default": "$available-theme-colors:(extra)",
+        "path": "project/config.scss"
+    },
+    "ungic.project.property-handlers": {
+        "root": "framework",
+        "path": "ungic/project/property-handlers.scss"
+    },    
+    "ungic.project.functions": {
+        "root": "framework",
+        "path": "ungic/project/functions.scss"
+    },
+    "ungic.theme.init": {
+        "root": "framework",
+        "path": "theme/init.scss"
+    },
+    "ungic.theme": {
+        "root": "framework",
+        "path": "theme/index.scss"
+    },
+    "ungic.theme.functions": {
+        "root": "framework",
+        "path": "theme/functions.scss"
+    },
+    "ungic.theme.mixins": {
+        "root": "framework",
+        "path": "theme/mixins.scss"
+    },
+    "ungic.meta.property-handlers": {
+        "root": "framework",
+        "path": "ungic/meta/functions/props-handlers.scss"
+    },
+    "ungic.meta": {
+        "root": "framework",
+        "path": "ungic/meta"
+    },
+    "ungic.utils": {
+        "root": "framework",
+        "path": "ungic/utils"
+    },
+    "ungic.default-properties": {
+        "root": "framework",
+        "path": "ungic/default-properties.scss"
+    }
+}
