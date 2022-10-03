@@ -1125,7 +1125,7 @@ export const svgSprite = \`${this.getSvgSprite(this.collection.filter(m => m.has
             }
         }
     }
-    async initialize() {
+    async initialize() {        
         if(this.project.config.build.plugins[this.id]) {
             try {
                 this.builder = new builder(require('./build.model-scheme'), this.project.config.build.plugins[this.id]);
@@ -1143,7 +1143,6 @@ export const svgSprite = \`${this.getSvgSprite(this.collection.filter(m => m.has
                 await this.setEntityByPath(svg, {silent: true});
             }
         }
-        let config = this.config;
         this.buildConfig = this.builder.config.dev;
         try {
             if(this.buildConfig.svgIconsMode == 'fonts') {

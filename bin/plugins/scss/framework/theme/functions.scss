@@ -538,6 +538,7 @@ $theme: meta.module-variables(theme);
     $hsl: un-meta.hsl($color);
 
     $color: hsl($hue, list.nth($hsl, 2) * 1%, list.nth($hsl, 3) * 1%);
+
     @return lightness($color, $offset);
 }
 @function gray($offset:0) {
