@@ -352,7 +352,9 @@ module.exports = async function(args, defaultConfig={}, overlayConfig={}) {
     *   Если выбранная тема по умолчанию не существует, заменить стандартной
     */
     if(!themes.includes(release.defaultTheme)) {
-      this.logger.system(`${release.defaultTheme} theme not exist in current project, the default theme will be used`);
+      if(release.defaultTheme !== 'default') {
+        this.logger.system(`${release.defaultTheme} theme not exist in current project, the default theme will be used`);
+      }
       release.defaultTheme = 'default';
     }
 
