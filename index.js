@@ -246,7 +246,7 @@ class App extends skeleton {
         process.exit();
       }
     } else {
-      this.logger.success(`${this.app.config.name} app running at: ${colors.cyan.bold(this.app.fastify.address)}`, 'Status');
+      this.logger.success(`${this.app?.config?.name || ''} app running at: ${colors.cyan.bold(this.app.fastify.address)}`, 'Status');
       this.appMenu = async function (yargs) {
         yargs
           .command('release <release_name> [build_name]', 'Build a full release', yargs => {
