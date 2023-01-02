@@ -225,7 +225,7 @@ class app extends skeleton {
         let dirs = await fg('**', { cwd: appPaths.root, dot: false, onlyDirectories: true, deep: 1 });
         return !dirs.length
     }
-    async begin(opt={}) {
+    async begin(opt = {}) {
         let release = opt.release;
         if (!appPaths.config && !appPaths.package) {
             if (await this.suitableAppDir()) {
@@ -236,7 +236,10 @@ class app extends skeleton {
             return;
         }
         let config = this.config;
-        this.fastify = fastify({ logger: false, ignoreTrailingSlash: false });
+        this.fastify = fastify({
+            logger: false,
+            ignoreTrailingSlash: false
+        });
         this.fastify.decorate('uid', () => '_' + Math.random().toString(36).substr(2, 9));
         this.fastify.decorate('app', this);
 
@@ -355,7 +358,14 @@ class app extends skeleton {
             this.serverPort = config.server.port;
             await new Promise(done => {
                 let start = async () => {
-                    await this.fastify.listen(this.serverPort).then(address => {
+                    await this.fastify.listen({
+                        port: this.serverPort,
+                        host: 'localhost',
+                        exclusive: false,
+                        readableAll: false,
+                        writableAll: false,
+                        ipv6Only: false
+                    }).then(address => {
                         this.fastify.address = address;
                         done(address);
                     }).catch(() => {
@@ -405,7 +415,7 @@ class app extends skeleton {
                 let relative = path.relative(this.project.assets, ph).replace(/\\+/g, '/');
                 this.finishController.push({
                     event,
-                    url: this.fastify.address  + '/' + relative,
+                    url: this.fastify.address + '/' + relative,
                     relative
                 });
             });
