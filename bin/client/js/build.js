@@ -10,7 +10,6 @@ let render = (name) => {
 
         let output = fs.createWriteStream(path.join(__dirname, 'dist', name + '.min.js'));
         output.on('finish', function () {
-            console.log('finish');
             res();
         });
         let b = browserify(src)
@@ -20,7 +19,7 @@ let render = (name) => {
                     "sourceType": 'module'
                 }]
             }))
-            .transform('uglifyify', {global:true})
+            //.transform('uglifyify', {global:true})
             .bundle()
             .pipe(output);
     });
