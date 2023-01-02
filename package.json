@@ -1,6 +1,6 @@
 {
   "name": "ungic",
-  "version": "2.8.6",
+  "version": "2.9.0",
   "description": "Development environment for web layout",
   "main": "index.js",
   "bin": {
@@ -89,7 +89,7 @@
     "ttf2eot": "^2.0.0",
     "ttf2woff": "^2.0.2",
     "underscore": "^1.13.1",
-    "wawoff2": "^1.0.2",
+    "wawoff2": "^2.0.1",
     "yargs": "^15.4.1"
   }
 }
