@@ -360,7 +360,7 @@ class app extends skeleton {
                 let start = async () => {
                     await this.fastify.listen({
                         port: this.serverPort,
-                        host: 'localhost',
+                        host: '127.0.0.1',
                         exclusive: false,
                         readableAll: false,
                         writableAll: false,
