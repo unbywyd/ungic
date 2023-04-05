@@ -29,6 +29,7 @@ $theme-options: map.merge($theme-options, (theme-name: {{theme}}));
 
 
 $theme-config: map.merge(map.get($theme-options, config), (inverse: {{defaultInverse}}, colors-vars-mode: $theme-colors-vars-mode, inverse-support: $inverse-support));
+
 $theme-options: map.merge($theme-options, (config: $theme-config));
 
 $project-configs: meta.module-variables(project-config);
